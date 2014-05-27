@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+my @trace_data;
+my $job = 0;
+
 # Prints one status field line
 sub print_status_field {
 	my @fields = @_;
@@ -11,13 +14,6 @@ sub print_status_field {
 	}
 
 	print "\n";
-}
-
-# Parses one job line
-sub parse_data_fields {
-	my @fields = @_;
-
-	print "Job Number: $fields[0]\n";
 }
 
 open (FILE, 'small.swf');
@@ -32,11 +28,13 @@ while (<FILE>) {
 	}
 
 	# Job line
-	if ($fields[9] != " ") {
-		parse_data_fields(@fields);
+	if ($fields[0] != " ") {
+		push (@trace_data, @fields);
 	}
 
 }
+
+print "@trace_data[0]";
 
 close (FILE);
 exit;
