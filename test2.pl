@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 
-use Data::Dumper qw(Dumper);
-
 my @trace_data;
 my $job = 0;
 
@@ -18,19 +16,19 @@ sub print_status_field {
 	print "\n";
 }
 
-open (FILE, 'small.swf');
+open (FILE, $ARGV[0]);
 
 while (<FILE>) {
-	chomp;
 	@fields = split(" ");
 
 	# Status line
 	if ($fields[0] == ";") { 
-		print_status_field(@fields);
+		#print_status_field(@fields);
 	}
 
 	# Job line
 	if ($fields[0] != " ") {
+		#print "Job: @fields\n";
 		foreach $field (0 .. 17) {
 			$trace_data[$job][$field] = $fields[$field];
 		}
@@ -40,6 +38,11 @@ while (<FILE>) {
 
 }
 
-print Dumper \@trace_data;
+print "Total jobs: " . scalar @trace_data . "\n";
+
+#foreach $job (0 .. scalar @trace_data -1) {
+#	print "Job Number: $trace_data[$job][0]\n";
+#}
+
 close (FILE);
 exit;
