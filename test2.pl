@@ -13,13 +13,27 @@ sub print_status_field {
 	print "\n";
 }
 
+# Parses one job line
+sub parse_data_fields {
+	my @fields = @_;
+
+	print "Job Number: $fields[0]\n";
+}
+
 open (FILE, 'small.swf');
 
 while (<FILE>) {
+	chomp;
 	@fields = split(" ");
 
+	# Status line
 	if ($fields[0] == ";") { 
 		print_status_field(@fields);
+	}
+
+	# Job line
+	if ($fields[9] != " ") {
+		parse_data_fields(@fields);
 	}
 
 }
