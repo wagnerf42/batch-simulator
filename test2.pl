@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+use Data::Dumper qw(Dumper);
+
 my @trace_data;
 my $job = 0;
 
@@ -29,12 +31,15 @@ while (<FILE>) {
 
 	# Job line
 	if ($fields[0] != " ") {
-		push (@trace_data, @fields);
+		foreach $field (0 .. 17) {
+			$trace_data[$job][$field] = $fields[$field];
+		}
+
+		$job++;
 	}
 
 }
 
-print "@trace_data[0]";
-
+print Dumper \@trace_data;
 close (FILE);
 exit;
