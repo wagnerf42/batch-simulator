@@ -1,0 +1,12 @@
+1) answer questions
+    - what partitions useful
+    - comparison declared time vs real time
+2) classes for objects
+    - task
+    - processor
+
+3) scheduling algorithm
+
+    -> real p_i, FCFS (then with backfilling)
+        arrival time = 0
+        tasks ordered (by real arrival time)
