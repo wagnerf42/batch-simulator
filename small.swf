@@ -1,4 +1,40 @@
 ; Installation: CEA Curie Cluster
+; MaxQueues: 1
+; Queue:  1
+; MaxPartitions: 33
+; Partition:  1  test
+; Partition:  2  parallel
+; Partition:  3  batch
+; Partition:  4  large
+; Partition:  5  TestIB
+; Partition:  6  inter
+; Partition:  7  test,batch
+; Partition:  8  hybrid
+; Partition:  9  xlarge
+; Partition: 10  standard
+; Partition: 11  Unitaire
+; Partition: 12  Burned
+; Partition: 13  -1
+; Partition: 14  curie3550
+; Partition: 15  curie6066
+; Partition: 16  UNKNOWN
+; Partition: 17  BCS
+; Partition: 18  z+i5U=:
+; Partition: 19  `;
+; Partition: 20  UNKNOWN
+; Partition: 21  0
+; Partition: 22  16029-16045
+; Partition: 23  UNKNOWN
+; Partition: 24  curie3570
+; Partition: 25  x86_64
+; Partition: 26  curie2125
+; Partition: 27  p^
+; Partition: 28  15185-15201
+; Partition: 29  pa0907@standard
+; Partition: 30  pack_ipsl
+; Partition: 31  curie1611
+; Partition: 32  UNKNOWN
+; Partition: 33  crypto/munge
 
 272393 31656837  33492  86395  256     -1    -1  256  86400    -1  1  87  95  -1 -1  4 -1 -1
 272394 31664481 249861   1189 2048     -1    -1 2048  72000    -1  0  21  89  -1 -1  4 -1 -1
