@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 my @trace_data;
+my @status_data;
 my $job = 0;
 my $partitions_count = 0;
 my @partitions;
@@ -24,6 +25,8 @@ while (my $line = <FILE>) {
 	
 	# Status line
 	if ($fields[0] eq ';') { 
+		push @status_data, [@fields];
+
 		if ($fields[1] eq 'Partition:') {
 			$partitions_count++;
 		}
@@ -44,6 +47,7 @@ for (my $i = 0; $i < $partitions_count; $i++) {
 	$partitions[$i] = 0;
 }
 
+# The partitions in the SWF file start from 1 so I shift them one position
 for (my $i = 0; $i < scalar @trace_data; $i++) {
 	$partitions[$trace_data[$i][15] - 1]++;
 }
@@ -52,6 +56,16 @@ for (my $i = 0; $i < $partitions_count; $i++) {
 	next unless ($partitions[$i] > 0);
 
 	print 'Partition ' . ($i + 1) . ': ' . $partitions[$i] . "\n";
+}
+
+#for (my $i = 0; $i < @trace_data; $i++) {
+#		print join (" ", @{$trace_data[$i]}) . "\n";
+#}
+
+for (my $i = 0; $i < @status_data; $i++) {
+	if (($status_data[$i][1] ne 'Partition:') || (($status_data[$i][1] eq 'Partition:') && ($partitions[$status_data[$i][2] - 1] > 0))) {
+		print join(" ", @{$status_data[$i]}) . "\n";
+	}
 }
 
 close (FILE);
