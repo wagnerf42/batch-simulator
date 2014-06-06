@@ -27,6 +27,8 @@ while (my $line = <FILE>) {
 	if ($fields[0] eq ';') { 
 		push @status_data, [@fields];
 
+		next unless defined $fields[1];
+
 		if ($fields[1] eq 'Partition:') {
 			$partitions_count++;
 		}
@@ -63,7 +65,7 @@ for (my $i = 0; $i < $partitions_count; $i++) {
 #}
 
 for (my $i = 0; $i < @status_data; $i++) {
-	if (($status_data[$i][1] ne 'Partition:') || (($status_data[$i][1] eq 'Partition:') && ($partitions[$status_data[$i][2] - 1] > 0))) {
+	if ((!defined $status_data[$i][1]) || ($status_data[$i][1] ne 'Partition:') || (($status_data[$i][1] eq 'Partition:') && ($partitions[$status_data[$i][2] - 1] > 0))) {
 		print join(" ", @{$status_data[$i]}) . "\n";
 	}
 }
