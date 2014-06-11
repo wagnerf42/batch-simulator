@@ -49,26 +49,32 @@ for (my $i = 0; $i < $partitions_count; $i++) {
 	$partitions[$i] = 0;
 }
 
-# The partitions in the SWF file start from 1 so I shift them one position
+# Getting the partition names
+my @partition_names;
+my $status_index;
+my $partition_index;
+
+for ($status_index = 0; $status_index < @status_data; $status_index++) {
+	next unless defined $status_data[$status_index][1];
+	last if ($status_data[$status_index][1] eq 'Partition:');
+}
+
+for ($partition_index = 0; $status_index < @status_data and $status_data[$status_index][1] eq 'Partition:'; $partition_index++, $status_index++) {
+	$partition_names[$partition_index] = $status_data[$status_index][3];
+}
+
+# Counting how many times each partition is used. The partitions in the SWF 
+# file start from 1 so I shift them one position
 for (my $i = 0; $i < scalar @trace_data; $i++) {
 	$partitions[$trace_data[$i][15] - 1]++;
 }
 
 for (my $i = 0; $i < $partitions_count; $i++) {
 	next unless ($partitions[$i] > 0);
-
 	print 'Partition ' . ($i + 1) . ': ' . $partitions[$i] . "\n";
 }
 
-#for (my $i = 0; $i < @trace_data; $i++) {
-#		print join (" ", @{$trace_data[$i]}) . "\n";
-#}
 
-for (my $i = 0; $i < @status_data; $i++) {
-	if ((!defined $status_data[$i][1]) || ($status_data[$i][1] ne 'Partition:') || (($status_data[$i][1] eq 'Partition:') && ($partitions[$status_data[$i][2] - 1] > 0))) {
-		print join(" ", @{$status_data[$i]}) . "\n";
-	}
-}
 
 close (FILE);
 exit;
