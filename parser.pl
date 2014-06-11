@@ -59,7 +59,7 @@ for ($status_index = 0; $status_index < @status_data; $status_index++) {
 	last if ($status_data[$status_index][1] eq 'Partition:');
 }
 
-for ($partition_index = 0; $status_index < @status_data and $status_data[$status_index][1] eq 'Partition:'; $partition_index++, $status_index++) {
+for ($partition_index = 0; $status_index < @status_data and defined $status_data[$status_index][1] and $status_data[$status_index][1] eq 'Partition:'; $partition_index++, $status_index++) {
 	$partition_names[$partition_index] = $status_data[$status_index][3];
 }
 
@@ -71,7 +71,7 @@ for (my $i = 0; $i < scalar @trace_data; $i++) {
 
 for (my $i = 0; $i < $partitions_count; $i++) {
 	next unless ($partitions[$i] > 0);
-	print 'Partition ' . ($i + 1) . ': ' . $partitions[$i] . "\n";
+	print 'Partition ' . ($i + 1) . ': ' . $partition_names[$i] . ': ' . $partitions[$i] . "\n";
 }
 
 
