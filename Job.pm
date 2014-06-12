@@ -14,7 +14,7 @@ sub new {
 		run_time => shift,
 		allocated_cpus => shift,
 		avg_cpu_time => shift,
-		used_memory => shift,
+		used_mem => shift,
 		requested_cpus => shift,
 		requested_time => shift,
 		requested_mem => shift,
@@ -35,7 +35,26 @@ sub new {
 sub print {
 	my $self = shift;
 
-	print "Job with number $self->{job_number}\n";
+	print join(' ', 
+		$self->{job_number}, 
+		$self->{submit_time}, 
+		$self->{wait_time}, 
+		$self->{run_time}, 
+		$self->{allocated_cpus}, 
+		$self->{avg_cpu_time}, 
+		$self->{used_mem}, 
+		$self->{requested_cpus}, 
+		$self->{requested_time}, 
+		$self->{requested_mem}, 
+		$self->{status}, 
+		$self->{uid}, 
+		$self->{gid}, 
+		$self->{exec_number}, 
+		$self->{queue_number}, 
+		$self->{partition_number}, 
+		$self->{prec_job_number}, 
+		$self->{think_time_prec_job}) 
+	. "\n";	
 }
 
 1;

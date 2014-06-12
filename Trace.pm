@@ -53,4 +53,12 @@ sub print {
 	print 'Number of jobs: ' . scalar @{$self->{jobs}} . "\n";
 }
 
+sub print_jobs {
+	my $self = shift;
+
+	for (my $i = 0; $i < scalar @{$self->{jobs}}; $i++) {
+		$self->{jobs}[$i]->print();
+	}
+}
+
 1;
