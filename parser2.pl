@@ -5,10 +5,10 @@ use warnings;
 
 use Trace;
 
-my $trace = new Trace("small2.swf");
+my $trace = new Trace($ARGV[0]);
 
 $trace->read();
-$trace->print_jobs();
+$trace->print();
 
 exit;
 

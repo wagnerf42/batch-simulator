@@ -8,9 +8,6 @@ use Data::Dumper qw(Dumper);
 
 use Job;
 
-	
-my $partitions_count = 0;
-
 sub new {
 	my $class = shift;
 	my $self = {
@@ -39,14 +36,7 @@ sub read {
 		# Status line
 		if ($fields[0] eq ';') { 
 			push $self->{status}, [@fields];
-
-			next unless defined $fields[1];
-
-			if ($fields[1] eq 'Partition:') {
-				$self->{partition_count}++;
-			}
-
-	}	
+		}	
 
 		# Job line
 		elsif ($fields[0] ne ' ') {
@@ -57,8 +47,10 @@ sub read {
 	}
 }
 
-sub print_jobs {
+sub print {
 	my $self = shift;
+
+	print 'Number of jobs: ' . scalar @{$self->{jobs}} . "\n";
 }
 
 1;
