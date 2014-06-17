@@ -61,4 +61,12 @@ sub print_jobs {
 	}
 }
 
+sub print_jobs_time_ratio {
+	my $self = shift;
+
+	for (my $i = 0; $i < scalar @{$self->{jobs}}; $i++) {
+		$self->{jobs}[$i]->print_time_ratio();
+	}
+}
+
 1;

@@ -57,4 +57,12 @@ sub print {
 	. "\n";	
 }
 
+sub print_time_ratio {
+	my $self = shift;
+
+	if (($self->{run_time}) && ($self->{run_time} <= $self->{requested_time})) {	
+		print $self->{run_time}/$self->{requested_time} . "\n";
+	}
+}
+
 1;
