@@ -7,11 +7,15 @@ use warnings;
 use Data::Dumper qw(Dumper);
 
 use Job;
+use Processor;
 
 sub new {
 	my $class = shift;
 	my $self = {
-		file => shift
+		file => shift,
+		jobs => [],
+		status => [],
+		partition_count => 0
 	};
 	
 	bless $self, $class;
@@ -22,10 +26,6 @@ sub new {
 sub read {
 	my $self = shift;
 	
-	$self->{jobs} = [];
-	$self->{status} = [];
-	$self->{partition_count} = 0;
-
 	open (FILE, $self->{file});
 
 	while (my $line = <FILE>) {
