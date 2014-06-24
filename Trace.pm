@@ -55,18 +55,19 @@ sub print {
 
 sub print_jobs {
 	my $self = shift;
-
-	for (my $i = 0; $i < scalar @{$self->{jobs}}; $i++) {
-		$self->{jobs}[$i]->print();
-	}
+    print join(',', @{$self->{jobs}})."\n";
 }
 
 sub print_jobs_time_ratio {
 	my $self = shift;
+    map {$_->print_time_ratio()} @{$self->{jobs}};
+}
 
-	for (my $i = 0; $i < scalar @{$self->{jobs}}; $i++) {
-		$self->{jobs}[$i]->print_time_ratio();
-	}
+sub job {
+    my $self = shift;
+    my $job_number = shift;
+
+    return $self->{jobs}[$job_number];
 }
 
 1;

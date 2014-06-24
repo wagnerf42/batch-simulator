@@ -3,6 +3,8 @@
 package Job;
 use strict;
 use warnings;
+use overload
+    '""' => \&stringification;
 
 sub new {
 	my $class = shift;
@@ -32,10 +34,10 @@ sub new {
 	return $self;
 }
 
-sub print {
+sub stringification {
 	my $self = shift;
 
-	print join(' ', 
+	return join(' ', 
 		$self->{job_number}, 
 		$self->{submit_time}, 
 		$self->{wait_time}, 
@@ -53,8 +55,7 @@ sub print {
 		$self->{queue_number}, 
 		$self->{partition_number}, 
 		$self->{prec_job_number}, 
-		$self->{think_time_prec_job}) 
-	. "\n";	
+		$self->{think_time_prec_job});
 }
 
 sub print_time_ratio {
