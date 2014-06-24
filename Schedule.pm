@@ -18,8 +18,8 @@ sub new {
 		processors => []
 	};
 
-	for (my $i = 0; $i < $self->{num_processors}; $i++) {
-		my $processor = new Processor($i);
+	for my $id (0..($self->{num_processors}-1)) {
+		my $processor = new Processor($id);
 		push $self->{processors}, $processor;
 	}
 
@@ -41,7 +41,8 @@ sub assign_fcfs_job {
 	my @sorted_processors = sort {$a->get_cmax() <=> $b->get_cmax()} @{$self->{processors}};
 	my $requested_cpus = $job->get_requested_cpus();
 	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
-	map {$_->assign_job($job)} @selected_processors;
+	my $starting_time = $selected_processors[$#selected_processors]->get_cmax();
+	map {$_->assign_job($job, $starting_time)} @selected_processors;
 }
 
 sub print_schedule {

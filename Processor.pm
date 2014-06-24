@@ -33,16 +33,17 @@ sub get_cmax {
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
+	my $starting_time = shift;
 
 	push $self->{jobs}, $job;
 
-	$self->{cmax} = $self->{cmax} + $job->{run_time};
+	$self->{cmax} = $starting_time + $job->{run_time};
 }
 
 sub print_jobs {
 	my $self = shift;
 
-	print "Jobs for processor with id $self->{id}:\n";
+	print "Jobs for processor with id $self->{id} and cmax $self->{cmax}:\n";
 	map {print $_->stringification() . "\n"} @{$self->{jobs}};
 }
 
