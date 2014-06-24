@@ -17,8 +17,26 @@ sub new {
 	};
 	
 	bless $self, $class;
-
 	return $self;
+}
+
+sub get_cmax {
+	my $self = shift;
+
+	if (@_) {
+		$self->{cmax} = shift;
+	}
+
+	return $self->{cmax};
+}
+
+sub assign_job {
+	my $self = shift;
+	my $job = shift;
+
+	push $self->{jobs}, $job;
+
+	$self->{cmax} = $self->{cmax} + $job->{run_time};
 }
 
 1;

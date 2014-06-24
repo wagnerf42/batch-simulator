@@ -66,4 +66,10 @@ sub print_time_ratio {
 	}
 }
 
+sub get_requested_cpus {
+	my $self = shift;
+
+	return $self->{requested_cpus};
+}
+
 1;

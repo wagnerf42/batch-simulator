@@ -19,7 +19,6 @@ sub new {
 	};
 	
 	bless $self, $class;
-
 	return $self;
 }
 
@@ -47,27 +46,21 @@ sub read {
 	}
 }
 
-sub print {
-	my $self = shift;
-
-	print 'Number of jobs: ' . scalar @{$self->{jobs}} . "\n";
-}
-
 sub print_jobs {
 	my $self = shift;
-    print join(',', @{$self->{jobs}})."\n";
+	print join(',', @{$self->{jobs}})."\n";
 }
 
 sub print_jobs_time_ratio {
 	my $self = shift;
-    map {$_->print_time_ratio()} @{$self->{jobs}};
+	map {$_->print_time_ratio()} @{$self->{jobs}};
 }
 
 sub job {
-    my $self = shift;
-    my $job_number = shift;
+	my $self = shift;
+	my $job_number = shift;
 
-    return $self->{jobs}[$job_number];
+	return $self->{jobs}[$job_number];
 }
 
 1;
