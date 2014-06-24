@@ -39,4 +39,11 @@ sub assign_job {
 	$self->{cmax} = $self->{cmax} + $job->{run_time};
 }
 
+sub print_jobs {
+	my $self = shift;
+
+	print "Jobs for processor with id $self->{id}:\n";
+	map {print $_->stringification() . "\n"} @{$self->{jobs}};
+}
+
 1;

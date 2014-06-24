@@ -44,5 +44,12 @@ sub assign_fcfs_job {
 	map {$_->assign_job($job)} @selected_processors;
 }
 
+sub print_schedule {
+	my $self = shift;
+
+	print "Printing schedule\n";
+	map {$_->print_jobs()} @{$self->{processors}};
+}
+
 1;
 

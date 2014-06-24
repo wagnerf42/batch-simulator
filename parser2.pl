@@ -14,6 +14,7 @@ $trace->read();
 
 my $schedule = new Schedule($trace, 8);
 $schedule->fcfs();
+$schedule->print_schedule();
 
 print "\n";
 exit;

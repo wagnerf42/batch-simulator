@@ -38,30 +38,30 @@ sub stringification {
 	my $self = shift;
 
 	return join(' ', 
-		$self->{job_number}, 
-		$self->{submit_time}, 
-		$self->{wait_time}, 
-		$self->{run_time}, 
-		$self->{allocated_cpus}, 
-		$self->{avg_cpu_time}, 
-		$self->{used_mem}, 
-		$self->{requested_cpus}, 
-		$self->{requested_time}, 
-		$self->{requested_mem}, 
-		$self->{status}, 
-		$self->{uid}, 
-		$self->{gid}, 
-		$self->{exec_number}, 
-		$self->{queue_number}, 
-		$self->{partition_number}, 
-		$self->{prec_job_number}, 
+		$self->{job_number},
+		$self->{submit_time},
+		$self->{wait_time},
+		$self->{run_time},
+		$self->{allocated_cpus},
+		$self->{avg_cpu_time},
+		$self->{used_mem},
+		$self->{requested_cpus},
+		$self->{requested_time},
+		$self->{requested_mem},
+		$self->{status},
+		$self->{uid},
+		$self->{gid},
+		$self->{exec_number},
+		$self->{queue_number},
+		$self->{partition_number},
+		$self->{prec_job_number},
 		$self->{think_time_prec_job});
 }
 
 sub print_time_ratio {
 	my $self = shift;
 
-	if ($self->{run_time} <= $self->{requested_time}) {	
+	if ($self->{run_time} <= $self->{requested_time}) {
 		print $self->{run_time}/$self->{requested_time} . "\n";
 	}
 }
