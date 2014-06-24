@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-package Schedule_FCFS;
+package Schedule;
 use strict;
 use warnings;
 
@@ -23,6 +23,7 @@ sub new {
 
 sub fcfs {
     my $self = shift;
+    
     for my $job (@{$self->{trace}}) {
         $self->assign_fcfs_job($job);
     }
