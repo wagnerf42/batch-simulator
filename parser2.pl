@@ -11,9 +11,9 @@ my $trace = new Trace($ARGV[0]);
 $trace->read();
 
 my $schedule = new Schedule($trace, 8);
-$schedule->fcfs();
+$schedule->fcfs_contiguous();
 #$schedule->print_schedule();
-$schedule->print_svg("parser2.svg", "parser2.pdf");
+$schedule->print_svg2("parser2.svg", "parser2.pdf");
 
 exit;
 

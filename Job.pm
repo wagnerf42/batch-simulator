@@ -27,7 +27,7 @@ sub new {
 		queue_number => shift,
 		partition_number => shift,
 		prec_job_number => shift,
-		think_time_prec_job => shift
+		think_time_prec_job => shift,
 	};
 
 	bless $self, $class;
@@ -55,7 +55,8 @@ sub stringification {
 		$self->{queue_number},
 		$self->{partition_number},
 		$self->{prec_job_number},
-		$self->{think_time_prec_job});
+		$self->{think_time_prec_job},
+		$self->{first_processor});
 }
 
 sub print_time_ratio {
