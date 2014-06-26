@@ -20,6 +20,11 @@ sub new {
 	return $self;
 }
 
+sub get_id {
+	my $self = shift;
+	return $self->{id};
+}
+
 sub get_cmax {
 	my $self = shift;
 

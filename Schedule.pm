@@ -110,24 +110,7 @@ sub print_svg {
 
 	for my $processor (@{$self->{processors}}) {
 		for my $job (@{$processor->{jobs}}) {
-			print $filehandler
-					"    <rect x=\"" .
-					$job->{starting_time} * 5 .
-					"\" y=\"" .
-					$processor->{id} * 20 .
-					"\" width=\"" .
-					$job->{run_time} * 5 .
-					"\" height=\"20\" style=\"fill:blue;stroke:pink;stroke-width:5;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
-			
-			print $filehandler
-					"    <text x=\"" .
-					($job->{starting_time} * 5 + 4) .
-					"\" y=\"" .
-					($processor->{id} * 20 + 15) .
-					"\" fill=\"black\">" .
-					$job->{job_number} .
-					"</text>\n";
-			
+			$job->save_svg($filehandler, $processor->get_id());
 		}
 	}
 
@@ -167,12 +150,6 @@ sub print_svg2 {
 				$job->{job_number} .
 				"</text>\n";
 
-	}
-
-	for my $processor (@{$self->{processors}}) {
-		for my $job (@{$processor->{jobs}}) {
-
-		}
 	}
 
 	print $filehandler "</svg>\n";

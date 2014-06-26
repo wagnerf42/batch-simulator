@@ -73,4 +73,27 @@ sub get_requested_cpus {
 	return $self->{requested_cpus};
 }
 
+sub save_svg {
+	my $self = shift;
+	my $fh = shift;
+	my $processor_id = shift;
+	print $fh
+	"\t<rect x=\"" .
+	$self->{starting_time} * 5 .
+	"\" y=\"" .
+	$processor_id * 20 .
+	"\" width=\"" .
+	$self->{run_time} * 5 .
+	"\" height=\"20\" style=\"fill:blue;stroke:pink;stroke-width:5;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
+
+	print $fh
+	"    <text x=\"" .
+	($self->{starting_time} * 5 + 4) .
+	"\" y=\"" .
+	($processor_id * 20 + 15) .
+	"\" fill=\"black\">" .
+	$self->{job_number} .
+	"</text>\n";
+}
+
 1;
