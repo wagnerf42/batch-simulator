@@ -35,6 +35,7 @@ sub assign_job {
 	my $job = shift;
 	my $starting_time = shift;
 
+	$job->{starting_time} = $starting_time;
 	push $self->{jobs}, $job;
 
 	$self->{cmax} = $starting_time + $job->{run_time};
