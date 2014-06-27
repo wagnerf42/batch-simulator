@@ -20,12 +20,17 @@ sub new {
 	return $self;
 }
 
-sub get_id {
+sub id {
 	my $self = shift;
+
+	if (@_) {
+		$self->{id} = shift;
+	}
+
 	return $self->{id};
 }
 
-sub get_cmax {
+sub cmax {
 	my $self = shift;
 
 	if (@_) {
@@ -40,10 +45,10 @@ sub assign_job {
 	my $job = shift;
 	my $starting_time = shift;
 
-	$job->{starting_time} = $starting_time;
+	$job->starting_time($starting_time);
 	push $self->{jobs}, $job;
 
-	$self->{cmax} = $starting_time + $job->{run_time};
+	$self->{cmax} = $starting_time + $job->run_time;
 }
 
 sub print_jobs {
@@ -51,6 +56,16 @@ sub print_jobs {
 
 	print "Jobs for processor with id $self->{id} and cmax $self->{cmax}:\n";
 	map {print $_->stringification() . "\n"} @{$self->{jobs}};
+}
+
+sub jobs {
+	my $self = shift;
+
+	if (@_) {
+		$self->{jobs} = shift;
+	}
+
+	return $self->{jobs};
 }
 
 1;

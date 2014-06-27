@@ -56,11 +56,14 @@ sub print_jobs_time_ratio {
 	map {$_->print_time_ratio()} @{$self->{jobs}};
 }
 
-sub job {
+sub jobs {
 	my $self = shift;
-	my $job_number = shift;
 
-	return $self->{jobs}[$job_number];
+	if (@_) {
+		$self->{jobs} = shift;
+	}
+
+	return $self->{jobs};
 }
 
 1;

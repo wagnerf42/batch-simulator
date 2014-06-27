@@ -18,7 +18,7 @@ sub new {
 		processors => []
 	};
 
-	for my $id (0..($self->{num_processors}-1)) {
+	for my $id (0..($self->{num_processors} - 1)) {
 		my $processor = new Processor($id);
 		push $self->{processors}, $processor;
 	}
@@ -30,7 +30,7 @@ sub new {
 sub fcfs {
 	my $self = shift;
 
-	for my $job (@{$self->{trace}->{jobs}}) {
+	for my $job (@{$self->{trace}->jobs}) {
 		$self->assign_fcfs_job($job);
 	}
 }
@@ -38,18 +38,18 @@ sub fcfs {
 sub fcfs_contiguous {
 	my $self = shift;
 
-	map {$self->assign_fcfs_contiguous_job($_)} @{$self->{trace}->{jobs}};
+	map {$self->assign_fcfs_contiguous_job($_)} @{$self->{trace}->jobs};
 }
 
 sub assign_fcfs_job {
 	my $self = shift;
 	my $job = shift;
-	my $requested_cpus = $job->get_requested_cpus();
+	my $requested_cpus = $job->requested_cpus;
 
-	my @sorted_processors = sort {$a->get_cmax() <=> $b->get_cmax()} @{$self->{processors}};
+	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
 	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
 
-	my $starting_time = $selected_processors[$#selected_processors]->get_cmax();
+	my $starting_time = $selected_processors[$#selected_processors]->cmax;
 	map {$_->assign_job($job, $starting_time)} @selected_processors;
 }
 
@@ -60,12 +60,12 @@ sub verify_available_block {
 
 	my $block = {
 		first_processor_id => $first_processor_id,
-		starting_time => $self->{processors}[$first_processor_id]->{cmax},
+		starting_time => $self->{processors}[$first_processor_id]->cmax,
 		size => $requested_cpus
 	};
 
 	for my $processor_id ($first_processor_id..($first_processor_id + $requested_cpus - 1)) {
-		if ($self->{processors}[$processor_id]->{cmax} > $block->{starting_time}) {
+		if ($self->{processors}[$processor_id]->cmax > $block->{starting_time}) {
 			return;
 		}
 	}
@@ -76,7 +76,7 @@ sub verify_available_block {
 sub assign_fcfs_contiguous_job {
 	my $self = shift;
 	my $job = shift;
-	my $requested_cpus = $job->get_requested_cpus();
+	my $requested_cpus = $job->requested_cpus;
 	my @available_blocks;
 
 	for my $processor_id (0..($self->{num_processors} - $requested_cpus)) {
@@ -104,13 +104,12 @@ sub print_svg {
 
 	open(my $filehandler, '>', $svg_filename);
 
-	my @sorted_processors = sort {$a->get_cmax() <=> $b->get_cmax()} @{$self->{processors}};
-
-	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->get_cmax() * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
+	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
+	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->cmax * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
 
 	for my $processor (@{$self->{processors}}) {
-		for my $job (@{$processor->{jobs}}) {
-			$job->save_svg($filehandler, $processor->get_id());
+		for my $job (@{$processor->jobs}) {
+			$job->save_svg($filehandler, $processor->id);
 		}
 	}
 
@@ -128,8 +127,8 @@ sub print_svg2 {
 
 	open(my $filehandler, '>', $svg_filename);
 
-	my @sorted_processors = sort {$a->get_cmax() <=> $b->get_cmax()} @{$self->{processors}};
-	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->get_cmax() * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
+	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
+	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->cmax * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
 
 	for my $job (@{$self->{trace}->{jobs}}) {
 		print $filehandler
