@@ -66,7 +66,7 @@ sub verify_available_block {
 
 	for my $processor_id ($first_processor_id..($first_processor_id + $requested_cpus - 1)) {
 		if ($self->{processors}[$processor_id]->cmax > $block->{starting_time}) {
-			return;
+			$block->{starting_time} = $self->{processors}[$processor_id]->cmax;
 		}
 	}
 
@@ -77,6 +77,7 @@ sub assign_fcfs_contiguous_job {
 	my $self = shift;
 	my $job = shift;
 	my $requested_cpus = $job->requested_cpus;
+	print "Assigning job $job->{job_number}, $requested_cpus requested cpus\n";
 	my @available_blocks;
 
 	for my $processor_id (0..($self->{num_processors} - $requested_cpus)) {
