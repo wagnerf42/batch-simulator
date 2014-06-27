@@ -40,8 +40,6 @@ sub run {
 	my $self = shift;
 
 	map {$self->assign_job($_)} @{$self->{trace}->jobs};
-
-	print Dumper($self->{profile});
 }
 
 sub assign_job {
@@ -51,22 +49,40 @@ sub assign_job {
 	my $profile_item_start = -1;
 	my $profile_item_end = -1;
 
+	# This part is the basis for the conservative backfilling
+	# The idea in the first step is just to check when there is enough space to
+	# execute the job. The actual end of the execution time will be found in the
+	# next step.
 	for my $i (0..(@{$self->{profile}} - 1)) {
 		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
 			$profile_item_start = $i;
-			last;
+
+			for my $j (($i + 1)..(@{$self->{profile}} - 1)) {
+				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time) && ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
+					$profile_item_start = -1;
+					last;
+				}
+
+				elsif ($self->{profile}[$j]->{starting_time} == $self->{profile}[$i]->{starting_time} + $job->run_time) {
+					$profile_item_end = $j;
+					last;
+				}
+
+				elsif ($self->{profile}[$j]->{starting_time} > $self->{profile}[$i]->{starting_time} + $job->run_time) {
+					last;
+				}
+			}
+
+			# Found a good starting time candidate
+			if ($profile_item_start != -1) {
+				last;
+			}
+
 		}
 	}
 
-	print "Found profile item ($self->{profile}[$profile_item_start]->{starting_time}, $self->{profile}[$profile_item_start]->{available_cpus})\n";
-
-
-	#Look if there is already an entry for the end of the job's execution time
-	for my $i (($profile_item_start + 1)..(@{$self->{profile}} - 1)) {
-		if ($self->{profile}[$i]->{starting_time} == $self->{profile}[$profile_item_start]->{starting_time} + $job->run_time) {
-			$profile_item_end = $i;
-			last;
-		}
+	if ($profile_item_start == -1) {
+		die "This was not supposed to happen";
 	}
 
 	if ($profile_item_end == -1) {
@@ -83,8 +99,7 @@ sub assign_job {
 		$self->{profile}[$i]->{available_cpus} -= $job->requested_cpus;
 	}
 
-	print "---------------------------\n";
-	print Dumper($self->{profile});
+	print "Assigned job $job->{job_number} on time $self->{profile}[$profile_item_start]->{starting_time}\n";
 }
 
 1;
