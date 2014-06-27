@@ -81,6 +81,7 @@ sub assign_job {
 		}
 	}
 
+	# I think it's ok and this will never happen but it's better to put it nonetheless
 	if ($profile_item_start == -1) {
 		die "This was not supposed to happen";
 	}
@@ -98,6 +99,9 @@ sub assign_job {
 	for my $i ($profile_item_start..($profile_item_end - 1)) {
 		$self->{profile}[$i]->{available_cpus} -= $job->requested_cpus;
 	}
+
+	$job->starting_time($self->{profile}[$profile_item_start]->{starting_time});
+	push $self->{queued_jobs}, $job;
 
 	print "Assigned job $job->{job_number} on time $self->{profile}[$profile_item_start]->{starting_time}\n";
 }
