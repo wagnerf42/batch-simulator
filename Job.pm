@@ -37,7 +37,7 @@ sub new {
 sub stringification {
 	my $self = shift;
 
-	return join(' ', 
+	return join(' ',
 		$self->{job_number},
 		$self->{submit_time},
 		$self->{wait_time},
@@ -56,7 +56,8 @@ sub stringification {
 		$self->{partition_number},
 		$self->{prec_job_number},
 		$self->{think_time_prec_job},
-		$self->{first_processor});
+		$self->{first_processor}
+	);
 }
 
 sub print_time_ratio {

@@ -15,7 +15,7 @@ sub new {
 		jobs => [],
 		cmax => 0
 	};
-	
+
 	bless $self, $class;
 	return $self;
 }

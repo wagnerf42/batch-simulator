@@ -17,21 +17,21 @@ sub new {
 		status => [],
 		partition_count => 0
 	};
-	
+
 	bless $self, $class;
 	return $self;
 }
 
 sub read {
 	my $self = shift;
-	
+
 	open (FILE, $self->{file});
 
 	while (my $line = <FILE>) {
 		my @fields = split(' ', $line);
 
 		next unless defined $fields[0];
-	
+
 		# Status line
 		if ($fields[0] eq ';') { 
 			push $self->{status}, [@fields];
@@ -42,7 +42,6 @@ sub read {
 			my $job = new Job(@fields);
 			push $self->{jobs}, $job;
 		}
-
 	}
 }
 
