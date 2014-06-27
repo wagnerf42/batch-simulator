@@ -40,25 +40,52 @@ sub run {
 	my $self = shift;
 
 	map {$self->assign_job($_)} @{$self->{trace}->jobs};
+
+	print Dumper($self->{profile});
 }
 
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
 
-	my $starting_time = -1;
+	my $profile_item_start = -1;
+	my $profile_item_end = -1;
 
-	for my $profile_item (@{$self->{profile}}) {
-		if ($profile_item->{available_cpus} >= $job->requested_cpus) {
-			$starting_time = $profile_item->{starting_time};
+	for my $i (0..(@{$self->{profile}} - 1)) {
+		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
+			$profile_item_start = $i;
 			last;
 		}
 	}
 
+	print "Found profile item ($self->{profile}[$profile_item_start]->{starting_time}, $self->{profile}[$profile_item_start]->{available_cpus})\n";
 
+
+	#Look if there is already an entry for the end of the job's execution time
+	for my $i (($profile_item_start + 1)..(@{$self->{profile}} - 1)) {
+		if ($self->{profile}[$i]->{starting_time} == $self->{profile}[$profile_item_start]->{starting_time} + $job->run_time) {
+			$profile_item_end = $i;
+			last;
+		}
+	}
+
+	if ($profile_item_end == -1) {
+		my $profile_item = {
+			available_cpus => $self->{num_processors},
+			starting_time => $self->{profile}[$profile_item_start]->{starting_time} + $job->run_time
+		};
+
+		push $self->{profile}, $profile_item;
+		$profile_item_end = @{$self->{profile}} - 1;
+	}
+
+	for my $i ($profile_item_start..($profile_item_end - 1)) {
+		$self->{profile}[$i]->{available_cpus} -= $job->requested_cpus;
+	}
+
+	print "---------------------------\n";
+	print Dumper($self->{profile});
 }
-
-
 
 1;
 
