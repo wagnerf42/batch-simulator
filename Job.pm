@@ -98,6 +98,16 @@ sub starting_time {
 	return $self->{starting_time};
 }
 
+sub first_processor {
+	my $self = shift;
+
+	if (@_) {
+		$self->{first_processor} = shift;
+	}
+
+	return $self->{first_processor};
+}
+
 sub save_svg {
 	my $self = shift;
 	my $fh = shift;

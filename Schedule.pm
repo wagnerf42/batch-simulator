@@ -1,10 +1,8 @@
 #!/usr/bin/perl
 
-package FCFS;
+package Schedule;
 use strict;
 use warnings;
-
-use Data::Dumper qw(Dumper);
 
 use Trace;
 use Job;
@@ -31,20 +29,8 @@ sub run {
 	my $self = shift;
 
 	for my $job (@{$self->{trace}->jobs}) {
-		$self->assign_fcfs_job($job);
+		$self->assign_job($job);
 	}
-}
-
-sub assign_fcfs_job {
-	my $self = shift;
-	my $job = shift;
-	my $requested_cpus = $job->requested_cpus;
-
-	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
-	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
-
-	my $starting_time = $selected_processors[$#selected_processors]->cmax;
-	map {$_->assign_job($job, $starting_time)} @selected_processors;
 }
 
 sub print {
