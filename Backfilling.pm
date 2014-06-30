@@ -39,9 +39,9 @@ sub new {
 sub run {
 	my $self = shift;
 
-	map {$self->assign_job_profile($_)} @{$self->{trace}->jobs};
+	$self->assign_job_profile($_) for @{$self->{trace}->jobs};
 	@{$self->{queued_jobs}} = sort {$a->starting_time <=> $b->starting_time} @{$self->{queued_jobs}};
-	map {$self->assign_job($_)} @{$self->{queued_jobs}};
+	$self->assign_job($_) for @{$self->{queued_jobs}};
 }
 
 sub assign_job {
@@ -69,11 +69,11 @@ sub assign_job_profile {
 	# The idea in the first step is just to check when there is enough space to
 	# execute the job. The actual end of the execution time will be found in the
 	# next step.
-	for my $i (0..(@{$self->{profile}} - 1)) {
+	for my $i (0..$#{$self->{profile}}) {
 		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
 			$profile->{start} = $i;
 
-			for my $j (($i + 1)..(@{$self->{profile}} - 1)) {
+			for my $j (($i + 1)..$#{$self->{profile}}) {
 				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time) && ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
 					$profile->{start} = -1;
 					last;
@@ -95,7 +95,6 @@ sub assign_job_profile {
 			if ($profile->{start} != -1) {
 				last;
 			}
-
 		}
 	}
 
