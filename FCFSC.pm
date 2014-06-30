@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-package Schedule;
+package FCFSC;
 use strict;
 use warnings;
 
@@ -27,30 +27,10 @@ sub new {
 	return $self;
 }
 
-sub fcfs {
-	my $self = shift;
-
-	for my $job (@{$self->{trace}->jobs}) {
-		$self->assign_fcfs_job($job);
-	}
-}
-
-sub fcfs_contiguous {
+sub run {
 	my $self = shift;
 
 	map {$self->assign_fcfs_contiguous_job($_)} @{$self->{trace}->jobs};
-}
-
-sub assign_fcfs_job {
-	my $self = shift;
-	my $job = shift;
-	my $requested_cpus = $job->requested_cpus;
-
-	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
-	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
-
-	my $starting_time = $selected_processors[$#selected_processors]->cmax;
-	map {$_->assign_job($job, $starting_time)} @selected_processors;
 }
 
 sub verify_available_block {
@@ -77,7 +57,6 @@ sub assign_fcfs_contiguous_job {
 	my $self = shift;
 	my $job = shift;
 	my $requested_cpus = $job->requested_cpus;
-	print "Assigning job $job->{job_number}, $requested_cpus requested cpus\n";
 	my @available_blocks;
 
 	for my $processor_id (0..($self->{num_processors} - $requested_cpus)) {
@@ -91,7 +70,7 @@ sub assign_fcfs_contiguous_job {
 	$job->{first_processor} = $sorted_blocks[0]->{first_processor_id};
 }
 
-sub print_schedule {
+sub print {
 	my $self = shift;
 
 	print "Printing schedule\n";
@@ -112,43 +91,6 @@ sub print_svg {
 		for my $job (@{$processor->jobs}) {
 			$job->save_svg($filehandler, $processor->id);
 		}
-	}
-
-	print $filehandler "</svg>\n";
-	close $filehandler;
-
-	# Convert the SVG file to PDF so that both are available
-	`inkscape $svg_filename --export-pdf=$pdf_filename`
-}
-
-sub print_svg2 {
-	my $self = shift;
-	my $svg_filename = shift;
-	my $pdf_filename = shift;
-
-	open(my $filehandler, '>', $svg_filename);
-
-	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
-	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->cmax * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
-
-	for my $job (@{$self->{trace}->{jobs}}) {
-		print $filehandler
-				"    <rect x=\"" .
-				$job->{starting_time} * 5 .
-				"\" y=\"" .
-				$job->{first_processor} * 20 .
-				"\" width=\"" .
-				$job->{run_time} * 5 .
-				"\" height=\"" . $job->{requested_cpus} * 20 . "\" style=\"fill:blue;stroke:pink;stroke-width:5;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
-
-		print $filehandler
-				"    <text x=\"" .
-				($job->{starting_time} * 5 + 4) .
-				"\" y=\"" .
-				($job->{first_processor} * 20 + 15) .
-				"\" fill=\"black\">" .
-				$job->{job_number} .
-				"</text>\n";
 	}
 
 	print $filehandler "</svg>\n";

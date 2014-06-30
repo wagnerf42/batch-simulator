@@ -51,9 +51,7 @@ sub assign_job {
 
 	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
 	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
-
-	my $starting_time = $selected_processors[$#selected_processors]->cmax;
-	map {$_->assign_job($job, $starting_time)} @selected_processors;
+	map {$_->assign_job($job, $job->starting_time)} @selected_processors;
 }
 
 
@@ -131,8 +129,6 @@ sub assign_job_profile {
 
 	$job->starting_time($self->{profile}[$profile->{start}]->{starting_time});
 	push $self->{queued_jobs}, $job;
-
-	print "Assigned job $job->{job_number} on time $self->{profile}[$profile->{start}]->{starting_time}\n";
 }
 
 sub print_svg {

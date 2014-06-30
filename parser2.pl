@@ -5,7 +5,8 @@ use warnings;
 use Data::Dumper qw(Dumper);
 
 use Trace;
-use Schedule;
+use FCFS;
+use FCFSC;
 use Backfilling;
 
 print "Executing parser version 2\n";
@@ -17,9 +18,9 @@ my $schedule = new Backfilling($trace, 4);
 $schedule->run();
 $schedule->print_svg("parser2.svg", "parser2.pdf");
 
-#my $schedule = new Schedule($trace, 3);
-#$schedule->fcfs_contiguous();
-#$schedule->print_schedule();
+#my $schedule = new FCFS($trace, 3);
+#$schedule->run();
+#$schedule->print();
 #$schedule->print_svg("parser2.svg", "parser2.pdf");
 
 exit;
