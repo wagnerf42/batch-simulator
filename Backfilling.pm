@@ -39,10 +39,25 @@ sub new {
 sub run {
 	my $self = shift;
 
-	map {$self->assign_job($_)} @{$self->{trace}->jobs};
+	map {$self->assign_job_profile($_)} @{$self->{trace}->jobs};
+	@{$self->{queued_jobs}} = sort {$a->starting_time <=> $b->starting_time} @{$self->{queued_jobs}};
+	map {$self->assign_job($_)} @{$self->{queued_jobs}};
 }
 
 sub assign_job {
+	my $self = shift;
+	my $job = shift;
+	my $requested_cpus = $job->requested_cpus;
+
+	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
+	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
+
+	my $starting_time = $selected_processors[$#selected_processors]->cmax;
+	map {$_->assign_job($job, $starting_time)} @selected_processors;
+}
+
+
+sub assign_job_profile {
 	my $self = shift;
 	my $job = shift;
 
@@ -118,6 +133,29 @@ sub assign_job {
 	push $self->{queued_jobs}, $job;
 
 	print "Assigned job $job->{job_number} on time $self->{profile}[$profile->{start}]->{starting_time}\n";
+}
+
+sub print_svg {
+	my $self = shift;
+	my $svg_filename = shift;
+	my $pdf_filename = shift;
+
+	open(my $filehandler, '>', $svg_filename);
+
+	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
+	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->cmax * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
+
+	for my $processor (@{$self->{processors}}) {
+		for my $job (@{$processor->jobs}) {
+			$job->save_svg($filehandler, $processor->id);
+		}
+	}
+
+	print $filehandler "</svg>\n";
+	close $filehandler;
+
+	# Convert the SVG file to PDF so that both are available
+	`inkscape $svg_filename --export-pdf=$pdf_filename`
 }
 
 1;
