@@ -43,6 +43,8 @@ sub assign_job {
 		push @available_blocks, $block if defined $block;
 	}
 
+	print Dumper(@available_blocks);
+
 	my @sorted_blocks = sort {$a->{starting_time} <=> $b->{starting_time}} @available_blocks;
 	my @selected_processors = @{$self->{processors}}[$sorted_blocks[0]->{first_processor_id}..($sorted_blocks[0]->{first_processor_id} + $sorted_blocks[0]->{size} - 1)];
 	map {$_->assign_job($job, $sorted_blocks[0]->{starting_time})} @selected_processors;

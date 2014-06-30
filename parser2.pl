@@ -18,7 +18,7 @@ $trace->read();
 #$schedule->run();
 #$schedule->print_svg("parser2.svg", "parser2.pdf");
 
-my $schedule = new FCFS($trace, 3);
+my $schedule = new FCFSC($trace, 8);
 $schedule->run();
 $schedule->print();
 $schedule->print_svg("parser2.svg", "parser2.pdf");
