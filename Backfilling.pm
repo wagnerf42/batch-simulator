@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 package Backfilling;
+use parent 'Schedule';
 use strict;
 use warnings;
 
@@ -36,28 +37,11 @@ sub new {
 	return $self;
 }
 
-sub run {
-	my $self = shift;
-
-	$self->assign_job_profile($_) for @{$self->{trace}->jobs};
-	@{$self->{queued_jobs}} = sort {$a->starting_time <=> $b->starting_time} @{$self->{queued_jobs}};
-	$self->assign_job($_) for @{$self->{queued_jobs}};
-}
-
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
 	my $requested_cpus = $job->requested_cpus;
 
-	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
-	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
-	map {$_->assign_job($job, $job->starting_time)} @selected_processors;
-}
-
-
-sub assign_job_profile {
-	my $self = shift;
-	my $job = shift;
 
 	my $profile = {
 		start => -1,
@@ -74,7 +58,8 @@ sub assign_job_profile {
 			$profile->{start} = $i;
 
 			for my $j (($i + 1)..$#{$self->{profile}}) {
-				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time) && ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
+				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time)
+						&& ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
 					$profile->{start} = -1;
 					last;
 				}
@@ -128,7 +113,12 @@ sub assign_job_profile {
 
 	$job->starting_time($self->{profile}[$profile->{start}]->{starting_time});
 	push $self->{queued_jobs}, $job;
+
+	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
+	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
+	map {$_->assign_job($job, $job->starting_time)} @selected_processors;
 }
+
 
 sub print_svg {
 	my $self = shift;
