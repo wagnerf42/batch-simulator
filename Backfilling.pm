@@ -46,35 +46,40 @@ sub assign_job {
 	my $self = shift;
 	my $job = shift;
 
-	my $profile_item_start = -1;
-	my $profile_item_end = -1;
-
+	my $profile = {
+		start => -1,
+		end => -1,
+		new => 0
+	};
+	
 	# This part is the basis for the conservative backfilling
 	# The idea in the first step is just to check when there is enough space to
 	# execute the job. The actual end of the execution time will be found in the
 	# next step.
 	for my $i (0..(@{$self->{profile}} - 1)) {
 		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
-			$profile_item_start = $i;
+			$profile->{start} = $i;
 
 			for my $j (($i + 1)..(@{$self->{profile}} - 1)) {
 				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time) && ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
-					$profile_item_start = -1;
+					$profile->{start} = -1;
 					last;
 				}
 
 				elsif ($self->{profile}[$j]->{starting_time} == $self->{profile}[$i]->{starting_time} + $job->run_time) {
-					$profile_item_end = $j;
+					$profile->{end} = $j;
 					last;
 				}
 
 				elsif ($self->{profile}[$j]->{starting_time} > $self->{profile}[$i]->{starting_time} + $job->run_time) {
+					$profile->{end} = $j;
+					$profile->{new} = 1;
 					last;
 				}
 			}
 
 			# Found a good starting time candidate
-			if ($profile_item_start != -1) {
+			if ($profile->{start} != -1) {
 				last;
 			}
 
@@ -82,28 +87,37 @@ sub assign_job {
 	}
 
 	# I think it's ok and this will never happen but it's better to put it nonetheless
-	if ($profile_item_start == -1) {
+	if ($profile->{start} == -1) {
 		die "This was not supposed to happen";
 	}
 
-	if ($profile_item_end == -1) {
+	if ($profile->{end} == -1) {
 		my $profile_item = {
 			available_cpus => $self->{num_processors},
-			starting_time => $self->{profile}[$profile_item_start]->{starting_time} + $job->run_time
+			starting_time => $self->{profile}[$profile->{start}]->{starting_time} + $job->run_time
 		};
 
 		push $self->{profile}, $profile_item;
-		$profile_item_end = @{$self->{profile}} - 1;
+		$profile->{end} = @{$self->{profile}} - 1;
 	}
 
-	for my $i ($profile_item_start..($profile_item_end - 1)) {
+	elsif ($profile->{new} == 1) {
+		my $profile_item = {
+			available_cpus => $self->{profile}[$profile->{end} - 1]->{available_cpus},
+			starting_time => $self->{profile}[$profile->{start}]->{starting_time} + $job->run_time
+		};
+
+		splice($self->{profile}, $profile->{end}, 0, $profile_item);
+	}
+
+	for my $i ($profile->{start}..($profile->{end} - 1)) {
 		$self->{profile}[$i]->{available_cpus} -= $job->requested_cpus;
 	}
 
-	$job->starting_time($self->{profile}[$profile_item_start]->{starting_time});
+	$job->starting_time($self->{profile}[$profile->{start}]->{starting_time});
 	push $self->{queued_jobs}, $job;
 
-	print "Assigned job $job->{job_number} on time $self->{profile}[$profile_item_start]->{starting_time}\n";
+	print "Assigned job $job->{job_number} on time $self->{profile}[$profile->{start}]->{starting_time}\n";
 }
 
 1;
