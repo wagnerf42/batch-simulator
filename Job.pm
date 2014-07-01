@@ -104,11 +104,11 @@ sub svg {
 		my $h = $h_ratio;
 		my $sw = min($w_ratio, $h_ratio) / 10;
 		my $color = $svg_colors[$self->{job_number} % @svg_colors];
-		print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" text-anchor=\"middle\" alignment-baseline=\"middle\" style=\"fill:$color;stroke:black;stroke-width:$sw\" />\n";
+		print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:$color;stroke:black;stroke-width:$sw\"/>\n";
 		$x = ($self->{starting_time}+$self->{run_time}/2) * $w_ratio;
 		$y = ($processor_id+0.5) * $h_ratio;
 		my $fs = min($w_ratio, $h_ratio) * 7;
-		print $fh "\t<text x=\"$x\" y=\"$y\" fill=\"white\" font-family=\"Verdana\" font-size=\"$fs\">$self->{job_number}</text>\n";
+		print $fh "\t<text x=\"$x\" y=\"$y\" fill=\"white\" font-family=\"Verdana\" text-anchor=\"middle\" alignment-baseline=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
 	}
 }
 
