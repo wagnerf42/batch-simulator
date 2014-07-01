@@ -1,15 +1,9 @@
-#!/usr/bin/perl
-
 package FCFSC;
 use parent 'Schedule';
 
 use strict;
 use warnings;
 use List::Util qw(max reduce);
-
-use Trace;
-use Job;
-use Processor;
 
 sub compute_block {
 	my $self = shift;
