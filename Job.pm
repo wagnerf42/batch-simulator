@@ -3,8 +3,11 @@
 package Job;
 use strict;
 use warnings;
+use List::Util qw(min);
 use overload
     '""' => \&stringification;
+
+my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen);
 
 sub new {
 	my $class = shift;
@@ -101,11 +104,22 @@ sub starting_time {
 sub svg {
 	my $self = shift;
 	my $fh = shift;
+	my $w_ratio = shift;
+	my $h_ratio = shift;
 
 	for my $processor (@{$self->{assigned_processors}}) {
 		my $processor_id = $processor->id();
-		print $fh "\t<rect x=\"$self->{starting_time}\" y=\"$processor_id\" width=\"$self->{run_time}\" height=\"1\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
-		print $fh "\t<text x=\"".($self->{starting_time}+$self->{run_time}/2)."\" y=\"".($processor_id+1)."\" fill=\"black\" font-family=\"Verdana\" font-size=\"1\">$self->{job_number}</text>\n";
+		my $x = $self->{starting_time} * $w_ratio;
+		my $y = $processor_id * $h_ratio;
+		my $w = $self->{run_time} * $w_ratio;
+		my $h = $h_ratio;
+		my $sw = min($w_ratio, $h_ratio) / 10;
+		my $color = $svg_colors[$self->{job_number} % @svg_colors];
+		print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" text-anchor=\"middle\" alignment-baseline=\"middle\" style=\"fill:$color;stroke:black;stroke-width:$sw\" />\n";
+		$x = ($self->{starting_time}+$self->{run_time}/2) * $w_ratio;
+		$y = ($processor_id+0.5) * $h_ratio;
+		my $fs = min($w_ratio, $h_ratio) * 7;
+		print $fh "\t<text x=\"$x\" y=\"$y\" fill=\"white\" font-family=\"Verdana\" font-size=\"$fs\">$self->{job_number}</text>\n";
 	}
 }
 
