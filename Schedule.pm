@@ -1,12 +1,9 @@
-#!/usr/bin/perl
-
 package Schedule;
 use strict;
 use warnings;
 
-use Trace;
-use Job;
 use Processor;
+use List::Util qw(max);
 
 sub new {
 	my $class = shift;
@@ -35,32 +32,42 @@ sub run {
 
 sub print {
 	my $self = shift;
-
 	print "Printing schedule\n";
-	map {$_->print_jobs()} @{$self->{processors}};
+	$_->print_jobs() for @{$self->{processors}};
 }
 
-sub print_svg {
+sub cmax {
+	my $self = shift;
+	return max map {$_->cmax()} @{$self->{processors}};
+}
+
+sub save_svg {
 	my $self = shift;
 	my $svg_filename = shift;
 	my $pdf_filename = shift;
 
-	open(my $filehandler, '>', $svg_filename);
+	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
 
-	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
-	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->cmax * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
+	my $cmax = $self->cmax();
+	print $filehandle "<svg width=\"800\" height=\"600\">\n";
+	my $w_ratio = 800/$cmax;
+	my $h_ratio = 600/$self->{num_processors};
 
-	for my $processor (@{$self->{processors}}) {
-		for my $job (@{$processor->jobs}) {
-			$job->save_svg($filehandler, $processor->id);
-		}
-	}
+	$_->svg($filehandle, $w_ratio, $h_ratio) for (@{$self->{trace}->jobs});
 
-	print $filehandler "</svg>\n";
-	close $filehandler;
+	print $filehandle "</svg>\n";
+	close $filehandle;
+}
 
-	# Convert the SVG file to PDF so that both are available
-	`inkscape $svg_filename --export-pdf=$pdf_filename`
+my $file_count = 0;
+sub tycat {
+	my $self = shift;
+	my $user = $ENV{"USER"};
+	my $dir = "/tmp/$user";
+	mkdir $dir unless -f $dir;
+	$self->save_svg("$dir/$file_count.svg");
+	$file_count++;
+	`tycat $dir/$file_count.svg`;
 }
 
 1;

@@ -3,8 +3,11 @@
 package Job;
 use strict;
 use warnings;
+use List::Util qw(min);
 use overload
     '""' => \&stringification;
+
+my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen);
 
 sub new {
 	my $class = shift;
@@ -60,14 +63,6 @@ sub stringification {
 	);
 }
 
-sub print_time_ratio {
-	my $self = shift;
-
-	if ($self->{run_time} <= $self->{requested_time}) {
-		print $self->{run_time}/$self->{requested_time} . "\n";
-	}
-}
-
 sub requested_cpus {
 	my $self = shift;
 
@@ -88,36 +83,40 @@ sub run_time {
 	return $self->{run_time};
 }
 
+#do not modify through here
+#use 'assign_to'
 sub starting_time {
 	my $self = shift;
-
-	if (@_) {
-		$self->{starting_time} = shift;
-	}
-
 	return $self->{starting_time};
 }
 
-sub first_processor {
-	my $self = shift;
-
-	if (@_) {
-		$self->{first_processor} = shift;
-	}
-
-	return $self->{first_processor};
-}
-
-sub save_svg {
+sub svg {
 	my $self = shift;
 	my $fh = shift;
-	my $processor_id = shift;
+	my $w_ratio = shift;
+	my $h_ratio = shift;
 
-	my $default_time_ratio = 5;
-	my $default_processor_ratio = 20;
+	for my $processor (@{$self->{assigned_processors}}) {
+		my $processor_id = $processor->id();
+		my $x = $self->{starting_time} * $w_ratio;
+		my $y = $processor_id * $h_ratio;
+		my $w = $self->{run_time} * $w_ratio;
+		my $h = $h_ratio;
+		my $sw = min($w_ratio, $h_ratio) / 10;
+		my $color = $svg_colors[$self->{job_number} % @svg_colors];
+		print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" text-anchor=\"middle\" alignment-baseline=\"middle\" style=\"fill:$color;stroke:black;stroke-width:$sw\" />\n";
+		$x = ($self->{starting_time}+$self->{run_time}/2) * $w_ratio;
+		$y = ($processor_id+0.5) * $h_ratio;
+		my $fs = min($w_ratio, $h_ratio) * 7;
+		print $fh "\t<text x=\"$x\" y=\"$y\" fill=\"white\" font-family=\"Verdana\" font-size=\"$fs\">$self->{job_number}</text>\n";
+	}
+}
 
-	print $fh "\t<rect x=\"" . $self->{starting_time} * $default_time_ratio . "\" y=\"" . $processor_id * $default_processor_ratio . "\" width=\"" . $self->{run_time} * $default_time_ratio . "\" height=\"20\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
-	print $fh "\t<text x=\"" . ($self->{starting_time} * $default_time_ratio + 4) . "\" y=\"" . ($processor_id * $default_processor_ratio + 15) . "\" fill=\"black\">" . $self->{job_number} . "</text>\n";
+sub assign_to {
+	my $self = shift;
+	$self->{starting_time} = shift;
+	$self->{assigned_processors} = shift;
+	$_->assign_job($self) for @{$self->{assigned_processors}};
 }
 
 1;

@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 package Backfilling;
 use parent 'Schedule';
 use strict;
