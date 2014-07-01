@@ -1,11 +1,7 @@
-#!/usr/bin/perl
-
 package Schedule;
 use strict;
 use warnings;
 
-use Trace;
-use Job;
 use Processor;
 use List::Util qw(max);
 
@@ -36,9 +32,8 @@ sub run {
 
 sub print {
 	my $self = shift;
-
 	print "Printing schedule\n";
-	map {$_->print_jobs()} @{$self->{processors}};
+	$_->print_jobs() for @{$self->{processors}};
 }
 
 sub cmax {
@@ -62,6 +57,17 @@ sub save_svg {
 
 	print $filehandle "</svg>\n";
 	close $filehandle;
+}
+
+my $file_count = 0;
+sub tycat {
+	my $self = shift;
+	my $user = $ENV{"USER"};
+	my $dir = "/tmp/$user";
+	mkdir $dir unless -f $dir;
+	$self->save_svg("$dir/$file_count.svg");
+	$file_count++;
+	`tycat $dir/$file_count.svg`;
 }
 
 1;

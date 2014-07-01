@@ -50,10 +50,6 @@ sub print_jobs {
 	print join(',', @{$self->{jobs}})."\n";
 }
 
-	my $self = shift;
-	map {$_->print_time_ratio()} @{$self->{jobs}};
-}
-
 sub jobs {
 	my $self = shift;
 
