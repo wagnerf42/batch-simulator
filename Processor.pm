@@ -1,12 +1,6 @@
-#!/usr/bin/perl
-
 package Processor;
 use strict;
 use warnings;
-
-use Data::Dumper qw(Dumper);
-
-use Job;
 
 sub new {
 	my $class = shift;
@@ -43,19 +37,16 @@ sub cmax {
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
-	my $starting_time = shift;
 
-	$job->starting_time($starting_time);
 	push $self->{jobs}, $job;
-
-	$self->{cmax} = $starting_time + $job->run_time;
+	my $candidate_cmax = $job->starting_time() + $job->run_time;
+	$self->{cmax} = $candidate_cmax if $candidate_cmax > $self->{cmax};
 }
 
 sub print_jobs {
 	my $self = shift;
-
 	print "Jobs for processor with id $self->{id} and cmax $self->{cmax}:\n";
-	map {print $_->stringification() . "\n"} @{$self->{jobs}};
+	print $_->stringification()."\n" for @{$self->{jobs}};
 }
 
 sub jobs {

@@ -63,14 +63,6 @@ sub stringification {
 	);
 }
 
-sub print_time_ratio {
-	my $self = shift;
-
-	if ($self->{run_time} <= $self->{requested_time}) {
-		print $self->{run_time}/$self->{requested_time} . "\n";
-	}
-}
-
 sub requested_cpus {
 	my $self = shift;
 
@@ -91,13 +83,10 @@ sub run_time {
 	return $self->{run_time};
 }
 
+#do not modify through here
+#use 'assign_to'
 sub starting_time {
 	my $self = shift;
-
-	if (@_) {
-		$self->{starting_time} = shift;
-	}
-
 	return $self->{starting_time};
 }
 
@@ -127,7 +116,7 @@ sub assign_to {
 	my $self = shift;
 	$self->{starting_time} = shift;
 	$self->{assigned_processors} = shift;
-	$_->assign_job($self, $self->{starting_time}) for @{$self->{assigned_processors}};
+	$_->assign_job($self) for @{$self->{assigned_processors}};
 }
 
 1;
