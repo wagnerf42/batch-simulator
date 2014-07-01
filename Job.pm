@@ -98,16 +98,6 @@ sub starting_time {
 	return $self->{starting_time};
 }
 
-sub first_processor {
-	my $self = shift;
-
-	if (@_) {
-		$self->{first_processor} = shift;
-	}
-
-	return $self->{first_processor};
-}
-
 sub save_svg {
 	my $self = shift;
 	my $fh = shift;
@@ -118,6 +108,13 @@ sub save_svg {
 
 	print $fh "\t<rect x=\"" . $self->{starting_time} * $default_time_ratio . "\" y=\"" . $processor_id * $default_processor_ratio . "\" width=\"" . $self->{run_time} * $default_time_ratio . "\" height=\"20\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
 	print $fh "\t<text x=\"" . ($self->{starting_time} * $default_time_ratio + 4) . "\" y=\"" . ($processor_id * $default_processor_ratio + 15) . "\" fill=\"black\">" . $self->{job_number} . "</text>\n";
+}
+
+sub assign_to {
+	my $self = shift;
+	$self->{starting_time} = shift;
+	$self->{assigned_processors} = shift;
+	$_->assign_job($self, $self->{starting_time}) for @{$self->{assigned_processors}};
 }
 
 1;
