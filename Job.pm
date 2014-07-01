@@ -98,16 +98,15 @@ sub starting_time {
 	return $self->{starting_time};
 }
 
-sub save_svg {
+sub svg {
 	my $self = shift;
 	my $fh = shift;
-	my $processor_id = shift;
 
-	my $default_time_ratio = 5;
-	my $default_processor_ratio = 20;
-
-	print $fh "\t<rect x=\"" . $self->{starting_time} * $default_time_ratio . "\" y=\"" . $processor_id * $default_processor_ratio . "\" width=\"" . $self->{run_time} * $default_time_ratio . "\" height=\"20\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
-	print $fh "\t<text x=\"" . ($self->{starting_time} * $default_time_ratio + 4) . "\" y=\"" . ($processor_id * $default_processor_ratio + 15) . "\" fill=\"black\">" . $self->{job_number} . "</text>\n";
+	for my $processor (@{$self->{assigned_processors}}) {
+		my $processor_id = $processor->id();
+		print $fh "\t<rect x=\"$self->{starting_time}\" y=\"$processor_id\" width=\"$self->{run_time}\" height=\"1\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
+		print $fh "\t<text x=\"".($self->{starting_time}+$self->{run_time}/2)."\" y=\"".($processor_id+1)."\" fill=\"black\" font-family=\"Verdana\" font-size=\"1\">$self->{job_number}</text>\n";
+	}
 }
 
 sub assign_to {
