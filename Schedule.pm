@@ -66,8 +66,8 @@ sub tycat {
 	my $dir = "/tmp/$user";
 	mkdir $dir unless -f $dir;
 	$self->save_svg("$dir/$file_count.svg");
-	$file_count++;
 	`tycat $dir/$file_count.svg`;
+	$file_count++;
 }
 
 1;
