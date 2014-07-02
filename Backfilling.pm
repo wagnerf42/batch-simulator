@@ -68,6 +68,9 @@ sub assign_job_profile {
 	# The idea in the first step is just to check when there is enough space to
 	# execute the job. The actual end of the execution time will be found in the
 	# next step.
+	#
+	# TODO Work with blocks of processors in the profile, so that things like
+	# contiguity can be used.
 	for my $i (0..$#{$self->{profile}}) {
 		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
 			$profile->{start} = $i;

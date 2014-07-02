@@ -147,4 +147,14 @@ sub first_processor {
 	return $self->{first_processor};
 }
 
+sub expected_termination_time {
+	my $self = shift;
+
+	if (@_) {
+		$self->{expected_termination_time} = shift;
+	}
+
+	return $self->{expected_termination_time};
+}
+
 1;
