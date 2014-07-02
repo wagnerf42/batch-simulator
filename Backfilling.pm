@@ -16,7 +16,8 @@ sub new {
 		num_processors => shift,
 		processors => [],
 		queued_jobs => [],
-		profile => []
+		profile => [],
+		backfilled_jobs => 0
 	};
 
 	for my $id (0..($self->{num_processors} - 1)) {
@@ -35,46 +36,20 @@ sub new {
 	return $self;
 }
 
-sub run {
-	my $self = shift;
-
-	$self->assign_job_profile($_) for @{$self->{trace}->jobs};
-	@{$self->{queued_jobs}} = sort {$a->starting_time <=> $b->starting_time} @{$self->{queued_jobs}};
-	$self->assign_job($_) for @{$self->{queued_jobs}};
-}
-
-sub assign_job {
+sub check_availability {
 	my $self = shift;
 	my $job = shift;
-	my $requested_cpus = $job->requested_cpus;
-
-	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
-	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
-	$_->assign_job($job, $job->starting_time) for @selected_processors;
-}
-
-
-sub assign_job_profile {
-	my $self = shift;
-	my $job = shift;
-
 	my $profile = {
 		start => -1,
 		end => -1,
 		new => 0
 	};
-	
-	# This part is the basis for the conservative backfilling
-	# The idea in the first step is just to check when there is enough space to
-	# execute the job. The actual end of the execution time will be found in the
-	# next step.
-	#
-	# TODO Work with blocks of processors in the profile, so that things like
-	# contiguity can be used.
+
 	for my $i (0..$#{$self->{profile}}) {
 		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
 			$profile->{start} = $i;
 
+			# Check if there is enough space for the job for the whole duration of the job
 			for my $j (($i + 1)..$#{$self->{profile}}) {
 				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time) && ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
 					$profile->{start} = -1;
@@ -83,14 +58,27 @@ sub assign_job_profile {
 
 				elsif ($self->{profile}[$j]->{starting_time} == $self->{profile}[$i]->{starting_time} + $job->run_time) {
 					$profile->{end} = $j;
+					$self->{backfilled_jobs}++;
 					last;
 				}
 
 				elsif ($self->{profile}[$j]->{starting_time} > $self->{profile}[$i]->{starting_time} + $job->run_time) {
 					$profile->{end} = $j;
 					$profile->{new} = 1;
+					$self->{backfilled_jobs}++;
 					last;
 				}
+			}
+
+			# Check if there is a non contiguous block of processors available at this time
+			my @available_processors = grep {$_->available_at($self->{profile}[$profile->{start}]->{starting_time}, $job->run_time)} @{$self->{processors}};
+
+			if (scalar @available_processors >= $job->requested_cpus) {
+				@{$profile->{selected_processors}} = @available_processors[0..($job->requested_cpus - 1)];
+			}
+
+			else {
+				$profile->{start} = -1;
 			}
 
 			# Found a good starting time candidate
@@ -99,12 +87,17 @@ sub assign_job_profile {
 			}
 		}
 	}
+	
+	return $profile;
+}
 
-	# I think it's ok and this will never happen but it's better to put it nonetheless
-	if ($profile->{start} == -1) {
-		die "This was not supposed to happen";
-	}
+sub assign_job {
+	my $self = shift;
+	my $job = shift;
 
+	my $profile = $self->check_availability($job);
+
+	# Create a new profile item at the end
 	if ($profile->{end} == -1) {
 		my $profile_item = {
 			available_cpus => $self->{num_processors},
@@ -115,6 +108,7 @@ sub assign_job_profile {
 		$profile->{end} = @{$self->{profile}} - 1;
 	}
 
+	# Create a new profile in the middle
 	elsif ($profile->{new} == 1) {
 		my $profile_item = {
 			available_cpus => $self->{profile}[$profile->{end} - 1]->{available_cpus},
@@ -130,6 +124,17 @@ sub assign_job_profile {
 
 	$job->starting_time($self->{profile}[$profile->{start}]->{starting_time});
 	push $self->{queued_jobs}, $job;
+
+	$job->assign_to($self->{profile}[$profile->{start}]->{starting_time}, $profile->{selected_processors});
+}
+
+sub print {
+	my $self = shift;
+
+	print "Details for the conservative backfilling: {\n";
+	print "\tNumber of backfilled jobs: $self->{backfilled_jobs}\n";
+	print "\tCmax: $self->{profile}[$#{$self->{profile}}]->{starting_time}\n";
+	print "}\n";
 }
 
 1;

@@ -157,4 +157,13 @@ sub expected_termination_time {
 	return $self->{expected_termination_time};
 }
 
+sub submit_time {
+	my $self = shift;
+	return $self->{submit_time};
+}
+
+sub wait_time {
+	my $self = shift;
+	return $self->{wait_time};
+}
 1;

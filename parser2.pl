@@ -14,13 +14,17 @@ print "Executing parser version 2\n";
 my $trace = new Trace($ARGV[0]);
 $trace->read();
 
-my $schedule = new Backfilling($trace, 4);
-$schedule->run();
+my $schedule;
 
-#my $schedule = new FCFS($trace, 8);
+$schedule = new Backfilling($trace, $ARGV[1]);
+$schedule->run();
+$schedule->print();
+
+#$schedule = new FCFSC($trace, 4);
 #$schedule->run();
 #$schedule->print();
 #$schedule->save_svg("parser2.svg");
+
 $schedule->print_svg("parser2.svg", "parser2.pdf");
 
 exit;

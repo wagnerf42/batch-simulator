@@ -31,5 +31,14 @@ sub assign_job {
 	$job->assign_to($best_block->{starting_time}, $best_block->{selected_processors});
 }
 
+sub print {
+	my $self = shift;
+	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
+
+	print "Details for the FCFSC schedule: {\n";
+	print "\tCmax: " . $sorted_processors[$#sorted_processors]->cmax . "\n";
+	print "}\n";
+}
+
 1;
 
