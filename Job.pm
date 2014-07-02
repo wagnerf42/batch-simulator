@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 package Job;
 use strict;
 use warnings;
@@ -88,6 +86,11 @@ sub run_time {
 
 sub starting_time {
 	my $self = shift;
+
+	if (@_) {
+		$self->{starting_time} = shift;
+	}
+
 	return $self->{starting_time};
 }
 

@@ -1,5 +1,3 @@
-#!/usr/bin/perl
-
 package Trace;
 use strict;
 use warnings;

@@ -50,7 +50,7 @@ sub assign_job {
 
 	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
 	my @selected_processors = splice(@sorted_processors, 0, $requested_cpus);
-	map {$_->assign_job($job, $job->starting_time)} @selected_processors;
+	$_->assign_job($job, $job->starting_time) for @selected_processors;
 }
 
 
@@ -130,4 +130,3 @@ sub assign_job_profile {
 }
 
 1;
-
