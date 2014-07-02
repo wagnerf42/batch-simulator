@@ -5,7 +5,8 @@ use warnings;
 use Data::Dumper qw(Dumper);
 
 use Trace;
-#use FCFS;
+use FCFS;
+use FCFS2;
 use FCFSC;
 use Backfilling;
 
@@ -18,10 +19,11 @@ $trace->read();
 #$schedule->run();
 #$schedule->print_svg("parser2.svg", "parser2.pdf");
 
-my $schedule = new FCFSC($trace, 8);
+my $schedule = new FCFS2($trace, 8);
 $schedule->run();
 #$schedule->print();
-$schedule->save_svg("parser2.svg");
+#$schedule->save_svg("parser2.svg");
+$schedule->print_svg("parser2.svg", "parser2.pdf");
 
 exit;
 

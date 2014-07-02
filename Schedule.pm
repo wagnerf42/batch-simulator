@@ -70,5 +70,29 @@ sub tycat {
 	$file_count++;
 }
 
+sub print_svg {
+	my $self = shift;
+	my $svg_filename = shift;
+	my $pdf_filename = shift;
+
+	open(my $filehandler, '>', $svg_filename);
+
+	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
+	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->cmax * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
+
+	for my $processor (@{$self->{processors}}) {
+		for my $job (@{$processor->jobs}) {
+			$job->save_svg($filehandler, $processor->id);
+		}
+	}
+
+	print $filehandler "</svg>\n";
+	close $filehandler;
+
+	# Convert the SVG file to PDF so that both are available
+	`inkscape $svg_filename --export-pdf=$pdf_filename`
+}
+
+
 1;
 

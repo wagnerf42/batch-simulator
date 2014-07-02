@@ -1,7 +1,9 @@
 #!/usr/bin/perl
 
-package FCFS;
+package FCFS2;
 use parent 'Schedule';
+
+use Data::Dumper qw(Dumper);
 
 use strict;
 use warnings;
@@ -21,8 +23,7 @@ sub assign_job {
 	my $starting_time = $selected_processors[$#selected_processors]->cmax;
 
 	$job->first_processor($selected_processors[0]->id);
-
-	map {$_->assign_job($job, $starting_time)} @selected_processors;
+	$job->assign_to($starting_time, [@selected_processors]);
 }
 
 1;

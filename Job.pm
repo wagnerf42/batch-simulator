@@ -4,6 +4,8 @@ package Job;
 use strict;
 use warnings;
 use List::Util qw(min);
+use Data::Dumper qw(Dumper);
+
 use overload
     '""' => \&stringification;
 
@@ -31,6 +33,7 @@ sub new {
 		partition_number => shift,
 		prec_job_number => shift,
 		think_time_prec_job => shift,
+		assigned_processors => []
 	};
 
 	bless $self, $class;
@@ -83,8 +86,6 @@ sub run_time {
 	return $self->{run_time};
 }
 
-#do not modify through here
-#use 'assign_to'
 sub starting_time {
 	my $self = shift;
 	return $self->{starting_time};
@@ -114,9 +115,33 @@ sub svg {
 
 sub assign_to {
 	my $self = shift;
+
 	$self->{starting_time} = shift;
 	$self->{assigned_processors} = shift;
+
 	$_->assign_job($self) for @{$self->{assigned_processors}};
+}
+
+sub save_svg {
+	my $self = shift;
+	my $fh = shift;
+	my $processor_id = shift;
+
+	my $default_time_ratio = 5;
+	my $default_processor_ratio = 20;
+
+	print $fh "\t<rect x=\"" . $self->{starting_time} * $default_time_ratio . "\" y=\"" . $processor_id * $default_processor_ratio . "\" width=\"" . $self->{run_time} * $default_time_ratio . "\" height=\"20\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
+	print $fh "\t<text x=\"" . ($self->{starting_time} * $default_time_ratio + 4) . "\" y=\"" . ($processor_id * $default_processor_ratio + 15) . "\" fill=\"black\">" . $self->{job_number} . "</text>\n";
+}
+
+sub first_processor {
+	my $self = shift;
+
+	if (@_) {
+		$self->{first_processor} = shift;
+	}
+
+	return $self->{first_processor};
 }
 
 1;
