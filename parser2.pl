@@ -14,8 +14,6 @@ print "Executing parser version 2\n";
 my $trace = Trace->new($ARGV[0]);
 $trace->read();
 
-print "CPUS: : " . $trace->requested_cpus() . "\n";
-
 my $schedule;
 #$schedule = Backfilling->new($trace, $trace->requested_cpus());
 $schedule = Backfilling->new($trace, 6);
