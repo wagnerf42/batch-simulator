@@ -59,28 +59,17 @@ sub stringification {
 		$self->{queue_number},
 		$self->{partition_number},
 		$self->{prec_job_number},
-		$self->{think_time_prec_job},
-		$self->{first_processor}
+		$self->{think_time_prec_job}
 	);
 }
 
 sub requested_cpus {
 	my $self = shift;
-
-	if (@_) {
-		$self->{requested_cpus} = shift;
-	}
-
 	return $self->{requested_cpus};
 }
 
 sub run_time {
 	my $self = shift;
-
-	if (@_) {
-		$self->{run_time} = shift;
-	}
-
 	return $self->{run_time};
 }
 
@@ -92,6 +81,45 @@ sub starting_time {
 sub ending_time {
 	my $self = shift;
 	return $self->{starting_time} + $self->{run_time};
+}
+
+sub submit_time {
+	my $self = shift;
+	return $self->{submit_time};
+}
+
+sub wait_time {
+	my $self = shift;
+	return $self->{wait_time};
+}
+
+sub job_number {
+	my $self = shift;
+
+	if (@_) {
+		$self->{job_number} = shift;
+	}
+
+	return $self->{job_number};
+}
+
+sub assign_to {
+	my $self = shift;
+
+	$self->{starting_time} = shift;
+	$self->{assigned_processors} = shift;
+
+	$_->assign_job($self) for @{$self->{assigned_processors}};
+}
+
+sub first_processor {
+	my $self = shift;
+
+	if (@_) {
+		$self->{first_processor} = shift;
+	}
+
+	return $self->{first_processor};
 }
 
 sub svg {
@@ -116,15 +144,6 @@ sub svg {
 	}
 }
 
-sub assign_to {
-	my $self = shift;
-
-	$self->{starting_time} = shift;
-	$self->{assigned_processors} = shift;
-
-	$_->assign_job($self) for @{$self->{assigned_processors}};
-}
-
 sub save_svg {
 	my $self = shift;
 	my $fh = shift;
@@ -135,41 +154,6 @@ sub save_svg {
 
 	print $fh "\t<rect x=\"" . $self->{starting_time} * $default_time_ratio . "\" y=\"" . $processor_id * $default_processor_ratio . "\" width=\"" . $self->{run_time} * $default_time_ratio . "\" height=\"20\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
 	print $fh "\t<text x=\"" . ($self->{starting_time} * $default_time_ratio + 4) . "\" y=\"" . ($processor_id * $default_processor_ratio + 15) . "\" fill=\"black\">" . $self->{job_number} . "</text>\n";
-}
-
-sub first_processor {
-	my $self = shift;
-
-	if (@_) {
-		$self->{first_processor} = shift;
-	}
-
-	return $self->{first_processor};
-}
-
-sub expected_termination_time {
-	my $self = shift;
-
-	if (@_) {
-		$self->{expected_termination_time} = shift;
-	}
-
-	return $self->{expected_termination_time};
-}
-
-sub submit_time {
-	my $self = shift;
-	return $self->{submit_time};
-}
-
-sub wait_time {
-	my $self = shift;
-	return $self->{wait_time};
-}
-
-sub job_number {
-	my $self = shift;
-	return $self->{job_number};
 }
 
 1;

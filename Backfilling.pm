@@ -10,6 +10,7 @@ use Job;
 use Processor;
 
 sub new {
+	#TODO Call the super new and then just complete the code
 	my $class = shift;
 	my $self = {
 		trace => shift,

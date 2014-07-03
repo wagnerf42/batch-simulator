@@ -17,7 +17,7 @@ sub assign_job {
 	my $starting_time = $selected_processors[$#selected_processors]->cmax();
 
 	$job->assign_to($starting_time, [@selected_processors]);
+	$self->tycat();
 }
 
 1;
-
