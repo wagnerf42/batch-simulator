@@ -86,12 +86,12 @@ sub run_time {
 
 sub starting_time {
 	my $self = shift;
-
-	if (@_) {
-		$self->{starting_time} = shift;
-	}
-
 	return $self->{starting_time};
+}
+
+sub ending_time {
+	my $self = shift;
+	return $self->{starting_time} + $self->{run_time};
 }
 
 sub svg {
@@ -166,4 +166,10 @@ sub wait_time {
 	my $self = shift;
 	return $self->{wait_time};
 }
+
+sub job_number {
+	my $self = shift;
+	return $self->{job_number};
+}
+
 1;

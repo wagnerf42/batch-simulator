@@ -11,12 +11,14 @@ use Backfilling;
 
 print "Executing parser version 2\n";
 
-my $trace = new Trace($ARGV[0]);
+my $trace = Trace->new($ARGV[0]);
 $trace->read();
 
-my $schedule;
+print "CPUS: : " . $trace->requested_cpus() . "\n";
 
-$schedule = new Backfilling($trace, $ARGV[1]);
+my $schedule;
+#$schedule = Backfilling->new($trace, $trace->requested_cpus());
+$schedule = Backfilling->new($trace, 6);
 $schedule->run();
 $schedule->print();
 

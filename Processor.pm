@@ -50,30 +50,12 @@ sub available_at {
 	my $starting_time = shift;
 	my $duration = shift;
 
-	my $current_job;
-	my $next_job;
-
-	for my $i (0..$#{$self->{jobs}}) {
-		# There is one job running
-		if (($self->{jobs}[$i]->starting_time < $starting_time) && ($self->{jobs}[$i]->starting_time + $self->{jobs}[$i]->run_time > $starting_time)) {
-			$current_job = $i;
-			last;
-		}
-
-		# There is no job running and the next job was found
-		if ($self->{jobs}[$i]->starting_time >= $starting_time) {
-			$next_job = $i;
-			last;
-		}
+	for my $job (@{$self->{jobs}}) {
+		return 0 if ($job->starting_time < $starting_time) and ($job->ending_time > $starting_time);
+		return 0 if ($job->starting_time >= $starting_time) and ($job->starting_time < $starting_time + $duration);
 	}
 
-	# Processor is being used by a job
-	return 0 if defined $current_job;
-
-	# Processor is available if there is no next job
-	return 1 if not defined $next_job;
-
-	return $self->{jobs}[$next_job]->starting_time - ($self->{jobs}[$next_job - 1]->starting_time + $self->{jobs}[$next_job-1]->run_time) >= $duration ? 1 : 0;
+	return 1;
 }
 
 sub print_jobs {

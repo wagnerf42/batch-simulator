@@ -45,27 +45,39 @@ sub check_availability {
 		new => 0
 	};
 
+#	my @profiles = @{$self->{profile}};
+#	while (@profiles) {
+#		my $start_profile = shift @profiles;
+#		my @kept_profiles;
+#		for my $profile (@profiles) {
+#			push @kept_profiles, $profile;
+#
+#			last;
+#		}
+#	}
+
 	for my $i (0..$#{$self->{profile}}) {
 		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
 			$profile->{start} = $i;
 
 			# Check if there is enough space for the job for the whole duration of the job
 			for my $j (($i + 1)..$#{$self->{profile}}) {
+				# Not enough space yet and not enough processors
 				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time) && ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
 					$profile->{start} = -1;
 					last;
 				}
 
+				# There is enough space with exactly the time necessary
 				elsif ($self->{profile}[$j]->{starting_time} == $self->{profile}[$i]->{starting_time} + $job->run_time) {
 					$profile->{end} = $j;
-					$self->{backfilled_jobs}++;
 					last;
 				}
 
+				# There is enough space and must create a new profile item in the middle
 				elsif ($self->{profile}[$j]->{starting_time} > $self->{profile}[$i]->{starting_time} + $job->run_time) {
 					$profile->{end} = $j;
 					$profile->{new} = 1;
-					$self->{backfilled_jobs}++;
 					last;
 				}
 			}
@@ -74,17 +86,16 @@ sub check_availability {
 			my @available_processors = grep {$_->available_at($self->{profile}[$profile->{start}]->{starting_time}, $job->run_time)} @{$self->{processors}};
 
 			if (scalar @available_processors >= $job->requested_cpus) {
-				@{$profile->{selected_processors}} = @available_processors[0..($job->requested_cpus - 1)];
-			}
+				$profile->{selected_processors} = [@available_processors[0..($job->requested_cpus - 1)]];
 
-			else {
-				$profile->{start} = -1;
-			}
-
-			# Found a good starting time candidate
-			if ($profile->{start} != -1) {
+				# Now we know that the schedule is OK and can increase the
+				# number of backfilling jobs if it's the case
+				if ($profile->{end} != -1) {
+					$self->{backfilled_jobs}++;
+				}
 				last;
 			}
+
 		}
 	}
 	
@@ -132,8 +143,8 @@ sub print {
 	my $self = shift;
 
 	print "Details for the conservative backfilling: {\n";
-	print "\tNumber of backfilled jobs: $self->{backfilled_jobs}\n";
-	print "\tCmax: $self->{profile}[$#{$self->{profile}}]->{starting_time}\n";
+	print "\tNumber of backfilled jobs: " . $self->{backfilled_jobs} . "\n";
+	print "\tCmax: " . $self->{profile}[$#{$self->{profile}}]->{starting_time} . "\n";
 	print "}\n";
 }
 
