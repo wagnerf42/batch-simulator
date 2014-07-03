@@ -16,22 +16,5 @@ $trace->read();
 my $schedule_backfilling = Backfilling->new($trace, $trace->needed_cpus);
 $schedule_backfilling->run();
 $schedule_backfilling->print_svg("parser2.svg", "parser2.pdf");
-die;
-
-my $trace_random = Trace->new();
-$trace_random->read_from_trace($trace, 10);
-$trace_random->write("random.swf");
-
-print Dumper($trace_random);
-
-my $schedule_backfilling = Backfilling->new($trace_random, $trace_random->needed_cpus);
-$schedule_backfilling->run();
-$schedule_backfilling->print_svg("parser2.svg", "parser2.pdf");
-
-my $schedule_FCFS = new FCFS($trace_random, $trace_random->needed_cpus);
-$schedule_FCFS->run();
-$schedule_FCFS->print_svg("parser2_fcfs.svg", "parser2_fcfs.pdf");
-
-print $schedule_backfilling->cmax . " " . $schedule_FCFS->cmax . "\n";
 exit;
 

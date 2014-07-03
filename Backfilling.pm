@@ -73,6 +73,8 @@ sub check_availability {
 				}
 			}
 
+			next if $profile_helper->{first} eq -1;
+
 			# Check if there is a non contiguous block of processors available at this time
 			my @available_processors = grep {$_->available_at($self->{profile}[$profile_helper->{first}]->{starting_time}, $job->run_time)} @{$self->{processors}};
 
@@ -84,6 +86,7 @@ sub check_availability {
 				if ($profile_helper->{last} != -1) {
 					$self->{backfilled_jobs}++;
 				}
+
 				last;
 			}
 		}
