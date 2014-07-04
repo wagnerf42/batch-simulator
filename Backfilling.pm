@@ -10,30 +10,18 @@ use Job;
 use Processor;
 
 sub new {
-	#TODO Call the super new and then just complete the code
 	my $class = shift;
-	my $self = {
-		trace => shift,
-		num_processors => shift,
-		processors => [],
-		queued_jobs => [],
-		profile => [],
-		backfilled_jobs => 0
-	};
-
-	for my $id (0..($self->{num_processors} - 1)) {
-		my $processor = new Processor($id);
-		push $self->{processors}, $processor;
-	}
+	my $self = $class->SUPER::new(@_);
 
 	# The profile needs to start with one item stating that all processors are available on time 0
 	my $profile_item = {
 		available_cpus => $self->{num_processors},
 		starting_time => 0
 	};
-	push $self->{profile}, $profile_item;
 
-	bless $self, $class;
+	$self->{profile} = [$profile_item];
+	$self->{queued_jobs} = [];
+
 	return $self;
 }
 
@@ -42,22 +30,22 @@ sub check_availability {
 	my $job = shift;
 
 	my $profile_helper = {
-		first => -1,
-		last => -1,
+		first => undef,
+		last => undef,
 		new => 0
 	};
 
 	for my $i (0..$#{$self->{profile}}) {
 		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
 			$profile_helper->{first} = $i;
-			$profile_helper->{last} = -1;
+			$profile_helper->{last} = undef;
 
 			# Check if there is enough space for the job for the whole duration of the job
 			for my $j (($i + 1)..$#{$self->{profile}}) {
 
 				# Not enough space yet and not enough processors
 				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time) && ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
-					$profile_helper->{first} = -1;
+					$profile_helper->{first} = undef;
 					last;
 				}
 
@@ -75,7 +63,7 @@ sub check_availability {
 				}
 			}
 
-			next if $profile_helper->{first} eq -1;
+			next unless defined $profile_helper->{first};
 
 			# Check if there is a non contiguous block of processors available at this time
 			my @available_processors = grep {$_->available_at($self->{profile}[$profile_helper->{first}]->{starting_time}, $job->run_time)} @{$self->{processors}};
@@ -85,9 +73,7 @@ sub check_availability {
 
 				# Now we know that the schedule is OK and can increase the
 				# number of backfilling jobs if it's the case
-				if ($profile_helper->{last} != -1) {
-					$self->{backfilled_jobs}++;
-				}
+				$self->{backfilled_jobs}++ if defined $profile_helper->{last};
 
 				last;
 			}
@@ -104,7 +90,7 @@ sub assign_job {
 	my $profile_helper = $self->check_availability($job);
 
 	# Create a new profile item at the end
-	if ($profile_helper->{last} == -1) {
+	unless (defined $profile_helper->{last}) {
 		my $profile_item = {
 			available_cpus => $self->{num_processors},
 			starting_time => $self->{profile}[$profile_helper->{first}]->{starting_time} + $job->run_time
@@ -115,7 +101,7 @@ sub assign_job {
 	}
 
 	# Create a new profile in the middle
-	elsif ($profile_helper->{new} == 1) {
+	elsif ($profile_helper->{new}) {
 		my $new_profile_item = {
 			available_cpus => $self->{profile}[$profile_helper->{last} - 1]->{available_cpus},
 			starting_time => $self->{profile}[$profile_helper->{first}]->{starting_time} + $job->run_time
@@ -132,15 +118,6 @@ sub assign_job {
 	push $self->{queued_jobs}, $job;
 
 	$job->assign_to($self->{profile}[$profile_helper->{first}]->{starting_time}, $profile_helper->{selected_processors});
-}
-
-sub print {
-	my $self = shift;
-
-	print "Details for the conservative backfilling: {\n";
-	print "\tNumber of backfilled jobs: " . $self->{backfilled_jobs} . "\n";
-	print "\tCmax: " . $self->{profile}[$#{$self->{profile}}]->{starting_time} . "\n";
-	print "}\n";
 }
 
 sub backfilled_jobs {
