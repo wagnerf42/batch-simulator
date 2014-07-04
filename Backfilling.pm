@@ -50,9 +50,11 @@ sub check_availability {
 	for my $i (0..$#{$self->{profile}}) {
 		if ($self->{profile}[$i]->{available_cpus} >= $job->requested_cpus) {
 			$profile_helper->{first} = $i;
+			$profile_helper->{last} = -1;
 
 			# Check if there is enough space for the job for the whole duration of the job
 			for my $j (($i + 1)..$#{$self->{profile}}) {
+
 				# Not enough space yet and not enough processors
 				if (($self->{profile}[$j]->{starting_time} < $self->{profile}[$i]->{starting_time} + $job->run_time) && ($self->{profile}[$j]->{available_cpus} < $job->requested_cpus)) {
 					$profile_helper->{first} = -1;
@@ -139,6 +141,11 @@ sub print {
 	print "\tNumber of backfilled jobs: " . $self->{backfilled_jobs} . "\n";
 	print "\tCmax: " . $self->{profile}[$#{$self->{profile}}]->{starting_time} . "\n";
 	print "}\n";
+}
+
+sub backfilled_jobs {
+	my $self = shift;
+	return $self->{backfilled_jobs};
 }
 
 1;
