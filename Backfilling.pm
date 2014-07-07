@@ -23,6 +23,7 @@ sub assign_job {
 	my $self = shift;
 	my $job = shift;
 
+	my $requested_cpus = $job->requested_cpus();
 	die "not enough processors (we need $requested_cpus, we have $self->{num_processors})" if $requested_cpus > $self->{num_processors};
 
 	#get the first valid profile_id for our job

@@ -11,6 +11,8 @@ sub new {
 	$self->{starting_time} = shift;
 	$self->{processors} = shift;
 	$self->{duration} = shift;
+	bless $self, $class;
+	return $self;
 }
 
 sub processors {
@@ -45,7 +47,7 @@ sub add_job_if_needed {
 	die "job starts after me" if $self->{starting_time} < $job->starting_time();
 	#job is ok, two cases : if it ends before ourselves or not
 	my @profiles;
-	if ($self->{starting_time} + $self->{duration} > $job->ending_time()) {
+	if ((not (defined $self->{duration})) or ($self->{starting_time} + $self->{duration} > $job->ending_time())) {
 		#split
 		push @profiles, $self->split($job);
 	} else {
@@ -89,3 +91,10 @@ sub remove_used_processors {
 	}
 	$self->{processors} = [@left_processors];
 }
+
+sub starting_time {
+	my $self = shift;
+	return $self->{starting_time};
+}
+
+1;
