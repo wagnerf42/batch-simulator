@@ -5,6 +5,7 @@ use warnings;
 
 use Profile;
 use Data::Dumper;
+use ProcessorsSet;
 
 #an execution profile object encodes the set of all profiles of a schedule
 
@@ -37,10 +38,10 @@ sub get_free_processors_for {
 			last;
 		}
 	}
-	my @available_processors = values %left_processors;
-	my @selected_processors = splice @available_processors, 0, $job->requested_cpus();
-	return if @selected_processors < $job->requested_cpus();
-	return @selected_processors;
+	my $processors = new ProcessorsSet(values %left_processors);
+	return unless $processors->contains_at_least($job->requested_cpus);
+	$processors->reduce_to($job->requested_cpus());
+	return $processors->processors();
 }
 
 #precondition : job should be assigned first

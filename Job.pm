@@ -7,7 +7,7 @@ use Data::Dumper qw(Dumper);
 use overload
     '""' => \&stringification;
 
-my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen);
+my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen darkred dimgray mediumpurple midnightblue olive);
 
 sub new {
 	my $class = shift;
