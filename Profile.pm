@@ -34,7 +34,7 @@ sub filter_processors {
 	for my $processor (@{$self->{processors}}) {
 		$processors{$processor} = 1;
 	}
-	for my $key (%{$href}) {
+	for my $key (keys %{$href}) {
 		delete $href->{$key} unless exists $processors{$key};
 	}
 }
