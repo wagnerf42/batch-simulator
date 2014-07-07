@@ -2,6 +2,9 @@ package Processor;
 use strict;
 use warnings;
 
+use overload
+	'""' => \&stringification;
+
 sub new {
 	my $class = shift;
 	my $self = {
@@ -12,6 +15,11 @@ sub new {
 
 	bless $self, $class;
 	return $self;
+}
+
+sub stringification {
+	my $self = shift;
+	return $self->{id};
 }
 
 sub id {

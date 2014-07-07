@@ -31,7 +31,6 @@ sub new {
 		partition_number => shift,
 		prec_job_number => shift,
 		think_time_prec_job => shift,
-		assigned_processors => []
 	};
 
 	bless $self, $class;
@@ -110,6 +109,11 @@ sub assign_to {
 	$self->{assigned_processors} = shift;
 
 	$_->assign_job($self) for @{$self->{assigned_processors}};
+}
+
+sub assigned_processors {
+	my $self = shift;
+	return $self->{assigned_processors};
 }
 
 sub first_processor {
