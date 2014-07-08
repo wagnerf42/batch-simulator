@@ -17,13 +17,13 @@ sub contains_at_least {
 }
 
 #reduce number of processors to given value
-#tries to stay contiguous as long as possible
+#tries to stay contiguous if possible
 sub reduce_to {
 	my $self = shift;
 	my $number = shift;
 
 	#try each position and see if we can get a contiguous block
-	for my $start_index (0..$#{$self}) {
+	for my $start_index (0..(@{$self}-$number)) {
 		my $ok = 1;
 		my $start_id = $self->[$start_index]->id();
 		for my $num (1..($number-1)) {
@@ -39,7 +39,7 @@ sub reduce_to {
 			return;
 		}
 	}
-	$self->keep_from(0);
+	$self->keep_from(0, $number);
 }
 
 sub keep_from {
