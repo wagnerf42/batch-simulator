@@ -4,13 +4,13 @@ use parent 'Schedule';
 use strict;
 use warnings;
 use List::Util qw(max reduce);
+use Data::Dumper qw(Dumper);
 
 sub compute_block {
 	my $self = shift;
 	my $first_processor_id = shift;
 	my $requested_cpus = shift;
-	my @processors = @{$self->{processors}};
-	my @selected_processors = splice(@processors, $first_processor_id, $requested_cpus);
+	my @selected_processors = @{$self->{processors}}[$first_processor_id..($first_processor_id + $requested_cpus - 1)];
 	my $starting_time = max map {$_->cmax()} @selected_processors;
 
 	return {
