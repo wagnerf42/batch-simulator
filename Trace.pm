@@ -57,6 +57,18 @@ sub read {
 	}
 }
 
+sub read_block_from_trace {
+	my $self = shift;
+	my $trace = shift;
+	my $size = shift;
+
+	my $start_point = int(rand(scalar @{$trace->jobs} - $size + 1));
+	my @selected_jobs = @{$trace->jobs}[$start_point..($start_point + $size - 1)];
+	push $self->{jobs}, @selected_jobs;
+
+	$self->{needed_cpus} = max map {$_->requested_cpus} @{$self->{jobs}};
+}
+
 sub read_from_trace {
 	my $self = shift;
 	my $trace = shift;
@@ -118,6 +130,12 @@ sub job {
 	my $job_number = shift;
 
 	return $self->{jobs}[$job_number];
+}
+
+sub number_of_jobs {
+	my $self = shift;
+
+	return scalar @{$self->{jobs}};
 }
 
 1;
