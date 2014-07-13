@@ -1,5 +1,5 @@
 data<-read.table("backfilling_FCFS.csv")
 pdf("backfilling_FCFS.pdf")
-hist(data$Backfilling/data$FCFS, main="Histogram", xlab="Value of the ratio")
+hist(data$V1/data$V3, main="Histogram", xlab="Value of the ratio", col="gray")
 
 

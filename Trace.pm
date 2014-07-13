@@ -34,7 +34,7 @@ sub read {
 		next unless defined $fields[0];
 
 		# Status line
-		if ($fields[0] eq ';') { 
+		if ($fields[0] eq ';') {
 			push $self->{status}, [@fields];
 		}
 

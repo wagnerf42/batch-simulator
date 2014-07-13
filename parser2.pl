@@ -12,9 +12,9 @@ use FCFS;
 use FCFSC;
 use Backfilling;
 
-my $trace_size = 5;
-my $executions = 4;
-my $cores = 2;
+my $trace_size = 50;
+my $executions = 10000;
+my $cores = 4;
 
 my $trace = new Trace($ARGV[0]);
 $trace->read();
@@ -41,12 +41,27 @@ for my $i (0..($cores - 1)) {
 # Wait for all threads to finish
 my @results;
 for my $i (0..($cores - 1)) {
-	my @results_thread = $threads[$i]->join();
-	push @results, @results_thread;
+	my $results_thread = $threads[$i]->join();
+	push @results, @{$results_thread};
 }
 
-print Dumper(@results);
+# Print all results in a file
+write_results_to_file([@results], 'backfilling_FCFS.csv');
 die;
+
+sub write_results_to_file {
+	my $results = shift;
+	my $filename = shift;
+
+
+	open(my $filehandle, ">> $filename") or die "unable to open $filename";
+
+	for my $results_item (@{$results}) {
+		print $filehandle "$results_item->{fcfs} $results_item->{fcfsc} $results_item->{backfilling}\n";
+	}
+
+	close $filehandle;
+}
 
 sub run_all_thread {
 	my $traces = shift;
