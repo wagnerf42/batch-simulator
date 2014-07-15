@@ -93,6 +93,13 @@ sub print_svg {
 	`inkscape $svg_filename --export-pdf=$pdf_filename`
 }
 
+sub DESTROY {
+	my $self = shift;
+	#remove circular references in processors <-> jobs
+	for my $processor (@{$self->{processors}}) {
+		$processor->remove_all_jobs();
+	}
+}
 
 1;
 

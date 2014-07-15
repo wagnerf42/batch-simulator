@@ -94,11 +94,6 @@ sub wait_time {
 
 sub job_number {
 	my $self = shift;
-
-	if (@_) {
-		$self->{job_number} = shift;
-	}
-
 	return $self->{job_number};
 }
 

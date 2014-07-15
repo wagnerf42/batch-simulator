@@ -14,8 +14,8 @@ use FCFSC;
 use Backfilling;
 
 my $trace_size = 50;
-my $executions = 10000;
-my $cores = 4;
+my $executions = 5;
+my $cores = 1;
 
 my $trace = new Trace($ARGV[0]);
 $trace->read();
@@ -23,16 +23,22 @@ $trace->read();
 my @trace_blocks;
 
 # Asemble the trace blocks that will be used
+print "Generating traces\n";
 for my $i (0..($executions - 1)) {
 	my $trace_random = new Trace();
 	$trace_random->read_block_from_trace($trace, $trace_size);
 	push @trace_blocks, $trace_random;
 }
 
+run_all_thread(\@trace_blocks);
+die;
+
 # Divide the block in chunks
 my @trace_chunks = group_traces_by_chunks(\@trace_blocks, $executions/$cores);
 
+
 # Create threads
+print "Creating threads\n";
 my @threads;
 for my $i (0..($cores - 1)) {
 	my $thread = threads->create(\&run_all_thread, $trace_chunks[$i]);
@@ -40,9 +46,11 @@ for my $i (0..($cores - 1)) {
 }
 
 # Wait for all threads to finish
+print "Waiting for all threads to finish\n";
 my @results;
 for my $i (0..($cores - 1)) {
 	my $results_thread = $threads[$i]->join();
+	print "Thread $i finished\n";
 	push @results, @{$results_thread};
 }
 
@@ -58,7 +66,7 @@ sub write_results_to_file {
 	open(my $filehandle, ">> $filename") or die "unable to open $filename";
 
 	for my $results_item (@{$results}) {
-		print $filehandle "$results_item->{fcfs} $results_item->{fcfsc} $results_item->{backfilling}\n";
+		print $filehandle "$results_item->{fcfs} $results_item->{backfilling}\n";
 	}
 
 	close $filehandle;
@@ -69,25 +77,23 @@ sub run_all_thread {
 	my @results_all;
 
 	for my $trace (@{$traces}) {
+		print "Running FCFS with $#{$trace->jobs} ".$trace->needed_cpus." jobs\n";
 		my $schedule_fcfs = new FCFS($trace, $trace->needed_cpus);
 		$schedule_fcfs->run();
 
-		my $schedule_fcfsc = new FCFSC($trace, $trace->needed_cpus);
-		$schedule_fcfsc->run();
-
+		print "Running Backfilling with $#{$trace->jobs} ".$trace->needed_cpus." jobs\n";
 		my $schedule_backfilling = new Backfilling($trace, $trace->needed_cpus);
 		$schedule_backfilling->run();
 
 		my $results = {
 			fcfs => $schedule_fcfs->cmax,
-			fcfsc => $schedule_fcfsc->cmax,
 			backfilling => $schedule_backfilling->cmax
 		};
 
 		push @results_all, $results;
 	}
 
-	return \@results_all;
+	return [@results_all];
 }
 
 sub group_traces_by_chunks {

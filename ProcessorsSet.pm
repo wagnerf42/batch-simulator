@@ -5,9 +5,18 @@ use warnings;
 
 sub new {
 	my $class = shift;
-	my $self = [sort {$a->id() <=> $b->id()} @_];
+	my $self = sort_processors(@_);
 	bless $self, $class;
 	return $self;
+}
+
+sub sort_processors {
+	my %processors;
+	$processors{$_} = $_ for @_;
+	my @sorted_ids = sort {$a <=> $b} (keys %processors);
+	my $sorted_processors = [];
+	push @{$sorted_processors}, $processors{$_} for @sorted_ids;
+	return $sorted_processors;
 }
 
 sub contains_at_least {

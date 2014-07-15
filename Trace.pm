@@ -46,7 +46,7 @@ sub read {
 			next unless $job->run_time;
 
 			# Do not accept jobs with no requested cpus
-			next unless $job->requested_cpus;
+			next unless $job->requested_cpus > 0;
 
 			if ($job->requested_cpus > $self->{needed_cpus}) {
 				$self->{needed_cpus} = $job->requested_cpus;
