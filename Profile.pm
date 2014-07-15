@@ -7,10 +7,12 @@ use warnings;
 
 sub new {
 	my $class = shift;
-	my $self = {};
-	$self->{starting_time} = shift;
-	$self->{processors} = shift;
-	$self->{duration} = shift;
+	my $self = {
+		starting_time => shift,
+		processors => shift,
+		duration => shift
+	};
+
 	bless $self, $class;
 	return $self;
 }

@@ -93,6 +93,26 @@ sub read_from_trace {
 	}
 }
 
+sub copy_from_trace {
+	my $self = shift;
+	my $trace = shift;
+	my $size = shift;
+
+	for my $job_number (0..($size - 1)) {
+		my $job_id = int(rand(@{$trace->jobs}));
+		my $new_job = dclone($trace->job($job_id));
+
+		if ($new_job->requested_cpus > $self->{needed_cpus}) {
+			$self->{needed_cpus} = $new_job->requested_cpus;
+		}
+
+		$new_job->job_number(scalar @{$self->{jobs}} + 1);
+
+		push $self->{jobs}, $new_job;
+	}
+}
+
+
 sub write {
 	my $self = shift;
 	my $trace_filename = shift;

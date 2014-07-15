@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use threads;
+use threads::shared;
 use Thread::Queue;
 
 use Data::Dumper qw(Dumper);
@@ -29,7 +30,7 @@ for my $i (0..($executions - 1)) {
 }
 
 # Divide the block in chunks
-my @trace_chunks = group_traces_by_chunks([@trace_blocks], $executions/$cores);
+my @trace_chunks = group_traces_by_chunks(\@trace_blocks, $executions/$cores);
 
 # Create threads
 my @threads;
@@ -46,8 +47,8 @@ for my $i (0..($cores - 1)) {
 }
 
 # Print all results in a file
-write_results_to_file([@results], 'backfilling_FCFS.csv');
-die;
+write_results_to_file(\@results, 'backfilling_FCFS.csv');
+exit;
 
 sub write_results_to_file {
 	my $results = shift;
@@ -86,7 +87,7 @@ sub run_all_thread {
 		push @results_all, $results;
 	}
 
-	return [@results_all];
+	return \@results_all;
 }
 
 sub group_traces_by_chunks {
@@ -122,10 +123,11 @@ sub run_threads_queue {
 
 	# This is the element that will go in the queue
 	my $trace_random = Trace->new();
+	print "aa $trace_random->{needed_cpus}\n";
 	$trace_random->read_from_trace($trace, $trace_size);
 
 	# Creating the thread
-	my $thread_backfilling = threads->create(\&run_backfilling, $queue);
+	my $thread_backfilling = threads->create(\&run_backfilling_queue, $queue);
 
 	# Using the queue as documented on http://perldoc.perl.org/Thread/Queue.html
 	$queue->enqueue($trace_random);
