@@ -85,10 +85,10 @@ sub run_all_thread {
 		#$trace->write("backfilling_FCFS-$id-$trace_number.swf");
 		#$trace_number++;
 
-		my $schedule_fcfs = new FCFS($trace, $trace->needed_cpus);
+		my $schedule_fcfs = new FCFS($trace, $max_cpus);
 		$schedule_fcfs->run();
 
-		my $schedule_backfilling = new Backfilling($trace, $trace->needed_cpus);
+		my $schedule_backfilling = new Backfilling($trace, $max_cpus);
 		$schedule_backfilling->run();
 
 		my $results = {
@@ -110,49 +110,5 @@ sub group_traces_by_chunks {
 	push @chunks, [splice @{$traces}, 0, $chunk_size] while @{$traces};
 
 	return @chunks;
-}
-
-sub run_fcfsc {
-	my $trace = shift;
-
-	my $schedule = new FCFSC($trace, $trace->needed_cpus);
-	$schedule->run();
-	$schedule->print_svg('fcfsc.svg', 'fcfsc.pdf');
-}
-
-sub run_fcfs {
-	my $trace = shift;
-
-	my $schedule = new FCFS($trace, $trace->needed_cpus);
-	$schedule->run();
-	$schedule->print_svg('fcfs.svg', 'fcfs.pdf');
-}
-
-sub run_threads_queue {
-	my $trace = shift;
-
-	my $queue = Thread::Queue->new();
-
-	# This is the element that will go in the queue
-	my $trace_random = Trace->new();
-	$trace_random->read_from_trace($trace, $trace_size);
-
-	# Creating the thread
-	my $thread_backfilling = threads->create(\&run_backfilling_queue, $queue);
-
-	# Using the queue as documented on http://perldoc.perl.org/Thread/Queue.html
-	$queue->enqueue($trace_random);
-	$queue->end();
-	$thread_backfilling->join();
-}
-
-# Running the thread sub also as documented on that page
-sub run_backfilling_queue {
-	my $queue = shift;
-
-	while (defined(my $trace = $queue->dequeue())) {
-		my $schedule = Backfilling->new($trace, $trace->needed_cpus);
-		$schedule->run();
-	}
 }
 
