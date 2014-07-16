@@ -138,8 +138,9 @@ sub svg {
 		print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:$color;stroke:black;stroke-width:$sw\"/>\n";
 		$x = ($self->{starting_time}+$self->{run_time}/2) * $w_ratio;
 		$y = ($processor_id+0.5) * $h_ratio;
-		my $fs = min($w_ratio, $h_ratio) * 40;
-		print $fh "\t<text x=\"$x\" y=\"$y\" fill=\"white\" font-family=\"Verdana\" text-anchor=\"middle\" alignment-baseline=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
+		my $fs = min($h_ratio, $w/5);
+		my $text_y = $y + $fs*0.35;
+		print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"white\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
 	}
 }
 
