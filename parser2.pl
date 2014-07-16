@@ -52,7 +52,7 @@ for my $i (0..($threads - 1)) {
 	my $results_thread = $threads[$i]->join();
 	print STDERR "Thread $i finished\n";
 
-	write_results_to_file($results_thread, "backfilling_FCFS_$i.csv");
+	write_results_to_file($results_thread, "backfilling_FCFS-$i.csv");
 
 	push @results, @{$results_thread};
 }
@@ -79,8 +79,12 @@ sub run_all_thread {
 	my $id = shift;
 	my $traces = shift;
 	my @results_all;
+	my $trace_number = 0;
 
 	for my $trace (@{$traces}) {
+		$trace->write("backfilling_FCFS-$id-$trace_number.swf");
+		$trace_number++;
+
 		my $schedule_fcfs = new FCFS($trace, $trace->needed_cpus);
 		$schedule_fcfs->run();
 
@@ -93,8 +97,6 @@ sub run_all_thread {
 		};
 
 		push @results_all, $results;
-
-		print STDERR "Thread $id finished trace\n";
 	}
 
 	return [@results_all];
