@@ -2,6 +2,8 @@ package Profile;
 
 use strict;
 use warnings;
+use overload
+	'""' => \&stringification;
 
 #a profile objects encodes a set of free processors at a given time
 
@@ -15,6 +17,13 @@ sub new {
 
 	bless $self, $class;
 	return $self;
+}
+
+sub stringification {
+	my $self = shift;
+	my $processors = join(',', @{$self->{processors}});
+	return "[$self->{starting_time} ; ($processors) ; $self->{duration}]" if defined $self->{duration};
+	return "[$self->{starting_time} ; ($processors) ]";
 }
 
 sub processors {

@@ -27,8 +27,12 @@ sub get_free_processors_for {
 	my $candidate_processors = $self->[$profile_index]->processors();
 	my %left_processors; #processors which might be ok for job
 	$left_processors{$_} = $_ for @{$candidate_processors};
+	my $starting_time = $self->[$profile_index]->starting_time();
 	while ($left_duration > 0) {
 		my $current_profile = $self->[$profile_index];
+		return unless $starting_time == $current_profile->starting_time(); #profiles must all be contiguous
+		my $duration = $current_profile->duration();
+		$starting_time += $duration if defined $duration;
 		$current_profile->filter_processors(\%left_processors);
 		last if (keys %left_processors) == 0; #abort if nothing left
 		if (defined $current_profile->duration()) {

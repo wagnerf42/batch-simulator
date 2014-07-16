@@ -26,7 +26,7 @@ sub new {
 sub read {
 	my $self = shift;
 
-	open (FILE, $self->{file});
+	open (FILE, $self->{file}) or die "unable to open $self->{file}";
 
 	while (my $line = <FILE>) {
 		my @fields = split(' ', $line);
