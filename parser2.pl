@@ -16,14 +16,14 @@ use Backfilling;
 my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
 die 'missing arguments: tracefile jobs_number executions_number cpus_number threads_number' unless defined $threads;
 
-my $trace = new_from_swf Trace($trace_file);
+my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($max_cpus);
 
 # Asemble the trace blocks that will be used
 print STDERR "Generating $executions trace(s) with size $trace_size\n";
 my @trace_blocks;
 for (1..$executions) {
-	my $trace_random = new_block_from_trace Trace($trace, $trace_size);
+	my $trace_random = Trace->new_from_trace($trace, $trace_size);
 	push @trace_blocks, $trace_random;
 }
 
@@ -77,10 +77,10 @@ sub run_all_thread {
 	my @results_all;
 
 	for my $trace (@{$traces}) {
-		my $schedule_fcfs = new FCFS($trace, $max_cpus);
+		my $schedule_fcfs = FCFS->new($trace, $max_cpus);
 		$schedule_fcfs->run();
 
-		my $schedule_backfilling = new Backfilling($trace, $max_cpus);
+		my $schedule_backfilling = Backfilling->new($trace, $max_cpus);
 		$schedule_backfilling->run();
 
 		my $results = {
