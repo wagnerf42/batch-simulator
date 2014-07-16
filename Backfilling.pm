@@ -36,6 +36,7 @@ sub assign_job {
 
 	#update profiles
 	$self->{execution_profile}->add_job_at($chosen_profile, $job);
+	$self->tycat();
 }
 
 sub backfilled_jobs {
