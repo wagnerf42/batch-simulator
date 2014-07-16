@@ -13,9 +13,8 @@ use FCFS;
 use FCFSC;
 use Backfilling;
 
-my ($trace_file, $trace_size, $executions, $max_cpus, $threads, $execution_id) = @ARGV;
-
-die 'missing arguments: tracefile jobs_number executions_number threads_number' unless defined $execution_id;
+my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
+die 'missing arguments: tracefile jobs_number executions_number threads_number' unless defined $threads;
 
 my $trace = new Trace($trace_file);
 $trace->read();
@@ -59,8 +58,8 @@ for my $i (0..($threads - 1)) {
 
 # Print all results in a file
 mkdir("backfilling_FCFS-$trace_size-$executions-$max_cpus");
-write_results_to_file(\@results, "backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus-$execution_id.csv");
-`Rscript backfilling_FCFS.R backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus-$execution_id.csv backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus-$execution_id.pdf`;
+write_results_to_file(\@results, "backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus.csv");
+`Rscript backfilling_FCFS.R backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus.csv backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus.pdf`;
 exit;
 
 sub write_results_to_file {
