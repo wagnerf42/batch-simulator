@@ -15,8 +15,7 @@ use Backfilling;
 
 my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
 
-#TODO Refactor this part
-#die 'missing arguments: tracefile jobs_number executions_number ' unless defined $executions;
+die 'missing arguments: tracefile jobs_number executions_number threads_number' unless defined $threads;
 
 my $trace = new Trace($trace_file);
 $trace->read();
