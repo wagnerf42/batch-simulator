@@ -13,9 +13,9 @@ use FCFS;
 use FCFSC;
 use Backfilling;
 
-my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
+my ($trace_file, $trace_size, $executions, $max_cpus, $threads, $execution_id) = @ARGV;
 
-die 'missing arguments: tracefile jobs_number executions_number threads_number' unless defined $threads;
+die 'missing arguments: tracefile jobs_number executions_number threads_number' unless defined $execution_id;
 
 my $trace = new Trace($trace_file);
 $trace->read();
@@ -58,7 +58,9 @@ for my $i (0..($threads - 1)) {
 }
 
 # Print all results in a file
-write_results_to_file(\@results, 'backfilling_FCFS.csv');
+mkdir("backfilling_FCFS-$trace_size-$executions-$max_cpus");
+write_results_to_file(\@results, "backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus-$execution_id.csv");
+`Rscript backfilling_FCFS.R backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus-$execution_id.csv backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus-$execution_id.pdf`;
 exit;
 
 sub write_results_to_file {
@@ -79,12 +81,8 @@ sub run_all_thread {
 	my $id = shift;
 	my $traces = shift;
 	my @results_all;
-	my $trace_number = 0;
 
 	for my $trace (@{$traces}) {
-		#$trace->write("backfilling_FCFS-$id-$trace_number.swf");
-		#$trace_number++;
-
 		my $schedule_fcfs = new FCFS($trace, $max_cpus);
 		$schedule_fcfs->run();
 
