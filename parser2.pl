@@ -14,19 +14,16 @@ use FCFSC;
 use Backfilling;
 
 my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
-die 'missing arguments: tracefile jobs_number executions_number threads_number' unless defined $threads;
+die 'missing arguments: tracefile jobs_number executions_number cpus_number threads_number' unless defined $threads;
 
-my $trace = new Trace($trace_file);
-$trace->read();
+my $trace = new_from_swf Trace($trace_file);
 $trace->remove_large_jobs($max_cpus);
-
-my @trace_blocks;
 
 # Asemble the trace blocks that will be used
 print STDERR "Generating $executions trace(s) with size $trace_size\n";
+my @trace_blocks;
 for (1..$executions) {
-	my $trace_random = new Trace();
-	$trace_random->read_block_from_trace($trace, $trace_size);
+	my $trace_random = new_block_from_trace Trace($trace, $trace_size);
 	push @trace_blocks, $trace_random;
 }
 
@@ -35,7 +32,6 @@ print STDERR "Splitting\n";
 my @trace_chunks = group_traces_by_chunks(\@trace_blocks, $executions/$threads);
 
 # Create threads
-# TODO Save these traces in files to control later
 print STDERR "Creating threads\n";
 my @threads;
 
@@ -52,7 +48,6 @@ for my $i (0..($threads - 1)) {
 	print STDERR "Thread $i finished\n";
 
 	#write_results_to_file($results_thread, "backfilling_FCFS-$i.csv");
-
 	push @results, @{$results_thread};
 }
 

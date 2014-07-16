@@ -9,7 +9,7 @@ use Storable qw(dclone);
 use Job;
 use Processor;
 
-sub new {
+sub new_from_swf {
 	my $class = shift;
 	my $self = {
 		file => shift,
@@ -18,13 +18,6 @@ sub new {
 		partition_count => 0,
 		needed_cpus => 0
 	};
-
-	bless $self, $class;
-	return $self;
-}
-
-sub read {
-	my $self = shift;
 
 	open (FILE, $self->{file}) or die "unable to open $self->{file}";
 
@@ -55,33 +48,47 @@ sub read {
 			push $self->{jobs}, $job;
 		}
 	}
+
+	bless $self, $class;
+	return $self;
 }
 
-sub read_block_from_trace {
-	my $self = shift;
-	my $trace = shift;
-	my $size = shift;
+#TODO Should this code use the references for the new jobs or deep copies?
+sub new_block_from_trace {
+	my $class = shift;
+	my $self = {
+		trace => shift,
+		size => shift,
+		jobs => [],
+		status => [],
+		partition_count => 0,
+		needed_cpus => 0
+	};
 
-	my $start_point = int(rand(scalar @{$trace->jobs} - $size + 1));
-	my @selected_jobs = @{$trace->jobs}[$start_point..($start_point + $size - 1)];
+	my $start_point = int(rand(scalar @{$self->{trace}->jobs} - $self->{size} + 1));
+	my @selected_jobs = @{$self->{trace}->jobs}[$start_point..($start_point + $self->{size} - 1)];
 	push $self->{jobs}, @selected_jobs;
 
 	$self->{needed_cpus} = max map {$_->requested_cpus} @{$self->{jobs}};
+
+	bless $self, $class;
+	return $self;
 }
 
-sub read_from_trace {
-	my $self = shift;
-	my $trace = shift;
-	my $size = shift;
+sub new_from_trace {
+	my $class = shift;
+	my $self = {
+		trace => shift,
+		size => shift,
+		jobs => [],
+		status => [],
+		partition_count => 0,
+		needed_cpus => 0
+	};
 
-	for my $job_number (0..($size - 1)) {
-		my $job_id = int(rand(@{$trace->jobs}));
-
-		# This version is using a deep copy of the jobs so that even if the code
-		# chooses the same job more then once it's ok. Maybe it's a better idea to
-		# not use deep copy and instead use references and make sure no job is
-		# used more then once in this case.
-		my $new_job = dclone($trace->job($job_id));
+	for my $job_number (0..($self->{size} - 1)) {
+		my $job_id = int(rand(@{$self->{trace}->jobs}));
+		my $new_job = dclone($self->{trace}->job($job_id));
 
 		if ($new_job->requested_cpus > $self->{needed_cpus}) {
 			$self->{needed_cpus} = $new_job->requested_cpus;
@@ -91,29 +98,12 @@ sub read_from_trace {
 
 		push $self->{jobs}, $new_job;
 	}
+
+	bless $self, $class;
+	return $self;
 }
 
-sub copy_from_trace {
-	my $self = shift;
-	my $trace = shift;
-	my $size = shift;
-
-	for my $job_number (0..($size - 1)) {
-		my $job_id = int(rand(@{$trace->jobs}));
-		my $new_job = dclone($trace->job($job_id));
-
-		if ($new_job->requested_cpus > $self->{needed_cpus}) {
-			$self->{needed_cpus} = $new_job->requested_cpus;
-		}
-
-		$new_job->job_number(scalar @{$self->{jobs}} + 1);
-
-		push $self->{jobs}, $new_job;
-	}
-}
-
-
-sub write {
+sub write_to_file {
 	my $self = shift;
 	my $trace_filename = shift;
 
@@ -161,6 +151,7 @@ sub number_of_jobs {
 sub remove_large_jobs {
 	my $self = shift;
 	my $limit = shift;
+
 	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
 	$self->{jobs} = [@left_jobs];
 }
