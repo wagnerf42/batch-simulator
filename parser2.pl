@@ -13,44 +13,48 @@ use FCFS;
 use FCFSC;
 use Backfilling;
 
-my $trace_size = 50;
-my $executions = 5;
-my $cores = 1;
+my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
 
-my $trace = new Trace($ARGV[0]);
+#TODO Refactor this part
+#die 'missing arguments: tracefile jobs_number executions_number ' unless defined $executions;
+
+my $trace = new Trace($trace_file);
 $trace->read();
+$trace->remove_large_jobs($max_cpus);
 
 my @trace_blocks;
 
 # Asemble the trace blocks that will be used
-print "Generating traces\n";
-for my $i (0..($executions - 1)) {
+print STDERR "Generating $executions trace(s) with size $trace_size\n";
+for (1..$executions) {
 	my $trace_random = new Trace();
 	$trace_random->read_block_from_trace($trace, $trace_size);
 	push @trace_blocks, $trace_random;
 }
 
-run_all_thread(\@trace_blocks);
-die;
-
 # Divide the block in chunks
-my @trace_chunks = group_traces_by_chunks(\@trace_blocks, $executions/$cores);
-
+print STDERR "Splitting\n";
+my @trace_chunks = group_traces_by_chunks(\@trace_blocks, $executions/$threads);
 
 # Create threads
-print "Creating threads\n";
+# TODO Save these traces in files to control later
+print STDERR "Creating threads\n";
 my @threads;
-for my $i (0..($cores - 1)) {
-	my $thread = threads->create(\&run_all_thread, $trace_chunks[$i]);
-	push @threads, $thread
+
+for my $i (0..($threads - 1)) {
+	my $thread = threads->create(\&run_all_thread, $i, $trace_chunks[$i]);
+	push @threads, $thread;
 }
 
 # Wait for all threads to finish
-print "Waiting for all threads to finish\n";
+print STDERR "Waiting for all threads to finish\n";
 my @results;
-for my $i (0..($cores - 1)) {
+for my $i (0..($threads - 1)) {
 	my $results_thread = $threads[$i]->join();
-	print "Thread $i finished\n";
+	print STDERR "Thread $i finished\n";
+
+	write_results_to_file($results_thread, "backfilling_FCFS_$i.csv");
+
 	push @results, @{$results_thread};
 }
 
@@ -73,15 +77,14 @@ sub write_results_to_file {
 }
 
 sub run_all_thread {
+	my $id = shift;
 	my $traces = shift;
 	my @results_all;
 
 	for my $trace (@{$traces}) {
-		print "Running FCFS with $#{$trace->jobs} ".$trace->needed_cpus." jobs\n";
 		my $schedule_fcfs = new FCFS($trace, $trace->needed_cpus);
 		$schedule_fcfs->run();
 
-		print "Running Backfilling with $#{$trace->jobs} ".$trace->needed_cpus." jobs\n";
 		my $schedule_backfilling = new Backfilling($trace, $trace->needed_cpus);
 		$schedule_backfilling->run();
 
@@ -91,6 +94,8 @@ sub run_all_thread {
 		};
 
 		push @results_all, $results;
+
+		print STDERR "Thread $id finished trace\n";
 	}
 
 	return [@results_all];
@@ -129,7 +134,6 @@ sub run_threads_queue {
 
 	# This is the element that will go in the queue
 	my $trace_random = Trace->new();
-	print "aa $trace_random->{needed_cpus}\n";
 	$trace_random->read_from_trace($trace, $trace_size);
 
 	# Creating the thread

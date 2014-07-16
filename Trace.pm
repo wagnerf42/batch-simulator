@@ -158,4 +158,12 @@ sub number_of_jobs {
 	return scalar @{$self->{jobs}};
 }
 
+#TODO Refactor
+sub remove_large_jobs {
+	my $self = shift;
+	my $limit = shift;
+	my @left_jobs = grep {$_->requested_cpus() >= $limit} @{$self->{jobs}};
+	$self->{jobs} = [@left_jobs];
+}
+
 1;
