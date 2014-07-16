@@ -47,7 +47,6 @@ sub assign_job {
 	my $job = shift;
 
 	push $self->{jobs}, $job;
-	@{$self->{jobs}} = sort {$a->starting_time <=> $b->starting_time} @{$self->{jobs}};
 
 	my $candidate_cmax = $job->starting_time() + $job->run_time;
 	$self->{cmax} = $candidate_cmax if $candidate_cmax > $self->{cmax};
@@ -74,12 +73,13 @@ sub print_jobs {
 
 sub jobs {
 	my $self = shift;
-
-	if (@_) {
-		$self->{jobs} = shift;
-	}
-
 	return $self->{jobs};
+}
+
+#TODO Revisit this part
+sub remove_all_jobs {
+	my $self = shift;
+	$self->{jobs} = [];
 }
 
 1;

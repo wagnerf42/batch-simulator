@@ -34,7 +34,7 @@ sub read {
 		next unless defined $fields[0];
 
 		# Status line
-		if ($fields[0] eq ';') { 
+		if ($fields[0] eq ';') {
 			push $self->{status}, [@fields];
 		}
 
@@ -46,7 +46,7 @@ sub read {
 			next unless $job->run_time;
 
 			# Do not accept jobs with no requested cpus
-			next unless $job->requested_cpus;
+			next unless $job->requested_cpus > 0;
 
 			if ($job->requested_cpus > $self->{needed_cpus}) {
 				$self->{needed_cpus} = $job->requested_cpus;
@@ -55,6 +55,18 @@ sub read {
 			push $self->{jobs}, $job;
 		}
 	}
+}
+
+sub read_block_from_trace {
+	my $self = shift;
+	my $trace = shift;
+	my $size = shift;
+
+	my $start_point = int(rand(scalar @{$trace->jobs} - $size + 1));
+	my @selected_jobs = @{$trace->jobs}[$start_point..($start_point + $size - 1)];
+	push $self->{jobs}, @selected_jobs;
+
+	$self->{needed_cpus} = max map {$_->requested_cpus} @{$self->{jobs}};
 }
 
 sub read_from_trace {
@@ -80,6 +92,26 @@ sub read_from_trace {
 		push $self->{jobs}, $new_job;
 	}
 }
+
+sub copy_from_trace {
+	my $self = shift;
+	my $trace = shift;
+	my $size = shift;
+
+	for my $job_number (0..($size - 1)) {
+		my $job_id = int(rand(@{$trace->jobs}));
+		my $new_job = dclone($trace->job($job_id));
+
+		if ($new_job->requested_cpus > $self->{needed_cpus}) {
+			$self->{needed_cpus} = $new_job->requested_cpus;
+		}
+
+		$new_job->job_number(scalar @{$self->{jobs}} + 1);
+
+		push $self->{jobs}, $new_job;
+	}
+}
+
 
 sub write {
 	my $self = shift;
@@ -118,6 +150,20 @@ sub job {
 	my $job_number = shift;
 
 	return $self->{jobs}[$job_number];
+}
+
+sub number_of_jobs {
+	my $self = shift;
+
+	return scalar @{$self->{jobs}};
+}
+
+#TODO Refactor
+sub remove_large_jobs {
+	my $self = shift;
+	my $limit = shift;
+	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
+	$self->{jobs} = [@left_jobs];
 }
 
 1;

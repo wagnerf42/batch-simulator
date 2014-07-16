@@ -13,6 +13,7 @@ use ExecutionProfile;
 sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
+
 	$self->{execution_profile} = new ExecutionProfile($self->{processors});
 	$self->{backfilled_jobs} = 0;
 

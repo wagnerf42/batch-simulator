@@ -18,7 +18,7 @@ sub assign_job {
 	my @selected_processors = @{$self->{processors}}[0..($requested_cpus - 1)];
 	my $starting_time = $selected_processors[$#selected_processors]->cmax();
 
-	$job->assign_to($starting_time, [@selected_processors]);
+	$job->assign_to($starting_time, \@selected_processors);
 }
 
 1;
