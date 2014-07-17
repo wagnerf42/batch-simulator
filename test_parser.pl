@@ -17,6 +17,7 @@ $trace->remove_large_jobs($max_cpus);
 
 for (1..$executions) {
 	my $trace_random = Trace->new_block_from_trace($trace, $trace_size);
+	$trace_random->write_to_file("debug_trace_$_");
 
 	my $schedule_fcfs = FCFS->new($trace_random, $max_cpus);
 	$schedule_fcfs->run();

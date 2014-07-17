@@ -13,6 +13,8 @@ sub new {
 		processors => []
 	};
 
+	$self->{trace}->reset();
+
 	for my $id (0..($self->{num_processors} - 1)) {
 		my $processor = new Processor($id);
 		push $self->{processors}, $processor;
@@ -78,7 +80,7 @@ sub tycat {
 	my $dir = "/tmp/$user";
 	mkdir $dir unless -f $dir;
 	$self->save_svg("$dir/$file_count.svg");
-	`inkscape $dir/$file_count.svg`;
+	`tycat $dir/$file_count.svg`;
 	$file_count++;
 }
 
@@ -107,7 +109,6 @@ sub print_svg {
 
 sub DESTROY {
 	my $self = shift;
-
 	for my $processor (@{$self->{processors}}) {
 		$processor->remove_all_jobs();
 	}

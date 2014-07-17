@@ -35,6 +35,7 @@ sub processors {
 
 sub duration {
 	my $self = shift;
+	$self->{duration} = shift if @_;
 	return $self->{duration};
 }
 

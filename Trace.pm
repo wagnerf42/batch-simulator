@@ -158,4 +158,9 @@ sub remove_large_jobs {
 	$self->{jobs} = [@left_jobs];
 }
 
+sub reset {
+	my $self = shift;
+	$_->reset() for @{$self->{jobs}};
+}
+
 1;

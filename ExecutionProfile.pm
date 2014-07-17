@@ -88,7 +88,12 @@ sub set_current_time {
 		}
 
 		elsif ((not defined $profile->ending_time()) or ($profile->ending_time() > $current_time)) {
+			my $ending_time = $profile->ending_time();
 			$profile->starting_time($current_time);
+			if (defined $ending_time) {
+				my $new_duration = $ending_time - $current_time;
+				$profile->duration($new_duration);
+			}
 			push @remaining_profiles, $profile;
 		}
 	}
