@@ -16,28 +16,12 @@ use Backfilling;
 my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
 die 'missing arguments: tracefile jobs_number executions_number cpus_number threads_number' unless defined $threads;
 
-my $trace = Trace->new_from_swf($trace_file);
-$trace->remove_large_jobs($max_cpus);
-
-#TODO Generate the traces inside the threads
-# Asemble the trace blocks that will be used
-print STDERR "Generating $executions trace(s) with size $trace_size\n";
-my @trace_blocks;
-for (1..$executions) {
-	my $trace_random = Trace->new_from_trace($trace, $trace_size);
-	push @trace_blocks, $trace_random;
-}
-
-# Divide the block in chunks
-print STDERR "Splitting\n";
-my @trace_chunks = group_traces_by_chunks(\@trace_blocks, $executions/$threads);
-
 # Create threads
 print STDERR "Creating threads\n";
 my @threads;
 
 for my $i (0..($threads - 1)) {
-	my $thread = threads->create(\&run_all_thread, $i, $max_cpus, $trace_chunks[$i]);
+	my $thread = threads->create(\&run_all_thread, $i);
 	push @threads, $thread;
 }
 
@@ -48,7 +32,6 @@ for my $i (0..($threads - 1)) {
 	my $results_thread = $threads[$i]->join();
 	print STDERR "Thread $i finished\n";
 
-	#write_results_to_file($results_thread, "backfilling_FCFS-$i.csv");
 	push @results, @{$results_thread};
 }
 
@@ -73,15 +56,16 @@ sub write_results_to_file {
 
 sub run_all_thread {
 	my $id = shift;
-	my $max_cpus = shift;
-	my $traces = shift;
 	my @results_all;
+	my $trace = Trace->new_from_swf($trace_file);
 
-	for my $trace (@{$traces}) {
-		my $schedule_fcfs = FCFS->new($trace, $max_cpus);
+	for (1..($executions/$threads)) {
+		my $trace_random = Trace->new_block_from_trace($trace, $trace_size);
+
+		my $schedule_fcfs = FCFS->new($trace_random, $max_cpus);
 		$schedule_fcfs->run();
 
-		my $schedule_backfilling = Backfilling->new($trace, $max_cpus);
+		my $schedule_backfilling = Backfilling->new($trace_random, $max_cpus);
 		$schedule_backfilling->run();
 
 		my $results = {
@@ -93,15 +77,5 @@ sub run_all_thread {
 	}
 
 	return [@results_all];
-}
-
-sub group_traces_by_chunks {
-	my $traces = shift;
-	my $chunk_size = shift;
-	my @chunks;
-
-	push @chunks, [splice @{$traces}, 0, $chunk_size] while @{$traces};
-
-	return @chunks;
 }
 
