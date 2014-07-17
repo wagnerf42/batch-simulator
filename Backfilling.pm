@@ -23,11 +23,10 @@ sub new {
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
-
 	my $requested_cpus = $job->requested_cpus();
-	die "not enough processors (we need $requested_cpus, we have $self->{num_processors})" if $requested_cpus > $self->{num_processors};
 
 	#get the first valid profile_id for our job
+	$self->{execution_profile}->set_current_time($job->submit_time());
 	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 	my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
@@ -36,7 +35,7 @@ sub assign_job {
 	#TODO: backfilled jobs statistics
 
 	#update profiles
-	$self->{execution_profile}->add_job_at($chosen_profile, $job);
+	$self->{execution_profile}->add_job_at($job);
 }
 
 sub backfilled_jobs {

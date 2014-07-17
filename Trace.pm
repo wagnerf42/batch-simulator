@@ -53,7 +53,6 @@ sub new_block_from_trace {
 	my $self = {
 		trace => shift,
 		size => shift,
-		jobs => [],
 		status => [],
 		partition_count => 0,
 		needed_cpus => 0
@@ -61,7 +60,10 @@ sub new_block_from_trace {
 
 	my $start_point = int(rand(scalar @{$self->{trace}->jobs} - $self->{size} + 1));
 	my @selected_jobs = @{$self->{trace}->jobs}[$start_point..($start_point + $self->{size} - 1)];
-	push $self->{jobs}, @selected_jobs;
+	my $first_submit_time = $selected_jobs[0]->submit_time();
+	$_->submit_time($_->submit_time()-$first_submit_time) for @selected_jobs;
+
+	$self->{jobs} = [ @selected_jobs ];
 
 	$self->{needed_cpus} = max map {$_->requested_cpus} @{$self->{jobs}};
 
@@ -95,6 +97,12 @@ sub new_from_trace {
 
 	bless $self, $class;
 	return $self;
+}
+
+sub reset_submit_times {
+	my $self = shift;
+
+	$_->submit_time(0) for (@{$self->{jobs}});
 }
 
 sub write_to_file {

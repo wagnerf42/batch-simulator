@@ -84,6 +84,11 @@ sub ending_time {
 
 sub submit_time {
 	my $self = shift;
+
+	if (@_) {
+		$self->{submit_time} = shift;
+	}
+
 	return $self->{submit_time};
 }
 

@@ -5,6 +5,8 @@ use warnings;
 use overload
 	'""' => \&stringification;
 
+use List::Util qw(min);
+
 #a profile objects encodes a set of free processors at a given time
 
 sub new {
@@ -55,33 +57,45 @@ sub add_job_if_needed {
 	my $self = shift;
 	my $job = shift;
 	return $self if $self->{starting_time} >= $job->ending_time();
-	die "job starts after me" if $self->{starting_time} < $job->starting_time();
-	#job is ok, two cases : if it ends before ourselves or not
-	my @profiles;
-	if ((not (defined $self->{duration})) or ($self->{starting_time} + $self->{duration} > $job->ending_time())) {
-		#split
-		push @profiles, $self->split($job);
-	} else {
-		#do not split
-		push @profiles, $self;
+	return $self if defined $self->ending_time() and $self->ending_time() <= $job->starting_time();
+	if ($self->starting_time() < $job->starting_time()) {
+		my $new_end;
+		if (defined $self->{duration}) {
+			$new_end = min($self->ending_time(), $job->starting_time());
+		} else {
+			$new_end = $job->starting_time();
+		}
+		$self->{duration} = $new_end - $self->{starting_time};
 	}
-	$profiles[0]->remove_used_processors($job); #remove processors only for starting profile where job executes
-	shift @profiles if $profiles[0]->is_fully_loaded();
-	return @profiles;
+	return $self->split($job);
 }
 
-#precondition: jobs splits the profile
 sub split {
 	my $self = shift;
 	my $job = shift;
-	my $start_profile = new Profile($self->{starting_time}, $self->{processors}, $job->ending_time()-$self->{starting_time});
-	my $end_duration;
+
+	my @profiles;
+	my $middle_start = $self->{starting_time};
+	my $middle_end;
 	if (defined $self->{duration}) {
-		$end_duration = $self->{starting_time} + $self->{duration} - $job->ending_time();
-		die "pb" if $end_duration <= 0;
+		$middle_end = min($self->ending_time(), $job->ending_time());
+	} else {
+		$middle_end = $job->ending_time();
 	}
-	my $end_profile = new Profile($job->ending_time(), $self->{processors}, $end_duration);
-	return ($start_profile, $end_profile);
+	my $middle_duration = $middle_end - $middle_start if defined $middle_end;
+	my $middle_profile = new Profile($middle_start, $self->{processors}, $middle_duration);
+	$middle_profile->remove_used_processors($job);
+	push @profiles, $middle_profile;
+
+	if ((not defined $self->ending_time()) or ($job->ending_time() < $self->ending_time())) {
+		my $end_duration;
+		if (defined $self->{duration}) {
+			$end_duration = $self->ending_time() - $job->ending_time();
+		}
+		my $end_profile = new Profile($job->ending_time(), $self->{processors}, $end_duration);
+		push @profiles, $end_profile;
+	}
+	return @profiles;
 }
 
 sub is_fully_loaded {
@@ -105,7 +119,16 @@ sub remove_used_processors {
 
 sub starting_time {
 	my $self = shift;
+
+	$self->{starting_time} = shift if @_;
 	return $self->{starting_time};
+}
+
+sub ending_time {
+	my $self = shift;
+
+	return unless defined $self->{duration};
+	return $self->{starting_time} + $self->{duration};
 }
 
 1;

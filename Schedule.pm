@@ -25,6 +25,8 @@ sub new {
 sub run {
 	my $self = shift;
 
+	die "not enough processors (we need $self->{trace}->needed_cpus, we have $self->{num_processors})" if $self->{trace}->needed_cpus() > $self->{num_processors};
+
 	my $start = time();
 
 	for my $job (@{$self->{trace}->jobs}) {
@@ -76,7 +78,7 @@ sub tycat {
 	my $dir = "/tmp/$user";
 	mkdir $dir unless -f $dir;
 	$self->save_svg("$dir/$file_count.svg");
-	`tycat $dir/$file_count.svg`;
+	`inkscape $dir/$file_count.svg`;
 	$file_count++;
 }
 

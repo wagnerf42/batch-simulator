@@ -28,6 +28,7 @@ sub get_free_processors_for {
 	my %left_processors; #processors which might be ok for job
 	$left_processors{$_} = $_ for @{$candidate_processors};
 	my $starting_time = $self->[$profile_index]->starting_time();
+
 	while ($left_duration > 0) {
 		my $current_profile = $self->[$profile_index];
 		return unless $starting_time == $current_profile->starting_time(); #profiles must all be contiguous
@@ -51,9 +52,8 @@ sub get_free_processors_for {
 #precondition : job should be assigned first
 sub add_job_at {
 	my $self = shift;
-	my $start_profile_id = shift;
 	my $job = shift;
-	my @new_profiles = splice @{$self}, 0, $start_profile_id;
+	my @new_profiles;
 	for my $profile (@{$self}) {
 		push @new_profiles, $profile->add_job_if_needed($job);
 	}
@@ -74,6 +74,26 @@ sub find_first_profile_for {
 		return ($profile_id, [@processors]) if @processors;
 	}
 	die "at least last profile should be ok for job";
+}
+
+sub set_current_time {
+	my $self = shift;
+	my $current_time = shift;
+
+	my @remaining_profiles;
+
+	for my $profile (@{$self}) {
+		if ($profile->starting_time() >= $current_time) {
+			push @remaining_profiles, $profile;
+		}
+
+		elsif ((not defined $profile->ending_time()) or ($profile->ending_time() > $current_time)) {
+			$profile->starting_time($current_time);
+			push @remaining_profiles, $profile;
+		}
+	}
+
+	@{$self} = @remaining_profiles;
 }
 
 1;
