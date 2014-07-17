@@ -19,6 +19,7 @@ die 'missing arguments: tracefile jobs_number executions_number cpus_number thre
 my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($max_cpus);
 
+#TODO Generate the traces inside the threads
 # Asemble the trace blocks that will be used
 print STDERR "Generating $executions trace(s) with size $trace_size\n";
 my @trace_blocks;
@@ -36,7 +37,7 @@ print STDERR "Creating threads\n";
 my @threads;
 
 for my $i (0..($threads - 1)) {
-	my $thread = threads->create(\&run_all_thread, $i, $trace_chunks[$i]);
+	my $thread = threads->create(\&run_all_thread, $i, $max_cpus, $trace_chunks[$i]);
 	push @threads, $thread;
 }
 
@@ -52,9 +53,8 @@ for my $i (0..($threads - 1)) {
 }
 
 # Print all results in a file
-mkdir("backfilling_FCFS-$trace_size-$executions-$max_cpus");
-write_results_to_file(\@results, "backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus.csv");
-`Rscript backfilling_FCFS.R backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus.csv backfilling_FCFS-$trace_size-$executions-$max_cpus/backfilling_FCFS-$trace_size-$executions-$max_cpus.pdf`;
+print STDERR "Writing results\n";
+write_results_to_file(\@results, "backfilling_FCFS-$trace_size-$executions-$max_cpus.csv");
 exit;
 
 sub write_results_to_file {
@@ -73,6 +73,7 @@ sub write_results_to_file {
 
 sub run_all_thread {
 	my $id = shift;
+	my $max_cpus = shift;
 	my $traces = shift;
 	my @results_all;
 

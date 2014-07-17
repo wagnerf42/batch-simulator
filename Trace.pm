@@ -35,12 +35,6 @@ sub new_from_swf {
 		elsif ($fields[0] ne ' ') {
 			my $job = new Job(@fields);
 
-			# Do not accept jobs with no run time
-			next unless $job->run_time;
-
-			# Do not accept jobs with no requested cpus
-			next unless $job->requested_cpus > 0;
-
 			if ($job->requested_cpus > $self->{needed_cpus}) {
 				$self->{needed_cpus} = $job->requested_cpus;
 			}

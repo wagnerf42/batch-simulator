@@ -64,7 +64,7 @@ sub stringification {
 
 sub requested_cpus {
 	my $self = shift;
-	return $self->{requested_cpus};
+	return $self->{allocated_cpus};
 }
 
 sub run_time {
