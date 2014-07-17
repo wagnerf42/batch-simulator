@@ -25,9 +25,19 @@ sub new {
 sub run {
 	my $self = shift;
 
+	my $start = time();
+
 	for my $job (@{$self->{trace}->jobs}) {
 		$self->assign_job($job);
 	}
+
+	$self->{run_time} = time() - $start;
+}
+
+sub run_time {
+	my $self = shift;
+
+	return $self->{run_time};
 }
 
 sub print {

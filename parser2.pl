@@ -5,7 +5,6 @@ use warnings;
 use threads;
 use threads::shared;
 use Thread::Queue;
-
 use Data::Dumper qw(Dumper);
 
 use Trace;
@@ -44,11 +43,10 @@ sub write_results_to_file {
 	my $results = shift;
 	my $filename = shift;
 
-
 	open(my $filehandle, "> $filename") or die "unable to open $filename";
 
 	for my $results_item (@{$results}) {
-		print $filehandle "$results_item->{fcfs} $results_item->{backfilling}\n";
+		print $filehandle "$results_item->{fcfs}->{cmax} $results_item->{backfilling}->{cmax}\n";
 	}
 
 	close $filehandle;
@@ -57,7 +55,9 @@ sub write_results_to_file {
 sub run_all_thread {
 	my $id = shift;
 	my @results_all;
+
 	my $trace = Trace->new_from_swf($trace_file);
+	$trace->remove_large_jobs($max_cpus);
 
 	for (1..($executions/$threads)) {
 		my $trace_random = Trace->new_block_from_trace($trace, $trace_size);
@@ -69,8 +69,15 @@ sub run_all_thread {
 		$schedule_backfilling->run();
 
 		my $results = {
-			fcfs => $schedule_fcfs->cmax,
-			backfilling => $schedule_backfilling->cmax
+			fcfs => {
+				cmax => $schedule_fcfs->cmax,
+				run_time => $schedule_fcfs->run_time
+			},
+
+			backfilling => {
+				cmax => $schedule_backfilling->cmax,
+				run_time => $schedule_backfilling->run_time
+			}
 		};
 
 		push @results_all, $results;
