@@ -46,7 +46,7 @@ sub write_results_to_file {
 	open(my $filehandle, "> $filename") or die "unable to open $filename";
 
 	for my $results_item (@{$results}) {
-		print $filehandle "$results_item->{fcfs}->{cmax} $results_item->{backfilling}->{cmax}\n";
+		print $filehandle "$results_item->{contiguous}->{cmax} $results_item->{not_contiguous}->{cmax}\n";
 	}
 
 	close $filehandle;
@@ -62,21 +62,23 @@ sub run_all_thread {
 	for (1..($executions/$threads)) {
 		my $trace_random = Trace->new_block_from_trace($trace, $trace_size);
 
-		my $schedule_fcfs = FCFS->new($trace_random, $max_cpus);
-		$schedule_fcfs->run();
+		my $schedule_not_contiguous= FCFS->new($trace_random, $max_cpus);
+		$schedule_not_contiguous->run();
 
-		my $schedule_backfilling = Backfilling->new($trace_random, $max_cpus);
-		$schedule_backfilling->run();
+		$trace_random->reset();
+
+		my $schedule_contiguous = Backfilling->new($trace_random, $max_cpus, 1);
+		$schedule_contiguous->run();
 
 		my $results = {
-			fcfs => {
-				cmax => $schedule_fcfs->cmax,
-				run_time => $schedule_fcfs->run_time
+			not_contiguous => {
+				cmax => $schedule_not_contiguous->cmax,
+				run_time => $schedule_not_contiguous->run_time
 			},
 
-			backfilling => {
-				cmax => $schedule_backfilling->cmax,
-				run_time => $schedule_backfilling->run_time
+			contiguous => {
+				cmax => $schedule_contiguous->cmax,
+				run_time => $schedule_contiguous->run_time
 			}
 		};
 

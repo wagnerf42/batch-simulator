@@ -10,10 +10,9 @@ sub new {
 	my $self = {
 		trace => shift,
 		num_processors => shift,
+		contiguous => shift,
 		processors => []
 	};
-
-	$self->{trace}->reset();
 
 	for my $id (0..($self->{num_processors} - 1)) {
 		my $processor = new Processor($id);

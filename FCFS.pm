@@ -7,8 +7,6 @@ use warnings;
 use List::Util qw(max);
 use ProcessorsSet;
 
-#dumbest possible fcfs algorithm
-
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
@@ -22,10 +20,17 @@ sub assign_job {
 	for my $processor (@{$self->{processors}}) {
 		push @candidate_processors, $processor if $processor->available_at($starting_time, $job->run_time());
 	}
-	my $set = new ProcessorsSet(@candidate_processors);
-	$set->reduce_to($requested_cpus);
 
-	$job->assign_to($starting_time, [$set->processors()]);
+	if ($self->{contiguous}) {
+		my $set = new ProcessorsSet(@candidate_processors);
+		$set->reduce_to($requested_cpus);
+		$job->assign_to($starting_time, [$set->processors()]);
+	}
+
+	else {
+		$job->assign_to($starting_time, \@selected_processors);
+	}
+
 }
 
 1;
