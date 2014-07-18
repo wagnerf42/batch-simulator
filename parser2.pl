@@ -16,13 +16,11 @@ use Database;
 my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
 die 'missing arguments: tracefile jobs_number executions_number cpus_number threads_number' unless defined $threads;
 
-my $database = Database->new();
-my $git_status = system("./check_git.sh");
-print "git $git_status\n";
-die;
+# This line keeps the code from bein executed if there are uncommited changes in the git tree
+die 'git tree not clean' if system('./check_git.sh');
 
+my $database = Database->new();
 my %execution;
-die;
 
 # Create threads
 print STDERR "Creating threads\n";
