@@ -11,14 +11,22 @@ use Trace;
 use FCFS;
 use FCFSC;
 use Backfilling;
+use Database;
 
 my ($trace_file, $trace_size, $executions, $max_cpus, $threads) = @ARGV;
 die 'missing arguments: tracefile jobs_number executions_number cpus_number threads_number' unless defined $threads;
 
+my $database = Database->new();
+my $git_status = system("./check_git.sh");
+print "git $git_status\n";
+die;
+
+my %execution;
+die;
+
 # Create threads
 print STDERR "Creating threads\n";
 my @threads;
-
 for my $i (0..($threads - 1)) {
 	my $thread = threads->create(\&run_all_thread, $i);
 	push @threads, $thread;
