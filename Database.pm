@@ -118,4 +118,28 @@ sub add_trace {
 	return $trace_id;
 }
 
+sub get_trace_ref {
+	my $self = shift;
+	my $trace_id = shift;
+
+	my $sth = $self->{dbh}->prepare("SELECT * FROM traces WHERE id=\'$trace_id\'");
+	$sth->execute();
+	return $sth->fetchrow_hashref();
+}
+
+sub get_job_refs {
+	my $self = shift;
+	my $trace_id = shift;
+	my $sth = $self->{dbh}->prepare("SELECT * FROM jobs WHERE trace=\'$trace_id\'");
+	$sth->execute();
+
+	my @job_refs;
+	while (my $job_ref = $sth->fetchrow_hashref()) {
+		push @job_refs, $job_ref;
+	}
+	return @job_refs;
+}
+
+
+
 1;

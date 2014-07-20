@@ -47,12 +47,7 @@ for my $i (0..($threads_number - 1)) {
 # Wait for all threads to finish
 print STDERR "Waiting for all threads to finish\n";
 my @results;
-for my $i (0..($threads_number - 1)) {
-	my $results_thread = $threads[$i]->join();
-	print STDERR "Thread $i finished\n";
-
-	push @results, @{$results_thread};
-}
+push @results, @{$_->join()} for (@threads);
 
 # Update run time in the database
 $database->update_execution_run_time($execution_id, time() - $start_time);
