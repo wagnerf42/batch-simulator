@@ -35,6 +35,11 @@ sub run {
 	}
 
 	$self->{run_time} = time() - $start;
+
+	return {
+		cmax => $self->cmax(),
+		run_time => $self->{run_time}
+	};
 }
 
 sub run_time {
