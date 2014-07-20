@@ -19,13 +19,15 @@ die 'missing arguments: trace_number cpus_number' unless defined $cpus_number;
 my $database = Database->new();
 my $trace = Trace->new_from_database($trace_number);
 
-my $schedule_fcfs = FCFS->new($trace, $cpus_number);
+my $schedule_fcfs = FCFS->new($trace, $cpus_number, 1);
 $schedule_fcfs->run();
+print "FCFS: " . $schedule_fcfs->cmax() . "\n";
 $schedule_fcfs->save_svg("backfilling_FCFS-$trace_number-$cpus_number-1.svg");
 
 $trace->reset();
 
-my $schedule_fcfs_contiguous = FCFS->new($trace, $cpus_number, 1);
-$schedule_fcfs_contiguous->run();
-$schedule_fcfs_contiguous->save_svg("backfilling_FCFS-$trace_number-$cpus_number-2.svg");
+my $schedule_backfilling= Backfilling->new($trace, $cpus_number);
+$schedule_backfilling->run();
+print "Backfilling " . $schedule_backfilling->cmax() . "\n";
+$schedule_backfilling->save_svg("backfilling_FCFS-$trace_number-$cpus_number-2.svg");
 

@@ -140,6 +140,4 @@ sub get_job_refs {
 	return @job_refs;
 }
 
-
-
 1;
