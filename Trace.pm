@@ -8,6 +8,7 @@ use Storable qw(dclone);
 
 use Job;
 use Processor;
+use Database;
 
 sub new_from_swf {
 	my $class = shift;
@@ -15,7 +16,6 @@ sub new_from_swf {
 		file => shift,
 		jobs => [],
 		status => [],
-		partition_count => 0,
 		needed_cpus => 0
 	};
 
@@ -78,7 +78,6 @@ sub new_from_trace {
 		size => shift,
 		jobs => [],
 		status => [],
-		partition_count => 0,
 		needed_cpus => 0
 	};
 
@@ -86,13 +85,33 @@ sub new_from_trace {
 		my $job_id = int(rand(@{$self->{trace}->jobs}));
 		my $new_job = dclone($self->{trace}->job($job_id));
 
-		if ($new_job->requested_cpus > $self->{needed_cpus}) {
-			$self->{needed_cpus} = $new_job->requested_cpus;
-		}
-
+		$self->{needed_cpus} = max($self->{needed_cpus}, $new_job->requested_cpus);
 		$new_job->job_number(scalar @{$self->{jobs}} + 1);
-
 		push $self->{jobs}, $new_job;
+	}
+
+	bless $self, $class;
+	return $self;
+}
+
+sub new_from_database {
+	my $class = shift;
+	my $self = {
+		trace_id => shift,
+		jobs => [],
+		status => [],
+		needed_cpus => 0
+	};
+
+	my $database = Database->new();
+	my $trace_ref = $database->get_trace_ref($self->{trace_id});
+	my @job_refs = $database->get_job_refs($self->{trace_id});
+
+	for my $job_ref (@job_refs) {
+		my $job = Job->new($job_ref->{job_number}, $job_ref->{submit_time}, $job_ref->{wait_time}, $job_ref->{run_time}, $job_ref->{allocated_cpus}, $job_ref->{avg_cpu_time}, $job_ref->{used_mem}, $job_ref->{requested_cpus}, $job_ref->{requested_time}, $job_ref->{requested_mem}, $job_ref->{status}, $job_ref->{uid}, $job_ref->{gid}, $job_ref->{exec_number}, $job_ref->{queue_number}, $job_ref->{partition_number}, $job_ref->{prec_job_number}, $job_ref->{think_time_prec_job});
+
+		$self->{needed_cpus} = max($self->{needed_cpus}, $job->requested_cpus);
+		push $self->{jobs}, $job;
 	}
 
 	bless $self, $class;
@@ -161,6 +180,11 @@ sub remove_large_jobs {
 sub reset {
 	my $self = shift;
 	$_->reset() for @{$self->{jobs}};
+}
+
+sub file {
+	my $self = shift;
+	return $self->{file};
 }
 
 1;
