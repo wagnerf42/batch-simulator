@@ -10,7 +10,6 @@ sub new {
 	my $self = {
 		trace => shift,
 		num_processors => shift,
-		contiguous => shift,
 		processors => []
 	};
 

@@ -21,16 +21,10 @@ sub assign_job {
 		push @candidate_processors, $processor if $processor->available_at($starting_time, $job->run_time());
 	}
 
-	if ($self->{contiguous}) {
-		my $set = new ProcessorsSet(@candidate_processors);
-		$set->reduce_to($requested_cpus);
-		$job->assign_to($starting_time, [$set->processors()]);
-	}
-
-	else {
-		$job->assign_to($starting_time, \@selected_processors);
-	}
-
+	# Best effort contiguous
+	my $set = new ProcessorsSet(@candidate_processors);
+	$set->reduce_to($requested_cpus);
+	$job->assign_to($starting_time, [$set->processors()]);
 }
 
 1;

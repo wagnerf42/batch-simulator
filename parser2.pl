@@ -92,10 +92,10 @@ sub run_all_thread {
 
 		$trace_random->reset();
 
-		my $schedule_backfilling= Backfilling->new($trace_random, $cpus_number);
-		my $results_backfilling= $schedule_backfilling->run();
+		my $schedule_fcfsc = FCFSC->new($trace_random, $cpus_number);
+		my $results_fcfsc = $schedule_fcfsc->run();
 
-		push @results, [$results_fcfs, $results_backfilling, $trace_id];
+		push @results, [$results_fcfs, $results_fcfsc, $trace_id];
 	}
 
 	return [@results];
