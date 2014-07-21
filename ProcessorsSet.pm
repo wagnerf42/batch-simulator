@@ -32,12 +32,13 @@ sub reduce_to {
 	my $number = shift;
 
 	#try each position and see if we can get a contiguous block
-	for my $start_index (0..(@{$self}-$number)) {
+	for my $start_index (0..$#{$self}) {
 		my $ok = 1;
 		my $start_id = $self->[$start_index]->id();
 		for my $num (1..($number-1)) {
-			my $id = $self->[$start_index+$num]->id();
-			my $expected_id = $start_id + $num;
+			my $index = ($start_index + $num) % @{$self};
+			my $id = $self->[$index]->id();
+			my $expected_id = ($start_id + $num) % @{$self};
 			if ($id != $expected_id) {
 				$ok = 0;
 				last;
@@ -55,7 +56,12 @@ sub keep_from {
 	my $self = shift;
 	my $index = shift;
 	my $n = shift;
-	@{$self} = splice @{$self}, $index, $n;
+	my @kept_processors;
+	for my $i ($index..($index+$n-1)) {
+		my $real_index = $i % @{$self};
+		push @kept_processors, $self->[$real_index];
+	}
+	@{$self} = @kept_processors;
 }
 
 sub processors {

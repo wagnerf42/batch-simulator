@@ -10,7 +10,11 @@ sub compute_block {
 	my $self = shift;
 	my $first_processor_id = shift;
 	my $requested_cpus = shift;
-	my @selected_processors = @{$self->{processors}}[$first_processor_id..($first_processor_id + $requested_cpus - 1)];
+	my @selected_processors;
+	for my $index ($first_processor_id..($first_processor_id+$requested_cpus-1)) {
+		my $real_index = $index % @{$self->{processors}};
+		push @selected_processors, $self->{processors}->[$real_index];
+	}
 	my $starting_time = max map {$_->cmax()} @selected_processors;
 
 	return {
@@ -25,10 +29,14 @@ sub assign_job {
 	my $requested_cpus = $job->requested_cpus;
 	die "not enough processors (we need $requested_cpus, we have $self->{num_processors})" if $requested_cpus > $self->{num_processors};
 
-	my @available_blocks = map {$self->compute_block($_, $requested_cpus)} (0..($self->{num_processors}-$requested_cpus));
+	my @available_blocks = map {$self->compute_block($_, $requested_cpus)} (0..$self->{num_processors});
 	my $best_block;
 
-	$best_block = reduce { $a->{starting_time} < $b->{starting_time} ? $a : $b } @available_blocks;
+	for my $block (@available_blocks) {
+		my $block_starting_time = $block->{starting_time};
+		$best_block = $block if not defined $best_block or $block_starting_time < $best_block->{starting_time};
+	}
+
 	$job->assign_to(max($job->submit_time(), $best_block->{starting_time}), $best_block->{selected_processors});
 }
 

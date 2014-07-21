@@ -22,7 +22,7 @@ for (1..$executions) {
 	my $schedule_fcfs = FCFS->new($trace_random, $max_cpus);
 	$schedule_fcfs->run();
 	print STDERR "fcfs: ".$schedule_fcfs->cmax()."\n";
-	$schedule_fcfs->tycat();
+	$$schedule_fcfs->tycat();
 
 	my $schedule_backfilling = Backfilling->new($trace_random, $max_cpus);
 	$schedule_backfilling->run();

@@ -20,20 +20,19 @@ die 'missing arguments: trace_number cpus_number' unless defined $cpus_number;
 
 my $database = Database->new();
 my $trace = Trace->new_from_database($trace_number);
+$trace->remove_large_jobs($cpus_number);
 
 my $schedule_fcfs = FCFS->new($trace, $cpus_number);
 $schedule_fcfs->run();
 
 # Count and print the number of jobs that use many processors
-my @big_jobs = grep {$_->requested_cpus() > $cpus_number} @{$trace->jobs()};
-print scalar @big_jobs . " jobs with more than $cpus_number CPUs\n";
+my @big_jobs = grep {$_->requested_cpus() > $cpus_number/2} @{$trace->jobs()};
+print scalar @big_jobs . " jobs with more than " . $cpus_number/2 . " CPUs\n";
 
-# Find out the job average run time
-my $average_run_time = 0;
-$average_run_time += $_->run_time() for (@{$trace->jobs()});
-$average_run_time /= @{$trace->jobs};
+# Find out the ratio between FCFSBE and Backfilling
+my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
+my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-# Use the average run time to divide the trace in equal parts
-my $parts_number = $schedule_fcfs/$average_run_time;
-print "$parts_number equal parts\n";
+my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
+my $results_fcfs = $schedule_fcfs->run();
 
