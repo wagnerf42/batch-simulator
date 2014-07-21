@@ -26,16 +26,9 @@ sub assign_job {
 	die "not enough processors (we need $requested_cpus, we have $self->{num_processors})" if $requested_cpus > $self->{num_processors};
 
 	my @available_blocks = map {$self->compute_block($_, $requested_cpus)} (0..($self->{num_processors}-$requested_cpus));
+	my $best_block;
 
-	# First I will get all the blocks that start after the submit time
-	my @available_blocks_after_submit_time = grep {$_->{starting_time} > $job->submit_time()} @available_blocks;
-
-	# If there is at least one, pick the one that starts first
-	my $best_block = reduce { $a->{starting_time} < $b->{starting_time} ? $a : $b } @available_blocks_after_submit_time;
-
-	# If no block was found, use the one that starts before the submit time bas as close as possible to it
-	$best_block = reduce { $a->{starting_time} > $b->{starting_time} ? $a : $b } @available_blocks if not defined $best_block;
-
+	$best_block = reduce { $a->{starting_time} < $b->{starting_time} ? $a : $b } @available_blocks;
 	$job->assign_to(max($job->submit_time(), $best_block->{starting_time}), $best_block->{selected_processors});
 }
 

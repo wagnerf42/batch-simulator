@@ -47,6 +47,15 @@ sub new_from_swf {
 	return $self;
 }
 
+sub fix_submit_times {
+	my $self = shift;
+
+	return if (!$self->{jobs}[0]->submit_time());
+
+	my $first_submit_time = $self->{jobs}[0]->submit_time();
+	$_->submit_time($_->submit_time() - $first_submit_time) for @{$self->{jobs}};
+}
+
 #TODO Should this code use the references for the new jobs or deep copies?
 sub new_block_from_trace {
 	my $class = shift;

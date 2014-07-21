@@ -18,7 +18,7 @@ sub assign_job {
 
 	my @candidate_processors;
 	for my $processor (@{$self->{processors}}) {
-		push @candidate_processors, $processor if $processor->available_at($starting_time, $job->run_time());
+		push @candidate_processors, $processor if $processor->cmax() <= $starting_time;
 	}
 
 	# Best effort contiguous
