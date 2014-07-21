@@ -87,7 +87,7 @@ sub run_all_thread {
 		my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number, 1);
+		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
 		my $results_fcfs = $schedule_fcfs->run();
 
 		$trace_random->reset();
