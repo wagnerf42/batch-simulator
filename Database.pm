@@ -36,6 +36,7 @@ sub prepare_tables {
 		threads_number INT,
 		git_revision VARCHAR(255),
 		run_time INT,
+		comments VARCHAR(255),
 		PRIMARY KEY (id)
 	)");
 
