@@ -13,7 +13,7 @@ sub new {
 	my $class = shift;
 	my $self = {
 		starting_time => shift,
-		processors => shift,
+		processors_ids => shift,
 		duration => shift
 	};
 
@@ -23,14 +23,14 @@ sub new {
 
 sub stringification {
 	my $self = shift;
-	my $processors = join(',', @{$self->{processors}});
-	return "[$self->{starting_time} ; ($processors) ; $self->{duration}]" if defined $self->{duration};
-	return "[$self->{starting_time} ; ($processors) ]";
+	my $processors_ids = join(',', @{$self->{processors_ids}});
+	return "[$self->{starting_time} ; ($processors_ids) ; $self->{duration}]" if defined $self->{duration};
+	return "[$self->{starting_time} ; ($processors_ids) ]";
 }
 
-sub processors {
+sub processors_ids {
 	my $self = shift;
-	return $self->{processors};
+	return $self->{processors_ids};
 }
 
 sub duration {
@@ -39,17 +39,17 @@ sub duration {
 	return $self->{duration};
 }
 
-#given a hash of processors, remove all processors
+#given a hash of processors_ids, remove all processors_ids
 #which are not in profile from this hash
-sub filter_processors {
+sub filter_processors_ids {
 	my $self = shift;
 	my $href = shift;
-	my %processors;
-	for my $processor (@{$self->{processors}}) {
-		$processors{$processor} = 1;
+	my %forbidden_ids;
+	for my $processor_id (@{$self->{processors_ids}}) {
+		$forbidden_ids{$processor_id} = 1;
 	}
 	for my $key (keys %{$href}) {
-		delete $href->{$key} unless exists $processors{$key};
+		delete $href->{$key} unless exists $forbidden_ids{$key};
 	}
 }
 
@@ -84,7 +84,7 @@ sub split {
 		$middle_end = $job->ending_time();
 	}
 	my $middle_duration = $middle_end - $middle_start if defined $middle_end;
-	my $middle_profile = new Profile($middle_start, $self->{processors}, $middle_duration);
+	my $middle_profile = new Profile($middle_start, $self->{processors_ids}, $middle_duration);
 	$middle_profile->remove_used_processors($job);
 	push @profiles, $middle_profile;
 
@@ -93,7 +93,7 @@ sub split {
 		if (defined $self->{duration}) {
 			$end_duration = $self->ending_time() - $job->ending_time();
 		}
-		my $end_profile = new Profile($job->ending_time(), $self->{processors}, $end_duration);
+		my $end_profile = new Profile($job->ending_time(), $self->{processors_ids}, $end_duration);
 		push @profiles, $end_profile;
 	}
 	return @profiles;
@@ -101,21 +101,21 @@ sub split {
 
 sub is_fully_loaded {
 	my $self = shift;
-	return (@{$self->{processors}} == 0);
+	return (@{$self->{processors_ids}} == 0);
 }
 
 sub remove_used_processors {
 	my $self = shift;
 	my $job = shift;
-	my %processors_to_remove;
-	for my $processor (@{$job->assigned_processors()}) {
-		$processors_to_remove{$processor} = 1;
+	my %processors_ids_to_remove;
+	for my $processor_id (map {$_->id()} @{$job->assigned_processors()}) {
+		$processors_ids_to_remove{$processor_id} = 1;
 	}
-	my @left_processors;
-	for my $processor (@{$self->{processors}}) {
-		push @left_processors, $processor unless exists $processors_to_remove{$processor};
+	my @left_processors_ids;
+	for my $processor_id (@{$self->{processors_ids}}) {
+		push @left_processors_ids, $processor_id unless exists $processors_ids_to_remove{$processor_id};
 	}
-	$self->{processors} = [@left_processors];
+	$self->{processors_ids} = [@left_processors_ids];
 }
 
 sub starting_time {

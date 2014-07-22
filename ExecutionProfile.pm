@@ -11,8 +11,10 @@ use ProcessorsSet;
 
 sub new {
 	my $class = shift;
-	my $processors = shift;
-	my $self = [ new Profile(0, $processors) ];
+	my $self = {};
+	$self->{processors} = shift;
+	my $ids = [map {$_->id()} @{$self->{processors}}];
+	$self->{profiles} = [ new Profile(0, $ids) ];
 	bless $self, $class;
 	return $self;
 }
@@ -24,17 +26,17 @@ sub get_free_processors_for {
 	my $job = shift;
 	my $profile_index = shift;
 	my $left_duration = $job->run_time();
-	my $candidate_processors = $self->[$profile_index]->processors();
+	my $candidate_processors = $self->{profiles}->[$profile_index]->processors_ids();
 	my %left_processors; #processors which might be ok for job
 	$left_processors{$_} = $_ for @{$candidate_processors};
-	my $starting_time = $self->[$profile_index]->starting_time();
+	my $starting_time = $self->{profiles}->[$profile_index]->starting_time();
 
 	while ($left_duration > 0) {
-		my $current_profile = $self->[$profile_index];
+		my $current_profile = $self->{profiles}->[$profile_index];
 		return unless $starting_time == $current_profile->starting_time(); #profiles must all be contiguous
 		my $duration = $current_profile->duration();
 		$starting_time += $duration if defined $duration;
-		$current_profile->filter_processors(\%left_processors);
+		$current_profile->filter_processors_ids(\%left_processors);
 		last if (keys %left_processors) == 0; #abort if nothing left
 		if (defined $current_profile->duration()) {
 			$left_duration -= $current_profile->duration();
@@ -43,8 +45,9 @@ sub get_free_processors_for {
 			last;
 		}
 	}
-	my $processors = new ProcessorsSet(values %left_processors);
-	return unless $processors->contains_at_least($job->requested_cpus);
+	my @selected_ids = values %left_processors;
+	return unless @selected_ids >= $job->requested_cpus();
+	my $processors = new ProcessorsSet(map {$self->{processors}->[$_]} @selected_ids);
 	$processors->reduce_to($job->requested_cpus());
 	return $processors->processors();
 }
@@ -54,22 +57,22 @@ sub add_job_at {
 	my $self = shift;
 	my $job = shift;
 	my @new_profiles;
-	for my $profile (@{$self}) {
+	for my $profile (@{$self->{profiles}}) {
 		push @new_profiles, $profile->add_job_if_needed($job);
 	}
-	@{$self} = @new_profiles;
+	$self->{profiles} = [@new_profiles];
 }
 
 sub starting_time {
 	my $self = shift;
 	my $profile_index = shift;
-	return $self->[$profile_index]->starting_time();
+	return $self->{profiles}->[$profile_index]->starting_time();
 }
 
 sub find_first_profile_for {
 	my $self = shift;
 	my $job = shift;
-	for my $profile_id (0..$#{$self}) {
+	for my $profile_id (0..$#{$self->{profiles}}) {
 		my @processors = $self->get_free_processors_for($job, $profile_id);
 		return ($profile_id, [@processors]) if @processors;
 	}
@@ -82,7 +85,7 @@ sub set_current_time {
 
 	my @remaining_profiles;
 
-	for my $profile (@{$self}) {
+	for my $profile (@{$self->{profiles}}) {
 		if ($profile->starting_time() >= $current_time) {
 			push @remaining_profiles, $profile;
 		}
@@ -98,7 +101,7 @@ sub set_current_time {
 		}
 	}
 
-	@{$self} = @remaining_profiles;
+	$self->{profiles} = [@remaining_profiles];
 }
 
 1;
