@@ -56,7 +56,6 @@ sub fix_submit_times {
 	$_->submit_time($_->submit_time() - $first_submit_time) for @{$self->{jobs}};
 }
 
-#TODO Should this code use the references for the new jobs or deep copies?
 sub new_block_from_trace {
 	my $class = shift;
 	my $self = {
@@ -129,7 +128,6 @@ sub new_from_database {
 
 sub reset_submit_times {
 	my $self = shift;
-
 	$_->submit_time(0) for (@{$self->{jobs}});
 }
 
@@ -198,10 +196,10 @@ sub file {
 
 sub characteristic {
 	my $self = shift;
+	my $characteristic_id = shift;
 	my $cpus_number = shift;
-	my $id = shift;
 
-	if ($id == 0) {
+	if ($characteristic_id == 0) {
 		return scalar grep {$_->requested_cpus() > $cpus_number/2} @{$self->{jobs}};
 	}
 }

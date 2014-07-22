@@ -84,12 +84,14 @@ sub add_execution {
 	my $value_string = join ('\',\'', values %{$execution});
 	$self->{dbh}->do("INSERT INTO executions ($key_string) values (\'$value_string\')");
 
-	#$self->{dbh} do "UPDATE executions SET add_time = NOW() WHERE id = \'" . $ref->{id} . "\'"
-
-	my $sth = $self->{dbh}->prepare("SELECT MAX(id) AS id FROM executions");
+	my $sth = $self->{dbh}->prepare("SELECT LAST_INSERT_ID() AS id");
 	$sth->execute();
 	my $ref = $sth->fetchrow_hashref();
-	return $ref->{id};
+	my $id = $ref->{id};
+
+	$self->{dbh}->do("UPDATE executions SET add_time = NOW() WHERE id = \'$id\'");
+
+	return $id;
 }
 
 sub update_execution_run_time {
@@ -107,7 +109,7 @@ sub add_trace {
 
 	$self->{dbh}->do("INSERT INTO traces (execution) VALUES (\'$execution_id\')");
 
-	my $sth = $self->{dbh}->prepare("SELECT MAX(id) AS id FROM traces");
+	my $sth = $self->{dbh}->prepare("SELECT LAST_INSERT_ID() AS id");
 	$sth->execute();
 	my $ref = $sth->fetchrow_hashref();
 	my $trace_id = $ref->{id};
