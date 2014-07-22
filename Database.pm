@@ -48,6 +48,23 @@ sub prepare_tables {
 		FOREIGN KEY (execution) REFERENCES executions(id)
 	)");
 
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS algorithms (
+		id INT NOT NULL AUTO_INCREMENT,
+		name VARCHAR(255),
+		PRIMARY KEY (id)
+	)");
+
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS runs (
+		id INT NOT NULL AUTO_INCREMENT,
+		trace INT NOT NULL,
+		algorithm INT NOT NULL,
+		cmax INT,
+		run_time INT,
+		PRIMARY KEY (id),
+		FOREIGN KEY (trace) REFERENCES traces(id),
+		FOREIGN KEY (algorithm) REFERENCES algorithms(id)
+	)");
+
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS jobs (
 		id INT NOT NULL AUTO_INCREMENT,
 		trace INT NOT NULL,
@@ -74,6 +91,15 @@ sub prepare_tables {
 		PRIMARY KEY (id),
 		FOREIGN KEY (trace) REFERENCES traces(id)
 	)");
+	
+	$self->{dbh}->do("INSERT INTO algorithms (name) VALUES 
+		('fcfs_not_contiguous'),
+		('fcfs_best_effort'),
+		('fcfs_contiguous'),
+		('backfilling_not_contiguous'),
+		('backfilling_best_effort'),
+		('backfilling_contiguous')
+	");
 }
 
 sub add_execution {
@@ -145,5 +171,20 @@ sub get_job_refs {
 	}
 	return @job_refs;
 }
+
+sub add_run {
+	my ($self, $trace_id, $algorithm_name, $cmax, $run_time) = @_;
+
+	my $sth = $self->{dbh}->prepare("SELECT id FROM algorithms WHERE name=\'$algorithm_name\'");
+	$sth->execute();
+
+	my $algorithm_ref = $sth->fetchrow_hashref();
+	die 'unknown algorithm name' unless defined $algorithm_ref;
+
+	my $algorithm_id = $algorithm_ref->{id};
+
+	$self->{dbh}->do("INSERT INTO runs (trace, algorithm, cmax, run_time) VALUES ($trace_id, $algorithm_id, $cmax, $run_time)");
+}
+
 
 1;

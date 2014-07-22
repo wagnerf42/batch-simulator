@@ -22,7 +22,7 @@ die 'missing arguments: trace_file jobs_number executions_number cpus_number thr
 #die 'git tree not clean' if ($git_branch eq 'master') and (system('./check_git.sh'));
 
 my $database = Database->new();
-$database->prepare_tables();
+#$database->prepare_tables();
 
 # Create new execution in the database
 my %execution = (
@@ -92,9 +92,11 @@ sub run_all_thread {
 
 		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
 		my $results_fcfs = $schedule_fcfs->run();
+		$database->add_run($trace_id, 'fcfs_best_effort', $results_fcfs->{cmax}, $results_fcfs->{run_time});
 
 		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
 		my $results_backfilling = $schedule_backfilling->run();
+		$database->add_run($trace_id, 'backfilling_best_effort', $results_fcfs->{cmax}, $results_fcfs->{run_time});
 
 		push @results, [$results_backfilling, $results_fcfs, $characteristic, $trace_id];
 	}
