@@ -12,7 +12,7 @@ sub new {
 	my $class = shift;
 	my $self = {
 		driver => "mysql",
-		database => "parser",
+		database => "parser_test",
 		userid => "parser",
 		password => "parser"
 	};
@@ -37,6 +37,7 @@ sub prepare_tables {
 		git_revision VARCHAR(255),
 		run_time INT,
 		comments VARCHAR(255),
+		add_time DATETIME,
 		PRIMARY KEY (id)
 	)");
 
@@ -82,6 +83,8 @@ sub add_execution {
 	my $key_string = join (',', keys %{$execution});
 	my $value_string = join ('\',\'', values %{$execution});
 	$self->{dbh}->do("INSERT INTO executions ($key_string) values (\'$value_string\')");
+
+	#$self->{dbh} do "UPDATE executions SET add_time = NOW() WHERE id = \'" . $ref->{id} . "\'"
 
 	my $sth = $self->{dbh}->prepare("SELECT MAX(id) AS id FROM executions");
 	$sth->execute();

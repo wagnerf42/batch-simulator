@@ -196,4 +196,14 @@ sub file {
 	return $self->{file};
 }
 
+sub characteristic {
+	my $self = shift;
+	my $cpus_number = shift;
+	my $id = shift;
+
+	if ($id == 0) {
+		return scalar grep {$_->requested_cpus() > $cpus_number/2} @{$self->{jobs}};
+	}
+}
+
 1;
