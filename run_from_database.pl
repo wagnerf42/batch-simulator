@@ -25,14 +25,10 @@ $schedule_fcfs->run();
 print "FCFS: " . $schedule_fcfs->cmax() . "\n";
 $schedule_fcfs->save_svg("backfilling_FCFS-$trace_number-$cpus_number-fcfs.svg");
 
-$trace->reset();
-
-my $schedule_fcfsc= FCFSC->new($trace, $cpus_number);
-$schedule_fcfsc->run();
-print "FCFSC " . $schedule_fcfsc->cmax() . "\n";
-$schedule_fcfsc->save_svg("backfilling_FCFS-$trace_number-$cpus_number-fcfsc.svg");
-
-$trace->reset();
+#my $schedule_fcfsc= FCFSC->new($trace, $cpus_number);
+#$schedule_fcfsc->run();
+#print "FCFSC " . $schedule_fcfsc->cmax() . "\n";
+#$schedule_fcfsc->save_svg("backfilling_FCFS-$trace_number-$cpus_number-fcfsc.svg");
 
 my $schedule_backfilling= Backfilling->new($trace, $cpus_number);
 $schedule_backfilling->run();

@@ -10,3 +10,62 @@
     -> real p_i, FCFS (then with backfilling)
         arrival time = 0
         tasks ordered (by real arrival time)
+
+22-07
+
+0) debugging
+
+1)
+
+fast scheduling
+
+-> can we schedule with backfilling (without submit times)
+10000 jobs on 10000 machines in less than 30 seconds ?
+
+TODO:
+	-> how about the use of kd-trees ?
+	-> discussing with olivier to get traces
+	-> modifying the oar perl scheduler to read data from traces instead of DB
+	-> comparing fast scheduler and oar perl scheduler
+
+2)
+
+performance guarantee
+
+why are both FCFS, FCFSC, backfilling good ?
+
+-> can we find a characterization of the input such that
+ratio (for each algorithm) to optimal > 2 => charact(input) > something
+
+
+3)
+
+-> backfilling with contiguity (not best effort)
+
+contiguity
+
+a) backfilling contiguous best effort is better than backfilling (not contiguous best effort) ?
+
+--> experimentally -> what traces to run on ?
+--> proof ?
+
+-> slurm / oar : what are they doing ?
+
+b) best effort contiguous : how many jobs are contiguous ?? (almost all ???) 
+
+-> can we prove something ? (hint: yes)
+-> run experiments and store percentage of contiguous jobs
+-> look at worst cases -> is it high ? low ?
+-> can you change slightly (by hand) the worst trace to make things worse ?
+
+c) proof than contiguity constraint is not dramatically degrading cmax
+
+-> looks tough
+
+d) more strict topology constraints
+-> assume 1 level of hierarchy
+-> constraint/objective : each job uses a minimum number of clusters
+-> see in backfilling best effort contiguity / contiguous backfilling : how many jobs do not have minimum # of clusters ?
+-> if you enforce constraint -> how much is cmax degraded ?
+
+-> maybe possibility for proofs (comparing the optimal cmax with or without additional constraint)

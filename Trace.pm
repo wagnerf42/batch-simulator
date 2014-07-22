@@ -4,6 +4,7 @@ use warnings;
 
 use Data::Dumper qw(Dumper);
 use List::Util qw(max reduce);
+use List::MoreUtils qw(natatime);
 use Storable qw(dclone);
 
 use Job;
@@ -200,7 +201,33 @@ sub characteristic {
 	my $cpus_number = shift;
 
 	if ($characteristic_id == 0) {
+
 		return scalar grep {$_->requested_cpus() > $cpus_number/2} @{$self->{jobs}};
+	} elsif ($characteristic_id == 1) {
+		my $piece_size = shift;
+		my $pieces_with_large_jobs = 0;
+
+		my $it = natatime $piece_size, @{$self->{jobs}};
+		while (my @piece = $it->()) {
+			my $large_jobs_number = scalar grep {$_->requested_cpus() > $cpus_number/2} @piece;
+			$pieces_with_large_jobs++ if $large_jobs_number > 0;
+		}
+
+		return $pieces_with_large_jobs;
+	} elsif ($characteristic_id == 2) {
+		my $longest_duration = 0;
+		my $work = 0;
+		my $worst_wasted_work = 0;
+		for my $job (@{$self->{jobs}}) {
+			my $wasted_work = ($cpus_number-$job->requested_cpus()) * $longest_duration - $work;
+			$worst_wasted_work = $wasted_work if $wasted_work > $worst_wasted_work;
+			$longest_duration = $job->run_time() if $job->run_time() > $longest_duration;
+			$work += $job->requested_cpus() * $job->run_time();
+		}
+		my $backfilling_waste = $cpus_number * $longest_duration - $work;
+		my $difference = $worst_wasted_work - $backfilling_waste;
+		return 0 if $difference < 0;
+		return ($difference / $work);
 	}
 }
 

@@ -81,6 +81,7 @@ sub run_all_thread {
 	# Read the original trace
 	my $trace = Trace->new_from_swf($trace_file_name);
 	$trace->remove_large_jobs($cpus_number);
+	$trace->reset_submit_times();
 
 	for (1..($executions_number/$threads_number)) {
 		# Generate the trace and add it to the database
@@ -88,7 +89,7 @@ sub run_all_thread {
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
 		# Generate the characteristic
-		my $characteristic = $trace_random->characteristic(0, $cpus_number);
+		my $characteristic = $trace_random->characteristic(2, $cpus_number, );
 
 		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
 		my $results_fcfs = $schedule_fcfs->run();
