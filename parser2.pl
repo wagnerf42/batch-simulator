@@ -22,7 +22,8 @@ die 'missing arguments: trace_file jobs_number executions_number cpus_number thr
 #die 'git tree not clean' if ($git_branch eq 'master') and (system('./check_git.sh'));
 
 my $database = Database->new();
-$database->prepare_tables();
+#$database->prepare_tables();
+#die 'created tables';
 
 # Create new execution in the database
 my %execution = (
@@ -31,7 +32,8 @@ my %execution = (
 	executions_number => $executions_number,
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
-	git_revision => `git rev-parse HEAD`
+	git_revision => `git rev-parse HEAD`,
+	comments => "parser script, fcfs best effor vs backfilling best effort, remove large jobs, reset submit times"
 );
 my $execution_id = $database->add_execution(\%execution);
 
@@ -53,9 +55,9 @@ push @results, @{$_->join()} for (@threads);
 $database->update_execution_run_time($execution_id, time() - $start_time);
 
 # Print all results in a file
-my $basic_file_name = "backfilling_FCFS-$jobs_number-$executions_number-$cpus_number-$threads_number-$execution_id";
-print STDERR "Writing results to $basic_file_name\n";
-write_results_to_file(\@results, "$basic_file_name.csv");
+#my $basic_file_name = "backfilling_FCFS-$jobs_number-$executions_number-$cpus_number-$threads_number-$execution_id";
+#print STDERR "Writing results to $basic_file_name\n";
+#write_results_to_file(\@results, "$basic_file_name.csv");
 
 sub write_results_to_file {
 	my $results = shift;
@@ -64,7 +66,7 @@ sub write_results_to_file {
 	open(my $filehandle, "> $filename") or die "unable to open $filename";
 
 	for my $results_item (@{$results}) {
-		# Prints the results for fcfs, fcfs_contiguous and backfilling
+		# Prints the results for fcfs and backfilling
 		my $cmax_ratio = @{$results_item}[0]->{cmax}/@{$results_item}[1]->{cmax};
 		print $filehandle "$cmax_ratio @{$results_item}[2]\n";
 	}
@@ -81,6 +83,7 @@ sub run_all_thread {
 	# Read the original trace
 	my $trace = Trace->new_from_swf($trace_file_name);
 	$trace->remove_large_jobs($cpus_number);
+	$trace->reset_submit_times();
 
 	for (1..($executions_number/$threads_number)) {
 		# Generate the trace and add it to the database
@@ -89,13 +92,13 @@ sub run_all_thread {
 
 		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
 		my $results_fcfs = $schedule_fcfs->run();
+		$database->add_run($trace_id, 'fcfs_best_effort', $results_fcfs->{cmax}, $results_fcfs->{run_time});
 
-		$trace_random->reset();
+		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
+		my $results_backfilling = $schedule_backfilling->run();
+		$database->add_run($trace_id, 'backfilling_best_effort', $results_backfilling->{cmax}, $results_backfilling->{run_time});
 
-		my $schedule_fcfsc = FCFSC->new($trace_random, $cpus_number);
-		my $results_fcfsc = $schedule_fcfsc->run();
-
-		push @results, [$results_fcfs, $results_fcfsc, $trace_id];
+		push @results, [$results_fcfs, $results_backfilling, $trace_id];
 	}
 
 	return [@results];

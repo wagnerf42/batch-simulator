@@ -45,7 +45,7 @@ sub prepare_tables {
 		id INT NOT NULL AUTO_INCREMENT,
 		execution INT NOT NULL,
 		PRIMARY KEY(id),
-		FOREIGN KEY (execution) REFERENCES executions(id)
+		FOREIGN KEY (execution) REFERENCES executions(id) ON DELETE CASCADE
 	)");
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS algorithms (
@@ -61,8 +61,8 @@ sub prepare_tables {
 		cmax INT,
 		run_time INT,
 		PRIMARY KEY (id),
-		FOREIGN KEY (trace) REFERENCES traces(id),
-		FOREIGN KEY (algorithm) REFERENCES algorithms(id)
+		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE,
+		FOREIGN KEY (algorithm) REFERENCES algorithms(id) ON DELETE CASCADE
 	)");
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS jobs (
@@ -89,7 +89,7 @@ sub prepare_tables {
 		assigned_processors VARCHAR(255),
 		starting_time INT,
 		PRIMARY KEY (id),
-		FOREIGN KEY (trace) REFERENCES traces(id)
+		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE
 	)");
 	
 	$self->{dbh}->do("INSERT INTO algorithms (name) VALUES 
