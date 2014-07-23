@@ -94,12 +94,12 @@ sub run_all_thread {
 		my $results_backfilling_contiguous = $schedule_backfilling_contiguous->run();
 		$database->add_run($trace_id, 'backfilling_contiguous', $results_backfilling_contiguous->{cmax}, $results_backfilling_contiguous->{run_time});
 
-		# Number of contiguous jobs
-		my $contiguous_jobs_number = $schedule_backfilling_contiguous->contiguous_jobs_number();
-
 		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
 		my $results_backfilling = $schedule_backfilling->run();
 		$database->add_run($trace_id, 'backfilling_best_effort', $results_backfilling->{cmax}, $results_backfilling->{run_time});
+
+		# Number of contiguous jobs
+		my $contiguous_jobs_number = $schedule_backfilling->contiguous_jobs_number();
 
 		push @results, [$results_backfilling, $results_backfilling_contiguous, $contiguous_jobs_number, $trace_id];
 	}
