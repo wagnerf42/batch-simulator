@@ -39,7 +39,7 @@ sub assign_job {
 }
 
 sub contiguous_jobs_number {
-	my $self = @_;
+	my ($self) = @_;
 	return $self->{contiguous_jobs_number};
 }
 

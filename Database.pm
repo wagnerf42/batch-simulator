@@ -25,7 +25,7 @@ sub new {
 }
 
 sub prepare_tables {
-	my $self = @_;
+	my ($self) = @_;
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS executions (
 		id INT NOT NULL AUTO_INCREMENT,

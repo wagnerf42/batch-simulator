@@ -90,7 +90,7 @@ sub run_all_thread {
 		# Generate the characteristic
 		#my $characteristic = $trace_random->characteristic(2, $cpus_number);
 
-		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_numberi, 1);
+		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_number, 1);
 		my $results_backfilling_contiguous = $schedule_backfilling_contiguous->run();
 		$database->add_run($trace_id, 'backfilling_contiguous', $results_backfilling_contiguous->{cmax}, $results_backfilling_contiguous->{run_time});
 

@@ -76,7 +76,7 @@ sub reduce_to_contiguous {
 			}
 		}
 		if ($ok) {
-			$self->{processors}->keep_from($start_index, $number);
+			$self->keep_from($start_index, $number);
 			$self->{contiguous} = 1;
 			return;
 		}

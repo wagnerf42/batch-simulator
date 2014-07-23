@@ -57,7 +57,7 @@ sub get_free_processors_for {
 		$processors->reduce_to($job->requested_cpus());
 	}
 
-	return ($processors->processors(), $processors->contiguous());
+	return ([$processors->processors()], $processors->contiguous());
 }
 
 #precondition : job should be assigned first
@@ -78,8 +78,8 @@ sub starting_time {
 sub find_first_profile_for {
 	my ($self, $job) = @_;
 	for my $profile_id (0..$#{$self->{profiles}}) {
-		my (@processors, $contiguous) = $self->get_free_processors_for($job, $profile_id);
-		return ($profile_id, [@processors], $contiguous) if @processors;
+		my ($processors, $contiguous) = $self->get_free_processors_for($job, $profile_id);
+		return ($profile_id, $processors, $contiguous) if $processors;
 	}
 
 	die "at least last profile should be ok for job";
