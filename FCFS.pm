@@ -8,8 +8,7 @@ use List::Util qw(max);
 use ProcessorsSet;
 
 sub assign_job {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 	my $requested_cpus = $job->requested_cpus;
 
 	@{$self->{processors}} = sort {$a->cmax() <=> $b->cmax()} @{$self->{processors}};

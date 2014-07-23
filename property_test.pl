@@ -33,7 +33,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "property test, backfilling/FCFS, best effort, remove large jobs, reset submit times"
+	comments => "property test, backfilling best effort/backfilling contiguous, remove large jobs, reset submit times"
 );
 my $execution_id = $database->add_execution(\%execution);
 
@@ -60,8 +60,7 @@ print STDERR "Writing results to $file_name\n";
 write_results_to_file(\@results, "$file_name");
 
 sub write_results_to_file {
-	my $results = shift;
-	my $filename = shift;
+	my ($results, $filename) = @_;
 
 	open(my $filehandle, "> $filename") or die "unable to open $filename";
 
@@ -74,8 +73,7 @@ sub write_results_to_file {
 }
 
 sub run_all_thread {
-	my $id = shift;
-	my $execution_id = shift;
+	my ($id, $execution_id) = @_;
 	my @results;
 	my $database = Database->new();
 
@@ -90,17 +88,20 @@ sub run_all_thread {
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
 		# Generate the characteristic
-		my $characteristic = $trace_random->characteristic(2, $cpus_number, );
+		#my $characteristic = $trace_random->characteristic(2, $cpus_number);
 
-		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
-		my $results_fcfs = $schedule_fcfs->run();
-		$database->add_run($trace_id, 'fcfs_best_effort', $results_fcfs->{cmax}, $results_fcfs->{run_time});
+		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_numberi, 1);
+		my $results_backfilling_contiguous = $schedule_backfilling_contiguous->run();
+		$database->add_run($trace_id, 'backfilling_contiguous', $results_backfilling_contiguous->{cmax}, $results_backfilling_contiguous->{run_time});
+
+		# Number of contiguous jobs
+		my $contiguous_jobs_number = $schedule_backfilling_contiguous->contiguous_jobs_number();
 
 		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
 		my $results_backfilling = $schedule_backfilling->run();
 		$database->add_run($trace_id, 'backfilling_best_effort', $results_backfilling->{cmax}, $results_backfilling->{run_time});
 
-		push @results, [$results_backfilling, $results_fcfs, $characteristic, $trace_id];
+		push @results, [$results_backfilling, $results_backfilling_contiguous, $contiguous_jobs_number, $trace_id];
 	}
 
 	return [@results];

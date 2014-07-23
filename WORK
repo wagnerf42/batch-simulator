@@ -34,7 +34,7 @@ performance guarantee
 
 why are both FCFS, FCFSC, backfilling good ?
 
--> can we find a characterization of the input such that
+* -> can we find a characterization of the input such that
 ratio (for each algorithm) to optimal > 2 => charact(input) > something
 
 
@@ -44,14 +44,14 @@ ratio (for each algorithm) to optimal > 2 => charact(input) > something
 
 contiguity
 
-a) backfilling contiguous best effort is better than backfilling (not contiguous best effort) ?
+* a) backfilling contiguous best effort is better than backfilling (not contiguous best effort) ?
 
 --> experimentally -> what traces to run on ?
 --> proof ?
 
 -> slurm / oar : what are they doing ?
 
-b) best effort contiguous : how many jobs are contiguous ?? (almost all ???) 
+* b) best effort contiguous : how many jobs are contiguous ?? (almost all ???)
 
 -> can we prove something ? (hint: yes)
 -> run experiments and store percentage of contiguous jobs

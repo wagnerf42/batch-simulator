@@ -25,7 +25,7 @@ sub new {
 }
 
 sub prepare_tables {
-	my $self = shift;
+	my $self = @_;
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS executions (
 		id INT NOT NULL AUTO_INCREMENT,
@@ -103,8 +103,7 @@ sub prepare_tables {
 }
 
 sub add_execution {
-	my $self = shift;
-	my $execution = shift;
+	my ($self, $execution) = @_;
 
 	my $key_string = join (',', keys %{$execution});
 	my $value_string = join ('\',\'', values %{$execution});
@@ -121,17 +120,12 @@ sub add_execution {
 }
 
 sub update_execution_run_time {
-	my $self = shift;
-	my $execution_id = shift;
-	my $run_time = shift;
-
+	my ($self, $execution_id, $run_time) = @_;
 	$self->{dbh}->do("UPDATE executions SET run_time = \'$run_time\' WHERE id = \'$execution_id\'");
 }
 
 sub add_trace {
-	my $self = shift;
-	my $trace = shift;
-	my $execution_id = shift;
+	my ($self, $trace, $execution_id) = @_;
 
 	$self->{dbh}->do("INSERT INTO traces (execution) VALUES (\'$execution_id\')");
 
@@ -151,8 +145,7 @@ sub add_trace {
 }
 
 sub get_trace_ref {
-	my $self = shift;
-	my $trace_id = shift;
+	my ($self, $trace_id) = @_;
 
 	my $sth = $self->{dbh}->prepare("SELECT * FROM traces WHERE id=\'$trace_id\'");
 	$sth->execute();
@@ -160,8 +153,8 @@ sub get_trace_ref {
 }
 
 sub get_job_refs {
-	my $self = shift;
-	my $trace_id = shift;
+	my ($self, $trace_id) = @_;
+
 	my $sth = $self->{dbh}->prepare("SELECT * FROM jobs WHERE trace=\'$trace_id\'");
 	$sth->execute();
 

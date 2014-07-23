@@ -26,9 +26,7 @@ sub new {
 #given a job we want to start at a given profile
 #return list of processors or nothing if not possible
 sub get_free_processors_for {
-	my $self = shift;
-	my $job = shift;
-	my $profile_index = shift;
+	my ($self, $job, $profile_index) = @_;
 	my $left_duration = $job->run_time();
 	my $candidate_processors = $self->{profiles}->[$profile_index]->processors_ids();
 	my %left_processors; #processors which might be ok for job
@@ -59,13 +57,12 @@ sub get_free_processors_for {
 		$processors->reduce_to($job->requested_cpus());
 	}
 
-	return $processors->processors();
+	return ($processors->processors(), $processors->contiguous());
 }
 
 #precondition : job should be assigned first
 sub add_job_at {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 	my @new_profiles;
 	for my $profile (@{$self->{profiles}}) {
 		push @new_profiles, $profile->add_job_if_needed($job);
@@ -74,26 +71,22 @@ sub add_job_at {
 }
 
 sub starting_time {
-	my $self = shift;
-	my $profile_index = shift;
+	my ($self, $profile_index) = @_;
 	return $self->{profiles}->[$profile_index]->starting_time();
 }
 
 sub find_first_profile_for {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 	for my $profile_id (0..$#{$self->{profiles}}) {
-		my @processors = $self->get_free_processors_for($job, $profile_id);
-		return ($profile_id, [@processors]) if @processors;
+		my (@processors, $contiguous) = $self->get_free_processors_for($job, $profile_id);
+		return ($profile_id, [@processors], $contiguous) if @processors;
 	}
 
 	die "at least last profile should be ok for job";
 }
 
 sub set_current_time {
-	my $self = shift;
-	my $current_time = shift;
-
+	my ($self, $current_time) = @_;
 	my @remaining_profiles;
 
 	for my $profile (@{$self->{profiles}}) {
