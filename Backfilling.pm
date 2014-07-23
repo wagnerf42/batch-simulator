@@ -14,7 +14,7 @@ sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = new ExecutionProfile($self->{processors});
+	$self->{execution_profile} = new ExecutionProfile($self->{processors}, $self->{contiguous});
 	$self->{backfilled_jobs} = 0;
 
 	return $self;
@@ -32,7 +32,6 @@ sub assign_job {
 
 	#assign job
 	$job->assign_to($starting_time, $chosen_processors);
-	#TODO: backfilled jobs statistics
 
 	#update profiles
 	$self->{execution_profile}->add_job_at($job);

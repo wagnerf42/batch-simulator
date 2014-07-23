@@ -33,7 +33,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, fcfs best effor vs backfilling best effort, remove large jobs, reset submit times"
+	comments => "parser script, fcfs best effort vs backfilling contiguous, remove large jobs, reset submit times"
 );
 my $execution_id = $database->add_execution(\%execution);
 
@@ -94,7 +94,7 @@ sub run_all_thread {
 		my $results_fcfs = $schedule_fcfs->run();
 		$database->add_run($trace_id, 'fcfs_best_effort', $results_fcfs->{cmax}, $results_fcfs->{run_time});
 
-		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
+		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number, 1);
 		my $results_backfilling = $schedule_backfilling->run();
 		$database->add_run($trace_id, 'backfilling_best_effort', $results_backfilling->{cmax}, $results_backfilling->{run_time});
 

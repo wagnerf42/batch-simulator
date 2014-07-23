@@ -52,6 +52,33 @@ sub reduce_to {
 	$self->keep_from(0, $number);
 }
 
+sub reduce_to_contiguous {
+	my $self = shift;
+	my $number = shift;
+
+	#try each position and see if we can get a contiguous block
+	for my $start_index (0..$#{$self}) {
+		my $ok = 1;
+		my $start_id = $self->[$start_index]->id();
+		for my $num (1..($number-1)) {
+			my $index = ($start_index + $num) % @{$self};
+			my $id = $self->[$index]->id();
+			my $expected_id = ($start_id + $num) % @{$self};
+			if ($id != $expected_id) {
+				$ok = 0;
+				last;
+			}
+		}
+		if ($ok) {
+			$self->keep_from($start_index, $number);
+			return;
+		}
+	}
+
+	# In this case it was not possible, return an empty answer
+	@{$self} = ();
+}
+
 sub keep_from {
 	my $self = shift;
 	my $index = shift;

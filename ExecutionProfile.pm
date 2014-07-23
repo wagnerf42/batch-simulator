@@ -11,10 +11,14 @@ use ProcessorsSet;
 
 sub new {
 	my $class = shift;
-	my $self = {};
-	$self->{processors} = shift;
+	my $self = {
+		processors => shift,
+		contiguous => shift
+	};
+
 	my $ids = [map {$_->id()} @{$self->{processors}}];
 	$self->{profiles} = [ new Profile(0, $ids) ];
+
 	bless $self, $class;
 	return $self;
 }
@@ -48,7 +52,15 @@ sub get_free_processors_for {
 	my @selected_ids = values %left_processors;
 	return unless @selected_ids >= $job->requested_cpus();
 	my $processors = new ProcessorsSet(map {$self->{processors}->[$_]} @selected_ids);
-	$processors->reduce_to($job->requested_cpus());
+
+#	if ($self->{contiguous}) {
+#		$processors->reduce_to_contiguous($job->requested_cpus());
+#	} else {
+#		$processors->reduce_to($job->requested_cpus());
+#	}
+	$processors->reduce_to_contiguous($job->requested_cpus());
+	#$processors->reduce_to($job->requested_cpus());
+
 	return $processors->processors();
 }
 
@@ -76,6 +88,7 @@ sub find_first_profile_for {
 		my @processors = $self->get_free_processors_for($job, $profile_id);
 		return ($profile_id, [@processors]) if @processors;
 	}
+
 	die "at least last profile should be ok for job";
 }
 
