@@ -53,13 +53,11 @@ sub get_free_processors_for {
 	return unless @selected_ids >= $job->requested_cpus();
 	my $processors = new ProcessorsSet(map {$self->{processors}->[$_]} @selected_ids);
 
-#	if ($self->{contiguous}) {
-#		$processors->reduce_to_contiguous($job->requested_cpus());
-#	} else {
-#		$processors->reduce_to($job->requested_cpus());
-#	}
-	$processors->reduce_to_contiguous($job->requested_cpus());
-	#$processors->reduce_to($job->requested_cpus());
+	if ($self->{contiguous}) {
+		$processors->reduce_to_contiguous($job->requested_cpus());
+	} else {
+		$processors->reduce_to($job->requested_cpus());
+	}
 
 	return $processors->processors();
 }
