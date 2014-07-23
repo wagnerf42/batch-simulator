@@ -57,6 +57,8 @@ sub get_free_processors_for {
 		$processors->reduce_to($job->requested_cpus());
 	}
 
+	return unless $processors->processors();
+
 	return ([$processors->processors()], $processors->contiguous());
 }
 
