@@ -63,22 +63,22 @@ sub stringification {
 }
 
 sub requested_cpus {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{allocated_cpus};
 }
 
 sub run_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{run_time};
 }
 
 sub starting_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{starting_time};
 }
 
 sub ending_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{starting_time} + $self->{run_time};
 }
 
@@ -93,18 +93,17 @@ sub submit_time {
 }
 
 sub wait_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{wait_time};
 }
 
 sub job_number {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{job_number};
 }
 
 sub assign_to {
 	my $self = shift;
-
 	$self->{starting_time} = shift;
 	$self->{assigned_processors} = shift;
 
@@ -112,7 +111,7 @@ sub assign_to {
 }
 
 sub assigned_processors {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{assigned_processors};
 }
 
@@ -127,10 +126,7 @@ sub first_processor {
 }
 
 sub svg {
-	my $self = shift;
-	my $fh = shift;
-	my $w_ratio = shift;
-	my $h_ratio = shift;
+	my ($self, $fh, $w_ratio, $h_ratio) = @_;
 
 	for my $processor (@{$self->{assigned_processors}}) {
 		my $processor_id = $processor->id();
@@ -150,16 +146,13 @@ sub svg {
 }
 
 sub reset {
-	my $self = shift;
+	my ($self) = @_;
 	delete $self->{starting_time};
 	delete $self->{assigned_processors};
 }
 
 sub save_svg {
-	my $self = shift;
-	my $fh = shift;
-	my $processor_id = shift;
-
+	my ($self, $fh, $processor_id) = @_;
 	my $default_time_ratio = 5;
 	my $default_processor_ratio = 20;
 

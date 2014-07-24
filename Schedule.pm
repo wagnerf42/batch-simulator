@@ -27,45 +27,30 @@ sub new {
 }
 
 sub run {
-	my $self = shift;
+	my ($self) = @_;
+	my $start = time();
 
 	die "not enough processors (we need " . $self->{trace}->needed_cpus() . ", we have " . $self->{num_processors} . ")" if $self->{trace}->needed_cpus() > $self->{num_processors};
-
-	my $start = time();
 
 	for my $job (@{$self->{trace}->jobs}) {
 		$self->assign_job($job);
 	}
 
 	$self->{run_time} = time() - $start;
-
-	return {
-		cmax => $self->cmax(),
-		run_time => $self->{run_time}
-	};
 }
 
 sub run_time {
-	my $self = shift;
-
+	my ($self) = @_;
 	return $self->{run_time};
 }
 
-sub print {
-	my $self = shift;
-	print "Printing schedule\n";
-	$_->print_jobs() for @{$self->{processors}};
-}
-
 sub cmax {
-	my $self = shift;
+	my ($self) = @_;
 	return max map {$_->cmax()} @{$self->{processors}};
 }
 
 sub save_svg {
-	my $self = shift;
-	my $svg_filename = shift;
-	my $pdf_filename = shift;
+	my ($self, $svg_filename) = @_;
 
 	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
 
@@ -82,7 +67,8 @@ sub save_svg {
 
 my $file_count = 0;
 sub tycat {
-	my $self = shift;
+	my ($self) = @_;
+
 	my $user = $ENV{"USER"};
 	my $dir = "/tmp/$user";
 	mkdir $dir unless -f $dir;
@@ -92,9 +78,7 @@ sub tycat {
 }
 
 sub print_svg {
-	my $self = shift;
-	my $svg_filename = shift;
-	my $pdf_filename = shift;
+	my ($self, $svg_filename, $pdf_filename) = @_;
 
 	open(my $filehandler, '>', $svg_filename);
 
@@ -115,7 +99,7 @@ sub print_svg {
 }
 
 sub DESTROY {
-	my $self = shift;
+	my ($self) = @_;
 	for my $processor (@{$self->{processors}}) {
 		$processor->remove_all_jobs();
 	}

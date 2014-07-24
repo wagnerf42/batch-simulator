@@ -55,9 +55,9 @@ push @results, @{$_->join()} for (@threads);
 $database->update_execution_run_time($execution_id, time() - $start_time);
 
 # Print all results in a file
-#my $basic_file_name = "backfilling_FCFS-$jobs_number-$executions_number-$cpus_number-$threads_number-$execution_id";
-#print STDERR "Writing results to $basic_file_name\n";
-#write_results_to_file(\@results, "$basic_file_name.csv");
+my $file_name = "parser2-$jobs_number-$executions_number-$cpus_number-$threads_number-$execution_id.csv";
+print STDERR "Writing results to $file_name\n";
+write_results_to_file(\@results, "$file_name");
 
 sub write_results_to_file {
 	my $results = shift;
@@ -66,9 +66,7 @@ sub write_results_to_file {
 	open(my $filehandle, "> $filename") or die "unable to open $filename";
 
 	for my $results_item (@{$results}) {
-		# Prints the results for fcfs and backfilling
-		my $cmax_ratio = @{$results_item}[0]->{cmax}/@{$results_item}[1]->{cmax};
-		print $filehandle "$cmax_ratio @{$results_item}[2]\n";
+		print $filehandle join(' ', @{$results_item}) . "\n";
 	}
 
 	close $filehandle;
@@ -91,14 +89,14 @@ sub run_all_thread {
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
 		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
-		my $results_fcfs = $schedule_fcfs->run();
-		$database->add_run($trace_id, 'fcfs_best_effort', $results_fcfs->{cmax}, $results_fcfs->{run_time});
+		$schedule_fcfs->run();
+		$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
 
 		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number, 1);
-		my $results_backfilling = $schedule_backfilling->run();
-		$database->add_run($trace_id, 'backfilling_best_effort', $results_backfilling->{cmax}, $results_backfilling->{run_time});
+		$schedule_backfilling->run();
+		$database->add_run($trace_id, 'backfilling_best_effort', $schedule_backfilling->cmax, $schedule_backfilling->run_time);
 
-		push @results, [$results_fcfs, $results_backfilling, $trace_id];
+		push @results, [$schedule_fcfs->cmax/$schedule_backfilling->cmax, $trace_id];
 	}
 
 	return [@results];

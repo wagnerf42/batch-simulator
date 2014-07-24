@@ -18,7 +18,7 @@ sub new {
 }
 
 sub stringification {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{id};
 }
 
@@ -43,8 +43,7 @@ sub cmax {
 }
 
 sub assign_job {
-	my $self = shift;
-	my $job = shift;
+	my ($self, $job) = @_;
 
 	push $self->{jobs}, $job;
 
@@ -53,9 +52,7 @@ sub assign_job {
 }
 
 sub available_at {
-	my $self = shift;
-	my $starting_time = shift;
-	my $duration = shift;
+	my ($self, $starting_time, $duration) = @_;
 
 	for my $job (@{$self->{jobs}}) {
 		return 0 if ($job->starting_time < $starting_time) and ($job->ending_time > $starting_time);
@@ -65,20 +62,13 @@ sub available_at {
 	return 1;
 }
 
-sub print_jobs {
-	my $self = shift;
-	print "Jobs for processor with id $self->{id} and cmax $self->{cmax}:\n";
-	print $_->stringification()."\n" for @{$self->{jobs}};
-}
-
 sub jobs {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{jobs};
 }
 
-#TODO Revisit this part
 sub remove_all_jobs {
-	my $self = shift;
+	my ($self) = @_;
 	$self->{jobs} = [];
 }
 
