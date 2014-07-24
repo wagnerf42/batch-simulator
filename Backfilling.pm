@@ -24,8 +24,6 @@ sub assign_job {
 	my ($self, $job) = @_;
 	my $requested_cpus = $job->requested_cpus();
 
-	#print "job " . $job->job_number() . "\n";
-
 	#get the first valid profile_id for our job
 	$self->{execution_profile}->set_current_time($job->submit_time());
 	my ($chosen_profile, $chosen_processors, $contiguous) = $self->{execution_profile}->find_first_profile_for($job);
@@ -33,7 +31,6 @@ sub assign_job {
 
 	$self->{contiguous_jobs_number}++ if ($contiguous);
 
-	#scalar <STDIN>;
 	#assign job
 	$job->assign_to($starting_time, $chosen_processors);
 
