@@ -2,14 +2,19 @@ package ProcessorsSet;
 
 use strict;
 use warnings;
+use Data::Dumper;
 
 sub new {
 	my $class = shift;
 	my $self = {
-		processors => sort_processors(@_)
+		processors => shift,
+		processors_number => shift
 	};
 
-	print "\tmy processors " . join(',', @{$self->{processors}}) . "\n";
+	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
+
+	#my @id = map {$_->id()} @{$self->{processors}};
+	#print Dumper(@id);
 
 	bless $self, $class;
 	return $self;
@@ -68,27 +73,28 @@ sub reduce_to_contiguous {
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
-		print "\tstart_id $start_id\n";
+		#print "\tstart_index $start_index start_id $start_id\n";
 		for my $num (1..($number-1)) {
-			my $index = ($start_index + $num) % @{$self->{processors}};
-			my $id = $self->{processors}->[$index]->id();
-			my $expected_id = ($start_id + $num) % @{$self->{processors}};
-			print "\tplop $id $expected_id " . @{$self->{processors}} . "\n";
+			my $index = ($start_index + $num) % scalar @{$self->{processors}};
+			my $expected_id = ($start_id + $num) % $self->{processors_number};
+			#print "\tindex $index expected_id $expected_id\n";
+			my $id = $self->{processors}[$index]->id();
+			#print "\tindex $index expected_id $expected_id id $id\n";
 			if ($id != $expected_id) {
 				$ok = 0;
 				last;
 			}
 		}
 		if ($ok) {
-			print "\tok\n";
 			$self->keep_from($start_index, $number);
 			$self->{contiguous} = 1;
 			return;
 		}
+
+		#scalar <STDIN>;
 	}
 
 	# In this case it was not possible, return an empty answer
-	print "\tnot ok\n";
 	@{$self->{processors}} = ();
 }
 
