@@ -48,6 +48,7 @@ sub get_free_processors_for {
 		}
 	}
 	my @selected_ids = values %left_processors;
+	print "\tselected ids @selected_ids\n";
 	return unless @selected_ids >= $job->requested_cpus();
 	my $processors = new ProcessorsSet(map {$self->{processors}->[$_]} @selected_ids);
 
@@ -81,6 +82,12 @@ sub find_first_profile_for {
 	my ($self, $job) = @_;
 	for my $profile_id (0..$#{$self->{profiles}}) {
 		my ($processors, $contiguous) = $self->get_free_processors_for($job, $profile_id);
+		if ($processors) {
+			print "\texists " . scalar @{$processors} . "\n";
+		} else {
+			print "\tdoesnt exist\n";
+			#print Dumper(@{$self->{profiles}}[$profile_id]);
+		}
 		return ($profile_id, $processors, $contiguous) if $processors;
 	}
 

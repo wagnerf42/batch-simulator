@@ -9,6 +9,8 @@ sub new {
 		processors => sort_processors(@_)
 	};
 
+	print "\tmy processors " . join(',', @{$self->{processors}}) . "\n";
+
 	bless $self, $class;
 	return $self;
 }
@@ -66,16 +68,19 @@ sub reduce_to_contiguous {
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
+		print "\tstart_id $start_id\n";
 		for my $num (1..($number-1)) {
 			my $index = ($start_index + $num) % @{$self->{processors}};
 			my $id = $self->{processors}->[$index]->id();
 			my $expected_id = ($start_id + $num) % @{$self->{processors}};
+			print "\tplop $id $expected_id " . @{$self->{processors}} . "\n";
 			if ($id != $expected_id) {
 				$ok = 0;
 				last;
 			}
 		}
 		if ($ok) {
+			print "\tok\n";
 			$self->keep_from($start_index, $number);
 			$self->{contiguous} = 1;
 			return;
@@ -83,6 +88,7 @@ sub reduce_to_contiguous {
 	}
 
 	# In this case it was not possible, return an empty answer
+	print "\tnot ok\n";
 	@{$self->{processors}} = ();
 }
 
