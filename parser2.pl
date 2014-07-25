@@ -33,7 +33,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, fcfs best effort vs backfilling contiguous, remove large jobs, reset submit times"
+	comments => "parser script, all algorithms, remove large jobs, reset submit times"
 );
 my $execution_id = $database->add_execution(\%execution);
 
@@ -92,11 +92,19 @@ sub run_all_thread {
 		$schedule_fcfs->run();
 		$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
 
-		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number, 1);
+		my $schedule_fcfsc = FCFSC->new($trace_random, $cpus_number);
+		$schedule_fcfsc->run();
+		$database->add_run($trace_id, 'fcfs_contiguous', $schedule_fcfsc->cmax, $schedule_fcfsc->run_time);
+
+		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
 		$schedule_backfilling->run();
 		$database->add_run($trace_id, 'backfilling_best_effort', $schedule_backfilling->cmax, $schedule_backfilling->run_time);
 
-		push @results, [$schedule_fcfs->cmax/$schedule_backfilling->cmax, $trace_id];
+		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_number, 1);
+		$schedule_backfilling_contiguous->run();
+		$database->add_run($trace_id, 'backfilling_contiguous', $schedule_backfilling_contiguous->cmax, $schedule_backfilling_contiguous->run_time);
+
+		push @results, [$schedule_fcfs->cmax, $schedule_fcfs->run_time, $schedule_fcfsc->cmax, $schedule_fcfsc->run_time, $schedule_backfilling->cmax, $schedule_backfilling->run_time, $schedule_backfilling_contiguous->cmax, $schedule_backfilling->run_time, $trace_id];
 	}
 
 	return [@results];
