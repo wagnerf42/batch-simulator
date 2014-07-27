@@ -21,6 +21,10 @@ die 'missing arguments: trace_file jobs_number executions_number cpus_number thr
 #chomp($git_branch);
 #die 'git tree not clean' if ($git_branch eq 'master') and (system('./check_git.sh'));
 
+# Create a directory to store the output
+my $basic_file_name = "parser2-$jobs_number-$executions_number-$cpus_number";
+mkdir $basic_file_name -f $basic_file_name;
+
 my $database = Database->new();
 #$database->prepare_tables();
 #die 'created tables';
@@ -55,9 +59,8 @@ push @results, @{$_->join()} for (@threads);
 $database->update_execution_run_time($execution_id, time() - $start_time);
 
 # Print all results in a file
-my $file_name = "parser2-$jobs_number-$executions_number-$cpus_number-$threads_number-$execution_id.csv";
-print STDERR "Writing results to $file_name\n";
-write_results_to_file(\@results, "$file_name");
+print STDERR "Writing results to $basic_file_name/$basic_file_name.csv\n";
+write_results_to_file(\@results, "$basic_file_name/$basic_file_name.csv");
 
 sub write_results_to_file {
 	my $results = shift;
@@ -104,7 +107,17 @@ sub run_all_thread {
 		$schedule_backfilling_contiguous->run();
 		$database->add_run($trace_id, 'backfilling_contiguous', $schedule_backfilling_contiguous->cmax, $schedule_backfilling_contiguous->run_time);
 
-		push @results, [$schedule_fcfs->cmax, $schedule_fcfs->run_time, $schedule_fcfsc->cmax, $schedule_fcfsc->run_time, $schedule_backfilling->cmax, $schedule_backfilling->run_time, $schedule_backfilling_contiguous->cmax, $schedule_backfilling->run_time, $trace_id];
+		push @results, [
+			$schedule_fcfs->cmax,
+			$schedule_fcfs->run_time,
+			$schedule_fcfsc->cmax,
+			$schedule_fcfsc->run_time,
+			$schedule_backfilling->cmax,
+			$schedule_backfilling->run_time,
+			$schedule_backfilling_contiguous->cmax,
+			$schedule_backfilling->run_time,
+			$trace_id
+		];
 	}
 
 	return [@results];
