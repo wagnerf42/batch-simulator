@@ -23,7 +23,7 @@ die 'missing arguments: trace_file jobs_number executions_number cpus_number thr
 
 # Create a directory to store the output
 my $basic_file_name = "parser2-$jobs_number-$executions_number-$cpus_number";
-mkdir $basic_file_name -f $basic_file_name;
+mkdir $basic_file_name unless -f $basic_file_name;
 
 my $database = Database->new();
 #$database->prepare_tables();

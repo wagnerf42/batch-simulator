@@ -12,7 +12,7 @@ sub new {
 	my $class = shift;
 	my $self = {
 		driver => "mysql",
-		database => "parser_test",
+		database => "parser",
 		userid => "parser",
 		password => "parser"
 	};

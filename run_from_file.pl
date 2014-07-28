@@ -18,7 +18,7 @@ die 'missing arguments: trace_number cpus_number' unless defined $cpus_number;
 
 # Create a directory to store the output
 my $basic_file_name = "run_from_file-$trace_number-$cpus_number";
-mkdir $basic_file_name -f $basic_file_name;
+mkdir $basic_file_name unless -f $basic_file_name;
 
 # Read the trace and write it to a file
 my $trace = Trace->new_from_swf($trace_file_name);
