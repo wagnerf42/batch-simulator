@@ -21,14 +21,6 @@ die 'missing arguments: trace_file jobs_number executions_number cpus_number thr
 #chomp($git_branch);
 #die 'git tree not clean' if ($git_branch eq 'master') and (system('./check_git.sh'));
 
-# Create a directory to store the output
-my $basic_file_name = "parser2-$jobs_number-$executions_number-$cpus_number";
-mkdir $basic_file_name unless -f $basic_file_name;
-
-my $database = Database->new();
-#$database->prepare_tables();
-#die 'created tables';
-
 # Create new execution in the database
 my %execution = (
 	trace_file => $trace_file_name,
@@ -37,9 +29,17 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, all algorithms, remove large jobs, reset submit times"
+	comments => "parser script, backfilling best effort and contiguous, remove large jobs"
 );
+
+my $database = Database->new();
+#$database->prepare_tables();
+#die 'created tables';
 my $execution_id = $database->add_execution(\%execution);
+
+# Create a directory to store the output
+my $basic_file_name = "parser2-$jobs_number-$executions_number-$cpus_number-$execution_id";
+mkdir $basic_file_name unless -f $basic_file_name;
 
 # Create threads
 print STDERR "Creating threads\n";
@@ -84,20 +84,20 @@ sub run_all_thread {
 	# Read the original trace
 	my $trace = Trace->new_from_swf($trace_file_name);
 	$trace->remove_large_jobs($cpus_number);
-	$trace->reset_submit_times();
+	#$trace->reset_submit_times();
 
 	for (1..($executions_number/$threads_number)) {
 		# Generate the trace and add it to the database
 		my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
-		$schedule_fcfs->run();
-		$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
+		#my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
+		#$schedule_fcfs->run();
+		#$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
 
-		my $schedule_fcfsc = FCFSC->new($trace_random, $cpus_number);
-		$schedule_fcfsc->run();
-		$database->add_run($trace_id, 'fcfs_contiguous', $schedule_fcfsc->cmax, $schedule_fcfsc->run_time);
+		#my $schedule_fcfsc = FCFSC->new($trace_random, $cpus_number);
+		#$schedule_fcfsc->run();
+		#$database->add_run($trace_id, 'fcfs_contiguous', $schedule_fcfsc->cmax, $schedule_fcfsc->run_time);
 
 		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
 		$schedule_backfilling->run();
@@ -108,14 +108,8 @@ sub run_all_thread {
 		$database->add_run($trace_id, 'backfilling_contiguous', $schedule_backfilling_contiguous->cmax, $schedule_backfilling_contiguous->run_time);
 
 		push @results, [
-			$schedule_fcfs->cmax,
-			$schedule_fcfs->run_time,
-			$schedule_fcfsc->cmax,
-			$schedule_fcfsc->run_time,
-			$schedule_backfilling->cmax,
-			$schedule_backfilling->run_time,
-			$schedule_backfilling_contiguous->cmax,
-			$schedule_backfilling->run_time,
+			$schedule_backfilling->cmax/$schedule_backfilling_contiguous->cmax,
+			$schedule_backfilling->contiguous_jobs_number,
 			$trace_id
 		];
 	}
