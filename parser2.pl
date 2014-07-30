@@ -13,8 +13,8 @@ use FCFSC;
 use Backfilling;
 use Database;
 
-my ($trace_file_name, $jobs_number, $executions_number, $cpus_number, $threads_number) = @ARGV;
-die 'missing arguments: trace_file jobs_number executions_number cpus_number threads_number' unless defined $threads_number;
+my ($trace_file_name, $jobs_number, $executions_number, $cpus_number, $cluster_size, $threads_number) = @ARGV;
+die 'missing arguments: trace_file jobs_number executions_number cpus_number cluster_size threads_number' unless defined $threads_number;
 
 # This line keeps the code from bein executed if there are uncommited changes in the git tree if the branch being used is the master branch
 #my $git_branch = `git symbolic-ref --short HEAD`;
@@ -29,7 +29,8 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, backfilling best effort"
+	comments => "parser script, backfilling best effort",
+	cluster_size => $cluster_size
 );
 
 my $database = Database->new();
@@ -98,23 +99,17 @@ sub run_all_thread {
 		#$schedule_fcfsc->run();
 		#$database->add_run($trace_id, 'fcfs_contiguous', $schedule_fcfsc->cmax, $schedule_fcfsc->run_time);
 
-		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
+		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number, $cluster_size);
 		$schedule_backfilling->run();
 		$database->add_run($trace_id, 'backfilling_best_effort', $schedule_backfilling->cmax, $schedule_backfilling->run_time);
-		my $sum_flow_time_backfilling = $schedule_backfilling->sum_flow_time();
-		my $max_flow_time_backfilling = $schedule_backfilling->max_flow_time();
 
-		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_number, 1);
+		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_number, $cluster_size, 1);
 		$schedule_backfilling_contiguous->run();
 		$database->add_run($trace_id, 'backfilling_contiguous', $schedule_backfilling_contiguous->cmax, $schedule_backfilling_contiguous->run_time);
 		my $sum_flow_time_backfilling_contiguous = $schedule_backfilling_contiguous->sum_flow_time();
 		my $max_flow_time_backfilling_contiguous = $schedule_backfilling_contiguous->max_flow_time();
 
 		push @results, [
-			$sum_flow_time_backfilling,
-			$max_flow_time_backfilling,
-			$sum_flow_time_backfilling_contiguous,
-			$max_flow_time_backfilling_contiguous,
 			$trace_id
 		];
 	}

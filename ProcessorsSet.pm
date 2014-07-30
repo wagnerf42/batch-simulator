@@ -8,7 +8,7 @@ sub new {
 	my $class = shift;
 	my $self = {
 		processors => shift,
-		processors_number => shift
+		processors_number => shift,
 	};
 
 	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
@@ -90,6 +90,34 @@ sub reduce_to_contiguous {
 	@{$self->{processors}} = ();
 }
 
+sub reduce_to_cluster {
+	my $self = shift;
+	my $number = shift;
+
+	for my $start_index (0..(scalar @{$self->{processors}} - $number)) {
+		my $ok = 1;
+		my $start_cluster = $self->{processors}->[$start_index]->cluster();
+
+		for my $index ($start_index..($start_index + $number - 1)) {
+			my $cluster = $self->{processors}[$index]->cluster();
+			if ($cluster != $start_cluster) {
+				$ok = 0;
+				last;
+			}
+		}
+
+		if ($ok) {
+			$self->keep_from($start_index, $number);
+			$self->{local} = 1;
+			return;
+		}
+	}
+
+	# In this case it was not possible, return an empty answer
+	@{$self->{processors}} = ();
+}
+
+
 sub keep_from {
 	my $self = shift;
 	my $index = shift;
@@ -108,8 +136,13 @@ sub processors {
 }
 
 sub contiguous {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{contiguous};
+}
+
+sub local {
+	my ($self) = @_;
+	return $self->{local};
 }
 
 1;

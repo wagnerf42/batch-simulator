@@ -9,6 +9,7 @@ sub new {
 	my $class = shift;
 	my $self = {
 		id => shift,
+		cluster => shift,
 		jobs => [],
 		cmax => 0
 	};
@@ -70,6 +71,11 @@ sub jobs {
 sub remove_all_jobs {
 	my ($self) = @_;
 	$self->{jobs} = [];
+}
+
+sub cluster {
+	my ($self) = @_;
+	return $self->{cluster};
 }
 
 1;

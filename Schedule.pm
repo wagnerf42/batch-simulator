@@ -10,12 +10,13 @@ sub new {
 	my $self = {
 		trace => shift,
 		num_processors => shift,
+		cluster_size => shift,
 		contiguous => shift,
 		processors => []
 	};
 
 	for my $id (0..($self->{num_processors} - 1)) {
-		my $processor = new Processor($id);
+		my $processor = new Processor($id, int($id/$self->{cluster_size}));
 		push $self->{processors}, $processor;
 	}
 

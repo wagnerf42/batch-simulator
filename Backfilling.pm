@@ -14,8 +14,9 @@ sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = new ExecutionProfile($self->{processors}, $self->{contiguous});
+	$self->{execution_profile} = new ExecutionProfile($self->{processors}, $self->{cluster_size}, $self->{contiguous});
 	$self->{contiguous_jobs_number} = 0;
+	$self->{local_jobs_number} = 0;
 
 	return $self;
 }
@@ -26,10 +27,11 @@ sub assign_job {
 
 	#get the first valid profile_id for our job
 	$self->{execution_profile}->set_current_time($job->submit_time());
-	my ($chosen_profile, $chosen_processors, $contiguous) = $self->{execution_profile}->find_first_profile_for($job);
+	my ($chosen_profile, $chosen_processors, $local, $contiguous) = $self->{execution_profile}->find_first_profile_for($job);
 	my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
-	$self->{contiguous_jobs_number}++ if ($contiguous);
+	$self->{contiguous_jobs_number}++ if defined $contiguous and ($contiguous);
+	$self->{local_jobs_number}++ if defined $local and ($local);
 
 	#assign job
 	$job->assign_to($starting_time, $chosen_processors);
