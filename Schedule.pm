@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use Processor;
-use List::Util qw(max);
+use List::Util qw(max sum);
 
 sub new {
 	my $class = shift;
@@ -32,7 +32,7 @@ sub run {
 
 	die "not enough processors (we need " . $self->{trace}->needed_cpus() . ", we have " . $self->{num_processors} . ")" if $self->{trace}->needed_cpus() > $self->{num_processors};
 
-	for my $job (@{$self->{trace}->jobs}) {
+	for my $job (@{$self->{trace}->jobs()}) {
 		$self->assign_job($job);
 	}
 
@@ -42,6 +42,21 @@ sub run {
 sub run_time {
 	my ($self) = @_;
 	return $self->{run_time};
+}
+
+sub sum_flow_time {
+	my ($self) = @_;
+	return sum map {$_->flow_time()} @{$self->{trace}->jobs()};
+}
+
+sub max_flow_time {
+	my ($self) = @_;
+	return max map {$_->flow_time()} @{$self->{trace}->jobs()};
+}
+
+sub mean_flow_time {
+	my ($self) = @_;
+	return $self->sum_flow_time()/scalar $self->{trace}->jobs();
 }
 
 sub cmax {

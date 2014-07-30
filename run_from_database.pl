@@ -37,11 +37,11 @@ $trace->write_to_file("$basic_file_name/$basic_file_name.swf");
 
 my $schedule_backfilling = Backfilling->new($trace, $cpus_number);
 $schedule_backfilling->run();
-print "Backfilling " . $schedule_backfilling->cmax() . "\n";
+print "Backfilling " . $schedule_backfilling->sum_flow_time() . "\n";
 $schedule_backfilling->save_svg("$basic_file_name/$basic_file_name-backfilling.svg");
 
 my $schedule_backfilling_contiguous = Backfilling->new($trace, $cpus_number, 1);
 $schedule_backfilling_contiguous->run();
-print "Backfilling contiguous " . $schedule_backfilling_contiguous->cmax() . "\n";
+print "Backfilling contiguous " . $schedule_backfilling_contiguous->sum_flow_time() . "\n";
 $schedule_backfilling_contiguous->save_svg("$basic_file_name/$basic_file_name-backfilling_contiguous.svg");
 

@@ -35,11 +35,7 @@ sub new_from_swf {
 		# Job line
 		elsif ($fields[0] ne ' ') {
 			my $job = new Job(@fields);
-
-			if ($job->requested_cpus > $self->{needed_cpus}) {
-				$self->{needed_cpus} = $job->requested_cpus;
-			}
-
+			$self->{needed_cpus} = max($self->{needed_cpus}, $job->requested_cpus);
 			push $self->{jobs}, $job;
 		}
 	}
@@ -58,22 +54,16 @@ sub fix_submit_times {
 }
 
 sub new_block_from_trace {
-	my $class = shift;
+	my ($class, $trace, $size) = @_;
+
 	my $self = {
-		trace => shift,
-		size => shift,
-		status => [],
-		partition_count => 0,
 		needed_cpus => 0
 	};
 
-	my $start_point = int(rand(scalar @{$self->{trace}->jobs} - $self->{size} + 1));
-	my @selected_jobs = @{$self->{trace}->jobs}[$start_point..($start_point + $self->{size} - 1)];
-	my $first_submit_time = $selected_jobs[0]->submit_time();
-	$_->submit_time($_->submit_time()-$first_submit_time) for @selected_jobs;
+	my $start_point = int(rand(scalar @{$trace->jobs()} - $size + 1));
+	my @selected_jobs = @{$trace->jobs()}[$start_point..($start_point + $size - 1)];
 
-	$self->{jobs} = [ @selected_jobs ];
-
+	$self->{jobs} = [@selected_jobs];
 	$self->{needed_cpus} = max map {$_->requested_cpus} @{$self->{jobs}};
 
 	bless $self, $class;
@@ -81,21 +71,18 @@ sub new_block_from_trace {
 }
 
 sub new_from_trace {
-	my $class = shift;
+	my ($class, $trace, $size) = @_;
+
 	my $self = {
-		trace => shift,
-		size => shift,
 		jobs => [],
-		status => [],
 		needed_cpus => 0
 	};
 
-	for my $job_number (0..($self->{size} - 1)) {
-		my $job_id = int(rand(@{$self->{trace}->jobs}));
-		my $new_job = dclone($self->{trace}->job($job_id));
+	for my $job_number (0..($size - 1)) {
+		my $job_id = int(rand(@{$trace->jobs()}));
+		my $new_job = dclone($trace->job($job_id));
 
 		$self->{needed_cpus} = max($self->{needed_cpus}, $new_job->requested_cpus);
-		$new_job->job_number(scalar @{$self->{jobs}} + 1);
 		push $self->{jobs}, $new_job;
 	}
 
@@ -103,18 +90,35 @@ sub new_from_trace {
 	return $self;
 }
 
-sub new_from_database {
-	my $class = shift;
+sub copy_from_trace {
+	my ($class, $trace) = @_;
+
 	my $self = {
-		trace_id => shift,
 		jobs => [],
-		status => [],
+		needed_cpus => $trace->needed_cpus()
+	};
+
+	for my $job (@{$trace->jobs()}) {
+		my $new_job = dclone($job);
+		push $self->{jobs}, $new_job;
+	}
+
+	bless $self, $class;
+	return $self;
+}
+
+
+sub new_from_database {
+	my ($class, $trace_id) = @_;
+
+	my $self = {
+		jobs => [],
 		needed_cpus => 0
 	};
 
 	my $database = Database->new();
-	my $trace_ref = $database->get_trace_ref($self->{trace_id});
-	my @job_refs = $database->get_job_refs($self->{trace_id});
+	my $trace_ref = $database->get_trace_ref($trace_id);
+	my @job_refs = $database->get_job_refs($trace_id);
 
 	for my $job_ref (@job_refs) {
 		my $job = Job->new($job_ref->{job_number}, $job_ref->{submit_time}, $job_ref->{wait_time}, $job_ref->{run_time}, $job_ref->{allocated_cpus}, $job_ref->{avg_cpu_time}, $job_ref->{used_mem}, $job_ref->{requested_cpus}, $job_ref->{requested_time}, $job_ref->{requested_mem}, $job_ref->{status}, $job_ref->{uid}, $job_ref->{gid}, $job_ref->{exec_number}, $job_ref->{queue_number}, $job_ref->{partition_number}, $job_ref->{prec_job_number}, $job_ref->{think_time_prec_job});
@@ -128,15 +132,22 @@ sub new_from_database {
 }
 
 sub reset_submit_times {
-	my $self = shift;
+	my ($self) = @_;
 	$_->submit_time(0) for (@{$self->{jobs}});
 }
 
-sub write_to_file {
-	my $self = shift;
-	my $trace_filename = shift;
+sub reset_jobs_numbers {
+	my ($self) = @_;
 
-	open(my $filehandle, "> $trace_filename") or die "unable to open $trace_filename";
+	for my $i (0..$#{$self->{jobs}}) {
+		$self->{jobs}[$i]->job_number($i + 1);
+	}
+}
+
+sub write_to_file {
+	my ($self, $trace_file_name) = @_;
+
+	open(my $filehandle, "> $trace_file_name") or die "unable to open $trace_file_name";
 
 	for my $job (@{$self->{jobs}}) {
 		print $filehandle "$job\n";
@@ -145,60 +156,49 @@ sub write_to_file {
 
 
 sub needed_cpus {
-	my $self = shift;
-
-	if (@_) {
-		$self->{needed_cpus} = shift;
-	}
-
+	my ($self, $needed_cpus) = @_;
+	$self->{needed_cpus} = $needed_cpus if defined $needed_cpus;
 	return $self->{needed_cpus};
 }
 
 sub print_jobs {
-	my $self = shift;
+	my ($self) = @_;
 	print join(',', @{$self->{jobs}})."\n";
 }
 
 sub jobs {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{jobs};
 }
 
 sub job {
-	my $self = shift;
-	my $job_number = shift;
-
+	my ($self, $job_number) = @_;
 	return $self->{jobs}[$job_number];
 }
 
 sub number_of_jobs {
-	my $self = shift;
-
+	my ($self) = @_;
 	return scalar @{$self->{jobs}};
 }
 
 sub remove_large_jobs {
-	my $self = shift;
-	my $limit = shift;
-
+	my ($self, $limit) = @_;
 	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
 	$self->{jobs} = [@left_jobs];
 }
 
 sub reset {
-	my $self = shift;
+	my ($self) = @_;
 	$_->reset() for @{$self->{jobs}};
 }
 
 sub file {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{file};
 }
 
 sub characteristic {
-	my $self = shift;
-	my $characteristic_id = shift;
-	my $cpus_number = shift;
+	my ($self, $characteristic_id, $cpus_number) = @_;
 
 	if ($characteristic_id == 0) {
 

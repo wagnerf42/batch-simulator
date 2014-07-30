@@ -82,6 +82,11 @@ sub ending_time {
 	return $self->{starting_time} + $self->{run_time};
 }
 
+sub flow_time {
+	my ($self) = @_;
+	return $self->{starting_time} + $self->{run_time} - $self->{submit_time};
+}
+
 sub submit_time {
 	my $self = shift;
 
@@ -98,14 +103,15 @@ sub wait_time {
 }
 
 sub job_number {
-	my ($self) = @_;
+	my ($self, $job_number) = @_;
+	$self->{job_number} = $job_number if defined $job_number;
 	return $self->{job_number};
 }
 
 sub assign_to {
-	my $self = shift;
-	$self->{starting_time} = shift;
-	$self->{assigned_processors} = shift;
+	my ($self, $starting_time, $assigned_processors) = @_;
+	$self->{starting_time} = $starting_time if defined $starting_time;
+	$self->{assigned_processors} = $assigned_processors if defined $assigned_processors;
 
 	$_->assign_job($self) for @{$self->{assigned_processors}};
 }
@@ -148,6 +154,7 @@ sub svg {
 sub reset {
 	my ($self) = @_;
 	delete $self->{starting_time};
+	delete $self->{first_processor};
 	delete $self->{assigned_processors};
 }
 

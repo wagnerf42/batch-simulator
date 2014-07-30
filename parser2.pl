@@ -29,7 +29,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, backfilling best effort and contiguous, remove large jobs"
+	comments => "parser script, backfilling best effort"
 );
 
 my $database = Database->new();
@@ -42,7 +42,6 @@ my $basic_file_name = "parser2-$jobs_number-$executions_number-$cpus_number-$exe
 mkdir $basic_file_name unless -f $basic_file_name;
 
 # Create threads
-print STDERR "Creating threads\n";
 my $start_time = time();
 my @threads;
 for my $i (0..($threads_number - 1)) {
@@ -51,7 +50,6 @@ for my $i (0..($threads_number - 1)) {
 }
 
 # Wait for all threads to finish
-print STDERR "Waiting for all threads to finish\n";
 my @results;
 push @results, @{$_->join()} for (@threads);
 
@@ -89,6 +87,7 @@ sub run_all_thread {
 	for (1..($executions_number/$threads_number)) {
 		# Generate the trace and add it to the database
 		my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
+		$trace_random->fix_submit_times();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
 		#my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
@@ -102,14 +101,20 @@ sub run_all_thread {
 		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number);
 		$schedule_backfilling->run();
 		$database->add_run($trace_id, 'backfilling_best_effort', $schedule_backfilling->cmax, $schedule_backfilling->run_time);
+		my $sum_flow_time_backfilling = $schedule_backfilling->sum_flow_time();
+		my $max_flow_time_backfilling = $schedule_backfilling->max_flow_time();
 
 		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_number, 1);
 		$schedule_backfilling_contiguous->run();
 		$database->add_run($trace_id, 'backfilling_contiguous', $schedule_backfilling_contiguous->cmax, $schedule_backfilling_contiguous->run_time);
+		my $sum_flow_time_backfilling_contiguous = $schedule_backfilling_contiguous->sum_flow_time();
+		my $max_flow_time_backfilling_contiguous = $schedule_backfilling_contiguous->max_flow_time();
 
 		push @results, [
-			$schedule_backfilling->cmax/$schedule_backfilling_contiguous->cmax,
-			$schedule_backfilling->contiguous_jobs_number,
+			$sum_flow_time_backfilling,
+			$max_flow_time_backfilling,
+			$sum_flow_time_backfilling_contiguous,
+			$max_flow_time_backfilling_contiguous,
 			$trace_id
 		];
 	}
