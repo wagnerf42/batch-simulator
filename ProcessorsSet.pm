@@ -42,12 +42,12 @@ sub reduce_to {
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
-		my $start_cluster = $self->{processors}->[$start_index]->cluster();
+		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
 
 		for my $num (1..($number-1)) {
 			my $index = ($start_index + $num) % @{$self->{processors}};
 			my $id = $self->{processors}->[$index]->id();
-			my $cluster = $self->{processors}->[$index]->cluster();
+			my $cluster = $self->{processors}->[$index]->cluster_number();
 			my $expected_id = ($start_id + $num) % $self->{processors_number};
 
 			if (($id != $expected_id) or ($cluster != $start_cluster)) {
@@ -78,12 +78,12 @@ sub reduce_to_contiguous {
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
-		my $start_cluster = $self->{processors}->[$start_index]->cluster();
+		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
 
 		for my $num (1..($number-1)) {
 			my $index = ($start_index + $num) % @{$self->{processors}};
 			my $id = $self->{processors}[$index]->id();
-			my $cluster = $self->{processors}->[$index]->cluster();
+			my $cluster = $self->{processors}->[$index]->cluster_number();
 			my $expected_id = ($start_id + $num) % $self->{processors_number};
 
 			if (($id != $expected_id) or ($cluster != $start_cluster)) {
@@ -107,10 +107,10 @@ sub reduce_to_cluster {
 
 	for my $start_index (0..(scalar @{$self->{processors}} - $number)) {
 		my $ok = 1;
-		my $start_cluster = $self->{processors}->[$start_index]->cluster();
+		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
 
 		for my $index (($start_index + 1)..($start_index + $number - 1)) {
-			my $cluster = $self->{processors}[$index]->cluster();
+			my $cluster = $self->{processors}[$index]->cluster_number();
 			if ($cluster != $start_cluster) {
 				$ok = 0;
 				last;

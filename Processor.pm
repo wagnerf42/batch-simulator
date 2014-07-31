@@ -73,7 +73,7 @@ sub remove_all_jobs {
 	$self->{jobs} = [];
 }
 
-sub cluster {
+sub cluster_number {
 	my ($self) = @_;
 	return $self->{cluster};
 }
