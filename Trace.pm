@@ -190,6 +190,7 @@ sub remove_large_jobs {
 sub reset {
 	my ($self) = @_;
 	$_->reset() for @{$self->{jobs}};
+	$self->{needed_cpus} = 0;
 }
 
 sub file {

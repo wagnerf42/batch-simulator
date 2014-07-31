@@ -42,22 +42,32 @@ sub reduce_to {
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
+		my $start_cluster = $self->{processors}->[$start_index]->cluster();
+
 		for my $num (1..($number-1)) {
 			my $index = ($start_index + $num) % @{$self->{processors}};
 			my $id = $self->{processors}->[$index]->id();
-			my $expected_id = ($start_id + $num) % @{$self->{processors}};
-			if ($id != $expected_id) {
+			my $cluster = $self->{processors}->[$index]->cluster();
+			my $expected_id = ($start_id + $num) % $self->{processors_number};
+
+			if (($id != $expected_id) or ($cluster != $start_cluster)) {
+				print "not ok\n";
 				$ok = 0;
 				last;
 			}
 		}
+
 		if ($ok) {
+			print "ok\n";
 			$self->keep_from($start_index, $number);
 			$self->{contiguous} = 1;
+			$self->{local} = 1;
 			return;
 		}
 	}
+
 	$self->{contiguous} = 0;
+	$self->{local} = 0;
 	$self->keep_from(0, $number);
 }
 
@@ -68,18 +78,22 @@ sub reduce_to_contiguous {
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
+		my $start_cluster = $self->{processors}->[$start_index]->cluster();
+
 		for my $num (1..($number-1)) {
-			my $index = ($start_index + $num) % scalar @{$self->{processors}};
-			my $expected_id = ($start_id + $num) % $self->{processors_number};
+			my $index = ($start_index + $num) % @{$self->{processors}};
 			my $id = $self->{processors}[$index]->id();
-			if ($id != $expected_id) {
+			my $cluster = $self->{processors}->[$index]->cluster();
+			my $expected_id = ($start_id + $num) % $self->{processors_number};
+
+			if (($id != $expected_id) or ($cluster != $start_cluster)) {
 				$ok = 0;
 				last;
 			}
 		}
+
 		if ($ok) {
 			$self->keep_from($start_index, $number);
-			$self->{contiguous} = 1;
 			return;
 		}
 	}
@@ -113,38 +127,6 @@ sub reduce_to_cluster {
 	# In this case it was not possible, return an empty answer
 	@{$self->{processors}} = ();
 }
-
-sub reduce_to_contiguous_cluster {
-	my ($self, $number) = @_;
-
-	for my $start_index (0..(scalar @{$self->{processors}} - $number)) {
-		my $ok = 1;
-		my $start_cluster = $self->{processors}->[$start_index]->cluster();
-		my $start_id = $self->{processors}->[$start_index]->id();
-
-		for my $index (($start_index + 1)..($start_index + $number - 1)) {
-			my $cluster = $self->{processors}[$index]->cluster();
-			my $id = $self->{processors}[$index]->id();
-			my $expected_id = $start_id + $index - $start_index;
-
-			if (($cluster != $start_cluster) or ($id != $expected_id)) {
-				$ok = 0;
-				last;
-			}
-		}
-
-		if ($ok) {
-			$self->keep_from($start_index, $number);
-			$self->{local} = 1;
-			$self->{contiguous} = 1;
-			return;
-		}
-	}
-
-	# In this case it was not possible, return an empty answer
-	@{$self->{processors}} = ();
-}
-
 
 sub keep_from {
 	my $self = shift;

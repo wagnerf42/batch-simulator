@@ -15,6 +15,9 @@ sub new {
 		processors => []
 	};
 
+	# If no cluster size was chosen, use the number of processors as cluster size
+	#$self->{cluster_size} = $self->{num_processors} unless defined $self->{cluster_size};
+
 	for my $id (0..($self->{num_processors} - 1)) {
 		my $processor = new Processor($id, int($id/$self->{cluster_size}));
 		push $self->{processors}, $processor;
