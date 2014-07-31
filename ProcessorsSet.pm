@@ -36,8 +36,7 @@ sub contains_at_least {
 #reduce number of processors to given value
 #tries to stay contiguous if possible
 sub reduce_to {
-	my $self = shift;
-	my $number = shift;
+	my ($self, $number) = @_;
 
 	#try each position and see if we can get a contiguous block
 	for my $start_index (0..$#{$self->{processors}}) {
@@ -63,8 +62,7 @@ sub reduce_to {
 }
 
 sub reduce_to_contiguous {
-	my $self = shift;
-	my $number = shift;
+	my ($self, $number) = @_;
 
 	#try each position and see if we can get a contiguous block
 	for my $start_index (0..$#{$self->{processors}}) {
@@ -91,14 +89,13 @@ sub reduce_to_contiguous {
 }
 
 sub reduce_to_cluster {
-	my $self = shift;
-	my $number = shift;
+	my ($self, $number) = @_;
 
 	for my $start_index (0..(scalar @{$self->{processors}} - $number)) {
 		my $ok = 1;
 		my $start_cluster = $self->{processors}->[$start_index]->cluster();
 
-		for my $index ($start_index..($start_index + $number - 1)) {
+		for my $index (($start_index + 1)..($start_index + $number - 1)) {
 			my $cluster = $self->{processors}[$index]->cluster();
 			if ($cluster != $start_cluster) {
 				$ok = 0;
@@ -109,6 +106,37 @@ sub reduce_to_cluster {
 		if ($ok) {
 			$self->keep_from($start_index, $number);
 			$self->{local} = 1;
+			return;
+		}
+	}
+
+	# In this case it was not possible, return an empty answer
+	@{$self->{processors}} = ();
+}
+
+sub reduce_to_contiguous_cluster {
+	my ($self, $number) = @_;
+
+	for my $start_index (0..(scalar @{$self->{processors}} - $number)) {
+		my $ok = 1;
+		my $start_cluster = $self->{processors}->[$start_index]->cluster();
+		my $start_id = $self->{processors}->[$start_index]->id();
+
+		for my $index (($start_index + 1)..($start_index + $number - 1)) {
+			my $cluster = $self->{processors}[$index]->cluster();
+			my $id = $self->{processors}[$index]->id();
+			my $expected_id = $start_id + $index - $start_index;
+
+			if (($cluster != $start_cluster) or ($id != $expected_id)) {
+				$ok = 0;
+				last;
+			}
+		}
+
+		if ($ok) {
+			$self->keep_from($start_index, $number);
+			$self->{local} = 1;
+			$self->{contiguous} = 1;
 			return;
 		}
 	}
