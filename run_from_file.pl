@@ -33,7 +33,7 @@ my $trace = Trace->new_from_swf($trace_file_name);
 #print "FCFSC " . $schedule_fcfsc->cmax() . "\n";
 #$schedule_fcfsc->save_svg("$basic_file_name/$basic_file_name-fcfsc.svg");
 
-my $schedule_backfilling = Backfilling->new($trace, $cpus_number, $cluster_size, 0);
+my $schedule_backfilling = Backfilling->new($trace, $cpus_number, $cluster_size);
 $schedule_backfilling->run();
 print "Backfilling " . $schedule_backfilling->cmax() . "\n";
 $schedule_backfilling->save_svg("$basic_file_name/$basic_file_name-backfilling.svg");

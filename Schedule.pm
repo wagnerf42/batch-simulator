@@ -11,7 +11,6 @@ sub new {
 		trace => shift,
 		num_processors => shift,
 		cluster_size => shift,
-		contiguous => shift,
 		processors => []
 	};
 

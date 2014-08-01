@@ -9,6 +9,8 @@ sub new {
 	my $self = {
 		processors => shift,
 		processors_number => shift,
+		contiguous => 0,
+		local => 0
 	};
 
 	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
@@ -35,39 +37,34 @@ sub contains_at_least {
 
 #reduce number of processors to given value
 #tries to stay contiguous if possible
-sub reduce_to {
+sub reduce_to_contiguous_best_effort {
 	my ($self, $number) = @_;
+
+	print "\treduce to contiguous best effort\n";
 
 	#try each position and see if we can get a contiguous block
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
-		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
 
 		for my $num (1..($number-1)) {
 			my $index = ($start_index + $num) % @{$self->{processors}};
 			my $id = $self->{processors}->[$index]->id();
-			my $cluster = $self->{processors}->[$index]->cluster_number();
 			my $expected_id = ($start_id + $num) % $self->{processors_number};
 
-			if (($id != $expected_id) or ($cluster != $start_cluster)) {
-				print "not ok\n";
+			if ($id != $expected_id) {
 				$ok = 0;
 				last;
 			}
 		}
 
 		if ($ok) {
-			print "ok\n";
 			$self->keep_from($start_index, $number);
 			$self->{contiguous} = 1;
-			$self->{local} = 1;
 			return;
 		}
 	}
 
-	$self->{contiguous} = 0;
-	$self->{local} = 0;
 	$self->keep_from(0, $number);
 }
 
@@ -78,15 +75,13 @@ sub reduce_to_contiguous {
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
-		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
 
 		for my $num (1..($number-1)) {
 			my $index = ($start_index + $num) % @{$self->{processors}};
 			my $id = $self->{processors}[$index]->id();
-			my $cluster = $self->{processors}->[$index]->cluster_number();
 			my $expected_id = ($start_id + $num) % $self->{processors_number};
 
-			if (($id != $expected_id) or ($cluster != $start_cluster)) {
+			if ($id != $expected_id) {
 				$ok = 0;
 				last;
 			}
@@ -94,6 +89,7 @@ sub reduce_to_contiguous {
 
 		if ($ok) {
 			$self->keep_from($start_index, $number);
+			$self->{contiguous} = 1;
 			return;
 		}
 	}
@@ -105,12 +101,13 @@ sub reduce_to_contiguous {
 sub reduce_to_cluster {
 	my ($self, $number) = @_;
 
-	for my $start_index (0..(scalar @{$self->{processors}} - $number)) {
+	for my $start_index (0..(@{$self->{processors}} - $number)) {
 		my $ok = 1;
 		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
 
 		for my $index (($start_index + 1)..($start_index + $number - 1)) {
 			my $cluster = $self->{processors}[$index]->cluster_number();
+
 			if ($cluster != $start_cluster) {
 				$ok = 0;
 				last;
@@ -128,13 +125,48 @@ sub reduce_to_cluster {
 	@{$self->{processors}} = ();
 }
 
+sub reduce_to_contiguous_cluster {
+	my ($self, $number) = @_;
+
+	print "\treduce to contiguous cluster\n";
+
+	for my $start_index (0..(@{$self->{processors}} - $number)) {
+		my $ok = 1;
+		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
+		my $start_id = $self->{processors}->[$start_index]->id();
+
+		for my $index (($start_index + 1)..($start_index + $number - 1)) {
+			my $cluster = $self->{processors}[$index]->cluster_number();
+			my $id = $self->{processors}->[$index]->id();
+			my $expected_id = $start_id + $index - $start_index;
+
+			if (($cluster != $start_cluster) or ($id != $expected_id)) {
+				$ok = 0;
+				last;
+			}
+		}
+
+		if ($ok) {
+			$self->keep_from($start_index, $number);
+			$self->{local} = 1;
+			$self->{contiguous} = 1;
+			return;
+		}
+	}
+
+	# In this case it was not possible, return an empty answer
+	@{$self->{processors}} = ();
+}
+
+
 sub keep_from {
-	my $self = shift;
-	my $index = shift;
-	my $n = shift;
+	my ($self, $index, $n) = @_;
+	print "\tindex $index\n";
+	print "\tn $n\n";
+	print "\t" . scalar @{$self->{processors}} . "\n";
 	my @kept_processors;
 	for my $i ($index..($index+$n-1)) {
-		my $real_index = $i % @{$self->{processors}};
+		my $real_index = $i % scalar @{$self->{processors}};
 		push @kept_processors, $self->{processors}->[$real_index];
 	}
 	@{$self->{processors}} = @kept_processors;

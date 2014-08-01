@@ -13,16 +13,17 @@ use FCFSC;
 use Backfilling;
 use Database;
 
-my ($trace_number, $cpus_number) = @ARGV;
-die 'missing arguments: trace_number cpus_number' unless defined $cpus_number;
+my ($trace_number, $cpus_number, $cluster_size) = @ARGV;
+die 'missing arguments: trace_number cpus_number' unless defined $cluster_size;
 
 # Create a directory to store the output
-my $basic_file_name = "run_from_database-$trace_number-$cpus_number";
+my $basic_file_name = "run_from_database-$trace_number-$cpus_number-$cluster_size";
 mkdir $basic_file_name unless -f $basic_file_name;
 
 # Read the trace and write it to a file
 my $database = Database->new();
 my $trace = Trace->new_from_database($trace_number);
+$trace->reset_submit_times();
 $trace->write_to_file("$basic_file_name/$basic_file_name.swf");
 
 #my $schedule_fcfs = FCFS->new($trace, $cpus_number);
@@ -35,13 +36,12 @@ $trace->write_to_file("$basic_file_name/$basic_file_name.swf");
 #print "FCFSC " . $schedule_fcfsc->cmax() . "\n";
 #$schedule_fcfsc->save_svg("$basic_file_name/$basic_file_name-fcfsc.svg");
 
-my $schedule_backfilling = Backfilling->new($trace, $cpus_number);
+my $schedule_backfilling = Backfilling->new($trace, $cpus_number, $cluster_size);
 $schedule_backfilling->run();
-print "Backfilling " . $schedule_backfilling->sum_flow_time() . "\n";
 $schedule_backfilling->save_svg("$basic_file_name/$basic_file_name-backfilling.svg");
 
-my $schedule_backfilling_contiguous = Backfilling->new($trace, $cpus_number, 1);
-$schedule_backfilling_contiguous->run();
-print "Backfilling contiguous " . $schedule_backfilling_contiguous->sum_flow_time() . "\n";
-$schedule_backfilling_contiguous->save_svg("$basic_file_name/$basic_file_name-backfilling_contiguous.svg");
+#my $schedule_backfilling_contiguous = Backfilling->new($trace, $cpus_number, 1);
+#$schedule_backfilling_contiguous->run();
+#print "Backfilling contiguous " . $schedule_backfilling_contiguous->sum_flow_time() . "\n";
+#$schedule_backfilling_contiguous->save_svg("$basic_file_name/$basic_file_name-backfilling_contiguous.svg");
 

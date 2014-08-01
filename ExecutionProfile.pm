@@ -24,8 +24,6 @@ sub new {
 	return $self;
 }
 
-#given a job we want to start at a given profile
-#return list of processors or nothing if not possible
 sub get_free_processors_for {
 	my ($self, $job, $profile_index) = @_;
 	my $left_duration = $job->run_time();
@@ -55,15 +53,15 @@ sub get_free_processors_for {
 	my @selected_processors = map {$self->{processors}->[$_]} @selected_ids;
 	my $processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}});
 
-	if ($self->{contiguous}) {
-		$processors->reduce_to_contiguous($job->requested_cpus());
-	} else {
-		#$processors->reduce_to($job->requested_cpus());
-		$processors->reduce_to_cluster($job->requested_cpus());
-	}
+	# First try to find a contiguous block of processors in the same cluster
+	$processors->reduce_to_contiguous_cluster($job->requested_cpus());
+	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
 
-	return unless $processors->processors();
-	return ([$processors->processors()], $processors->local(), $processors->contiguous());
+	# Try to find a contiguous block using the best effort routine
+	@selected_processors = map {$self->{processors}->[$_]} @selected_ids;
+	$processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}});
+	$processors->reduce_to_contiguous_best_effort($job->requested_cpus());
+	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
 }
 
 #precondition : job should be assigned first
