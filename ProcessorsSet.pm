@@ -40,8 +40,6 @@ sub contains_at_least {
 sub reduce_to_contiguous_best_effort {
 	my ($self, $number) = @_;
 
-	print "\treduce to contiguous best effort\n";
-
 	#try each position and see if we can get a contiguous block
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
@@ -128,8 +126,6 @@ sub reduce_to_cluster {
 sub reduce_to_contiguous_cluster {
 	my ($self, $number) = @_;
 
-	print "\treduce to contiguous cluster\n";
-
 	for my $start_index (0..(@{$self->{processors}} - $number)) {
 		my $ok = 1;
 		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
@@ -161,9 +157,6 @@ sub reduce_to_contiguous_cluster {
 
 sub keep_from {
 	my ($self, $index, $n) = @_;
-	print "\tindex $index\n";
-	print "\tn $n\n";
-	print "\t" . scalar @{$self->{processors}} . "\n";
 	my @kept_processors;
 	for my $i ($index..($index+$n-1)) {
 		my $real_index = $i % scalar @{$self->{processors}};

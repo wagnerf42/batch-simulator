@@ -29,7 +29,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, backfilling best effort",
+	comments => "parser script, fcfs vs backfilling best effort + locality",
 	cluster_size => $cluster_size
 );
 
@@ -91,9 +91,9 @@ sub run_all_thread {
 		$trace_random->fix_submit_times();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-		#my $schedule_fcfs = FCFS->new($trace_random, $cpus_number);
-		#$schedule_fcfs->run();
-		#$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
+		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number, $cpus_number);
+		$schedule_fcfs->run();
+		$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
 
 		#my $schedule_fcfsc = FCFSC->new($trace_random, $cpus_number);
 		#$schedule_fcfsc->run();
@@ -110,7 +110,7 @@ sub run_all_thread {
 		#my $max_flow_time_backfilling_contiguous = $schedule_backfilling_contiguous->max_flow_time();
 
 		push @results, [
-			$schedule_backfilling->cmax(),
+			$schedule_backfilling->cmax()/$schedule_fcfs->cmax(),
 			$schedule_backfilling->contiguous_jobs_number(),
 			$schedule_backfilling->local_jobs_number(),
 			$trace_id

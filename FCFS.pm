@@ -22,7 +22,7 @@ sub assign_job {
 
 	# Best effort contiguous
 	my $set = new ProcessorsSet(\@candidate_processors, scalar @{$self->{processors}});
-	$set->reduce_to($requested_cpus);
+	$set->reduce_to_contiguous_best_effort($requested_cpus);
 	$job->assign_to($starting_time, [$set->processors()]);
 }
 
