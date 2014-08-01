@@ -53,13 +53,16 @@ sub get_free_processors_for {
 	my @selected_processors = map {$self->{processors}->[$_]} @selected_ids;
 	my $processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}});
 
-	# First try to find a contiguous block of processors in the same cluster
-	$processors->reduce_to_contiguous_cluster($job->requested_cpus());
-	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
+	if (!$self->{contiguous}) {
+		# First try to find a contiguous block of processors in the same cluster
+		$processors->reduce_to_contiguous_cluster($job->requested_cpus());
+		return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
 
-	# Try to find a contiguous block using the best effort routine
-	@selected_processors = map {$self->{processors}->[$_]} @selected_ids;
-	$processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}});
+		# Try to find a contiguous block using the best effort routine
+		@selected_processors = map {$self->{processors}->[$_]} @selected_ids;
+		$processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}});
+	}
+
 	$processors->reduce_to_contiguous_best_effort($job->requested_cpus());
 	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
 }

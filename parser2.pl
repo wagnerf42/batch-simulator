@@ -91,9 +91,9 @@ sub run_all_thread {
 		$trace_random->fix_submit_times();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-		my $schedule_fcfs = FCFS->new($trace_random, $cpus_number, $cpus_number);
-		$schedule_fcfs->run();
-		$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
+		#my $schedule_fcfs = FCFS->new($trace_random, $cpus_number, $cpus_number);
+		#$schedule_fcfs->run();
+		#$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
 
 		#my $schedule_fcfsc = FCFSC->new($trace_random, $cpus_number);
 		#$schedule_fcfsc->run();
@@ -103,14 +103,12 @@ sub run_all_thread {
 		$schedule_backfilling->run();
 		$database->add_run($trace_id, 'backfilling_cluster_contiguous_best_effort', $schedule_backfilling->cmax, $schedule_backfilling->run_time);
 
-		#my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_number, $cluster_size);
-		#$schedule_backfilling_contiguous->run();
-		#$database->add_run($trace_id, 'backfilling_contiguous', $schedule_backfilling_contiguous->cmax, $schedule_backfilling_contiguous->run_time);
-		#my $sum_flow_time_backfilling_contiguous = $schedule_backfilling_contiguous->sum_flow_time();
-		#my $max_flow_time_backfilling_contiguous = $schedule_backfilling_contiguous->max_flow_time();
+		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_number, $cluster_size, 1);
+		$schedule_backfilling_contiguous->run();
+		$database->add_run($trace_id, 'backfilling_best_effort', $schedule_backfilling_contiguous->cmax, $schedule_backfilling_contiguous->run_time);
 
 		push @results, [
-			$schedule_backfilling->cmax()/$schedule_fcfs->cmax(),
+			$schedule_backfilling->cmax()/$schedule_backfilling_contiguous->cmax(),
 			$schedule_backfilling->contiguous_jobs_number(),
 			$schedule_backfilling->local_jobs_number(),
 			$trace_id
