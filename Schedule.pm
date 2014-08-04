@@ -11,7 +11,7 @@ sub new {
 	my $self = {
 		trace => $trace,
 		num_processors => $processors_number,
-		cluster_size => @cluster_size,
+		cluster_size => $cluster_size,
 		contiguous => $contiguous,
 		processors => []
 	};

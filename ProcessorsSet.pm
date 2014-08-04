@@ -3,6 +3,7 @@ package ProcessorsSet;
 use strict;
 use warnings;
 use Data::Dumper;
+use POSIX;
 
 sub new {
 	my ($class, $processors, $processors_number, $cluster_size) = @_;
@@ -100,12 +101,14 @@ sub reduce_to_cluster {
 	my ($self, $number) = @_;
 	my $max_clusters_number = ceil($number/$self->{cluster_size});
 
-	for my $start_index (0..(@{$self->{processors}} - $number)) {
+	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
+		my $start_id = $self->{processors}->[$start_index]->id();
 		my $current_cluster = $self->{processors}->[$start_index]->cluster_number();
 		my $clusters_number = 1;
 
-		for my $index (($start_index + 1)..($start_index + $number - 1)) {
+		for my $num (1..($number-1)) {
+			my $index = ($start_index + $num) % @{$self->{processors}};
 			my $cluster = $self->{processors}[$index]->cluster_number();
 
 			if ($cluster != $current_cluster) {
@@ -126,7 +129,49 @@ sub reduce_to_cluster {
 		}
 	}
 
-	# In this case it was not possible, return an empty answer
+	@{$self->{processors}} = ();
+}
+
+sub reduce_to_cluster_contiguous {
+	my ($self, $number) = @_;
+	my $max_clusters_number = ceil($number/$self->{cluster_size});
+
+	for my $start_index (0..$#{$self->{processors}}) {
+		my $ok = 1;
+		my $start_id = $self->{processors}->[$start_index]->id();
+		my $current_cluster = $self->{processors}->[$start_index]->cluster_number();
+		my $clusters_number = 1;
+
+		for my $num (1..($number-1)) {
+			my $index = ($start_index + $num) % @{$self->{processors}};
+			my $cluster = $self->{processors}[$index]->cluster_number();
+			my $id = $self->{processors}->[$index]->id();
+			my $expected_id = ($start_id + $num) % $self->{processors_number};
+
+			if ($id != $expected_id) {
+				$ok = 0;
+				last;
+			}
+
+			if ($cluster != $current_cluster) {
+				$clusters_number++;
+				$current_cluster = $cluster;
+			}
+
+			if ($clusters_number > $max_clusters_number) {
+				$ok = 0;
+				last;
+			}
+		}
+
+		if ($ok) {
+			$self->keep_from($start_index, $number);
+			$self->{contiguous} = 1;
+			$self->{local} = 1;
+			return;
+		}
+	}
+
 	@{$self->{processors}} = ();
 }
 
