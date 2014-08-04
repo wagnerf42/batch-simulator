@@ -63,6 +63,16 @@ sub mean_flow_time {
 	return $self->sum_flow_time()/scalar $self->{trace}->jobs();
 }
 
+sub max_stretch {
+	my ($self) = @_;
+	return max map {$_->stretch()} @{$self->{trace}->jobs()};
+}
+
+sub mean_stretch {
+	my ($self) = @_;
+	return (sum map {$_->stretch()} @{$self->{trace}->jobs()})/@{$self->{trace}->jobs()};
+}
+
 sub cmax {
 	my ($self) = @_;
 	return max map {$_->cmax()} @{$self->{processors}};

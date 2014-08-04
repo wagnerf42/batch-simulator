@@ -87,6 +87,11 @@ sub flow_time {
 	return $self->{starting_time} + $self->{run_time} - $self->{submit_time};
 }
 
+sub stretch {
+	my ($self) = @_;
+	return ($self->{starting_time} + $self->{run_time} - $self->{submit_time})/$self->{run_time};
+}
+
 sub submit_time {
 	my $self = shift;
 
