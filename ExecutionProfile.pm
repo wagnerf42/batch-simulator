@@ -10,15 +10,16 @@ use ProcessorsSet;
 #an execution profile object encodes the set of all profiles of a schedule
 
 sub new {
-	my $class = shift;
+	my ($class, $processors, $cluster_size, $contiguous) = @_;
+
 	my $self = {
-		processors => shift,
-		cluster_size => shift,
-		contiguous => shift
+		processors => $processors,
+		cluster_size => $cluster_size,
+		contiguous => $contiguous
 	};
 
 	my $ids = [map {$_->id()} @{$self->{processors}}];
-	$self->{profiles} = [ new Profile(0, $ids) ];
+	$self->{profiles} = [new Profile(0, $ids)];
 
 	bless $self, $class;
 	return $self;
@@ -51,19 +52,9 @@ sub get_free_processors_for {
 	return unless @selected_ids >= $job->requested_cpus();
 
 	my @selected_processors = map {$self->{processors}->[$_]} @selected_ids;
-	my $processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}});
+	my $processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}}, $self->{cluster_size});
 
-	if (!$self->{contiguous}) {
-		# First try to find a contiguous block of processors in the same cluster
-		$processors->reduce_to_contiguous_cluster($job->requested_cpus());
-		return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
-
-		# Try to find a contiguous block using the best effort routine
-		@selected_processors = map {$self->{processors}->[$_]} @selected_ids;
-		$processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}});
-	}
-
-	$processors->reduce_to_contiguous_best_effort($job->requested_cpus());
+	$processors->reduce_to_cluster($job->requested_cpus());
 	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
 }
 

@@ -5,12 +5,14 @@ use warnings;
 use Data::Dumper;
 
 sub new {
-	my $class = shift;
+	my ($class, $processors, $processors_number, $cluster_size) = @_;
+
 	my $self = {
-		processors => shift,
-		processors_number => shift,
-		contiguous => 0,
-		local => 0
+		processors => $processors,
+		processors_number => $processors_number,
+		cluster_size => $cluster_size,
+		contiguous_jobs_number => 0,
+		local_jobs_number => 0
 	};
 
 	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
@@ -35,8 +37,6 @@ sub contains_at_least {
 	return (@{$self->{processors}} >= $n);
 }
 
-#reduce number of processors to given value
-#tries to stay contiguous if possible
 sub reduce_to_contiguous_best_effort {
 	my ($self, $number) = @_;
 
@@ -98,15 +98,22 @@ sub reduce_to_contiguous {
 
 sub reduce_to_cluster {
 	my ($self, $number) = @_;
+	my $max_clusters_number = ceil($number/$self->{cluster_size});
 
 	for my $start_index (0..(@{$self->{processors}} - $number)) {
 		my $ok = 1;
-		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
+		my $current_cluster = $self->{processors}->[$start_index]->cluster_number();
+		my $clusters_number = 1;
 
 		for my $index (($start_index + 1)..($start_index + $number - 1)) {
 			my $cluster = $self->{processors}[$index]->cluster_number();
 
-			if ($cluster != $start_cluster) {
+			if ($cluster != $current_cluster) {
+				$clusters_number++;
+				$current_cluster = $cluster;
+			}
+
+			if ($clusters_number > $max_clusters_number) {
 				$ok = 0;
 				last;
 			}
@@ -122,38 +129,6 @@ sub reduce_to_cluster {
 	# In this case it was not possible, return an empty answer
 	@{$self->{processors}} = ();
 }
-
-sub reduce_to_contiguous_cluster {
-	my ($self, $number) = @_;
-
-	for my $start_index (0..(@{$self->{processors}} - $number)) {
-		my $ok = 1;
-		my $start_cluster = $self->{processors}->[$start_index]->cluster_number();
-		my $start_id = $self->{processors}->[$start_index]->id();
-
-		for my $index (($start_index + 1)..($start_index + $number - 1)) {
-			my $cluster = $self->{processors}[$index]->cluster_number();
-			my $id = $self->{processors}->[$index]->id();
-			my $expected_id = $start_id + $index - $start_index;
-
-			if (($cluster != $start_cluster) or ($id != $expected_id)) {
-				$ok = 0;
-				last;
-			}
-		}
-
-		if ($ok) {
-			$self->keep_from($start_index, $number);
-			$self->{local} = 1;
-			$self->{contiguous} = 1;
-			return;
-		}
-	}
-
-	# In this case it was not possible, return an empty answer
-	@{$self->{processors}} = ();
-}
-
 
 sub keep_from {
 	my ($self, $index, $n) = @_;

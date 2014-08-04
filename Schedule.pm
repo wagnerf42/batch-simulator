@@ -6,12 +6,13 @@ use Processor;
 use List::Util qw(max sum);
 
 sub new {
-	my $class = shift;
+	my ($class, $trace, $processors_number, $cluster_size, $contiguous) = @_;
+
 	my $self = {
-		trace => shift,
-		num_processors => shift,
-		cluster_size => shift,
-		contiguous => shift,
+		trace => $trace,
+		num_processors => $processors_number,
+		cluster_size => @cluster_size,
+		contiguous => $contiguous,
 		processors => []
 	};
 
