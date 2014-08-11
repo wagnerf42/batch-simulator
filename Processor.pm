@@ -6,10 +6,11 @@ use overload
 	'""' => \&stringification;
 
 sub new {
-	my $class = shift;
+	my ($class, $id, $cluster) = @_;
+
 	my $self = {
-		id => shift,
-		cluster => shift,
+		id => $id,
+		cluster => $cluster,
 		jobs => [],
 		cmax => 0
 	};
@@ -24,22 +25,14 @@ sub stringification {
 }
 
 sub id {
-	my $self = shift;
-
-	if (@_) {
-		$self->{id} = shift;
-	}
-
+	my ($self, $id) = @_;
+	$self->{id} = $id if defined $id;
 	return $self->{id};
 }
 
 sub cmax {
-	my $self = shift;
-
-	if (@_) {
-		$self->{cmax} = shift;
-	}
-
+	my ($self, $cmax) = @_;
+	$self->{cmax} = $cmax if defined $cmax;
 	return $self->{cmax};
 }
 

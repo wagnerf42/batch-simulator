@@ -93,12 +93,8 @@ sub stretch {
 }
 
 sub submit_time {
-	my $self = shift;
-
-	if (@_) {
-		$self->{submit_time} = shift;
-	}
-
+	my ($self, $submit_time) = @_;
+	$self->{submit_time} = $submit_time if defined $submit_time;
 	return $self->{submit_time};
 }
 
@@ -127,12 +123,8 @@ sub assigned_processors {
 }
 
 sub first_processor {
-	my $self = shift;
-
-	if (@_) {
-		$self->{first_processor} = shift;
-	}
-
+	my ($self, $first_processor) = @_;
+	$self->{first_processor} = $first_processor if defined $first_processor;
 	return $self->{first_processor};
 }
 

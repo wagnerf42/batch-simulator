@@ -55,11 +55,11 @@ sub get_free_processors_for {
 	my $processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}}, $self->{cluster_size});
 
 	if ($self->{contiguous}) {
-		$processors->reduce_to_cluster($job->requested_cpus());
+		$processors->reduce_to_cluster_contiguous($job->requested_cpus());
 	}
 
 	else {
-		$processors->reduce_to_cluster_contiguous($job->requested_cpus());
+		$processors->reduce_to_cluster($job->requested_cpus());
 	}
 
 	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();

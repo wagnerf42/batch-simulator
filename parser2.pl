@@ -109,8 +109,6 @@ sub run_all_thread {
 
 		push @results, [
 			$schedule_backfilling->cmax()/$schedule_backfilling_contiguous->cmax(),
-			$schedule_backfilling->contiguous_jobs_number(),
-			$schedule_backfilling->local_jobs_number(),
 			$trace_id
 		];
 	}

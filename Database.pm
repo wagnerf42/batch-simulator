@@ -9,7 +9,7 @@ use Trace;
 use Job;
 
 sub new {
-	my $class = shift;
+	my ($class) = @_;
 	my $self = {
 		driver => "mysql",
 		database => "parser",
