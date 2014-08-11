@@ -29,7 +29,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, fcfs vs backfilling best effort + locality",
+	comments => "parser script, best effort vs local contiguous",
 	cluster_size => $cluster_size
 );
 
@@ -91,24 +91,18 @@ sub run_all_thread {
 		$trace_random->fix_submit_times();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-		#my $schedule_fcfs = FCFS->new($trace_random, $cpus_number, $cpus_number);
-		#$schedule_fcfs->run();
-		#$database->add_run($trace_id, 'fcfs_best_effort', $schedule_fcfs->cmax, $schedule_fcfs->run_time);
+		my $schedule1 = Backfilling->new($trace_random, $cpus_number, $cluster_size);
+		$schedule1->run();
+		$database->add_run($trace_id, 'backfilling_best_effort', $schedule1->cmax, $schedule1->run_time);
 
-		#my $schedule_fcfsc = FCFSC->new($trace_random, $cpus_number);
-		#$schedule_fcfsc->run();
-		#$database->add_run($trace_id, 'fcfs_contiguous', $schedule_fcfsc->cmax, $schedule_fcfsc->run_time);
-
-		my $schedule_backfilling = Backfilling->new($trace_random, $cpus_number, $cluster_size);
-		$schedule_backfilling->run();
-		$database->add_run($trace_id, 'backfilling_cluster', $schedule_backfilling->cmax, $schedule_backfilling->run_time);
-
-		my $schedule_backfilling_contiguous = Backfilling->new($trace_random, $cpus_number, $cluster_size, 1);
-		$schedule_backfilling_contiguous->run();
-		$database->add_run($trace_id, 'backfilling_cluster_contiguous', $schedule_backfilling_contiguous->cmax, $schedule_backfilling_contiguous->run_time);
+		my $schedule2 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 1);
+		$schedule2->run();
+		$database->add_run($trace_id, 'backfilling_cluster_contiguous', $schedule2->cmax, $schedule2->run_time);
 
 		push @results, [
-			$schedule_backfilling->cmax()/$schedule_backfilling_contiguous->cmax(),
+			$schedule1->cmax()/$schedule2->cmax(),
+			$schedule1->mean_stretch()/$schedule2->mean_stretch(),
+			$schedule1->max_stretch()/$schedule2->max_stretch(),
 			$trace_id
 		];
 	}

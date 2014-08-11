@@ -59,7 +59,7 @@ sub get_free_processors_for {
 	}
 
 	else {
-		$processors->reduce_to_cluster($job->requested_cpus());
+		$processors->reduce_to_contiguous_best_effort($job->requested_cpus());
 	}
 
 	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
