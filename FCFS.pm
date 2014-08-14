@@ -20,9 +20,16 @@ sub assign_job {
 		push @candidate_processors, $processor if $processor->cmax() <= $starting_time;
 	}
 
-	# Best effort contiguous
 	my $set = new ProcessorsSet(\@candidate_processors, scalar @{$self->{processors}});
-	$set->reduce_to_contiguous_best_effort($requested_cpus);
+
+	if ($self->{version} == 0) {
+		$set->reduce_to_first($requested_cpus);
+	}
+
+	elsif ($self->{version} == 1) {
+		$set->reduce_to_contiguous_best_effort($requested_cpus);
+	}
+
 	$job->assign_to($starting_time, [$set->processors()]);
 }
 

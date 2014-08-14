@@ -29,7 +29,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, best effort vs local contiguous",
+	comments => "parser script, FCFS vs local contiguous, test property 3",
 	cluster_size => $cluster_size
 );
 
@@ -91,18 +91,17 @@ sub run_all_thread {
 		$trace_random->fix_submit_times();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-		my $schedule1 = Backfilling->new($trace_random, $cpus_number, $cluster_size);
+		my $schedule1 = FCFS->new($trace_random, $cpus_number, $cluster_size, 1);
 		$schedule1->run();
-		$database->add_run($trace_id, 'backfilling_best_effort', $schedule1->cmax, $schedule1->run_time);
+		$database->add_run($trace_id, 'fcfs_best_effort', $schedule1->cmax, $schedule1->run_time);
 
-		my $schedule2 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 1);
+		my $schedule2 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 0);
 		$schedule2->run();
-		$database->add_run($trace_id, 'backfilling_cluster_contiguous', $schedule2->cmax, $schedule2->run_time);
+		$database->add_run($trace_id, 'backfilling_best_effort', $schedule2->cmax, $schedule2->run_time);
 
 		push @results, [
-			$schedule1->cmax()/$schedule2->cmax(),
-			$schedule1->mean_stretch()/$schedule2->mean_stretch(),
-			$schedule1->max_stretch()/$schedule2->max_stretch(),
+			$schedule2->cmax()/$schedule1->cmax(),
+			$trace_random->characteristic(3, $cpus_number),
 			$trace_id
 		];
 	}

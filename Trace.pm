@@ -202,9 +202,10 @@ sub characteristic {
 	my ($self, $characteristic_id, $cpus_number) = @_;
 
 	if ($characteristic_id == 0) {
-
 		return scalar grep {$_->requested_cpus() > $cpus_number/2} @{$self->{jobs}};
-	} elsif ($characteristic_id == 1) {
+	}
+
+	elsif ($characteristic_id == 1) {
 		my $piece_size = shift;
 		my $pieces_with_large_jobs = 0;
 
@@ -215,7 +216,10 @@ sub characteristic {
 		}
 
 		return $pieces_with_large_jobs;
-	} elsif ($characteristic_id == 2) {
+	}
+
+	# Find the ammount of wasted work in the trace based on the largest job and the bumber of required CPUs 
+	elsif ($characteristic_id == 2) {
 		my $longest_duration = 0;
 		my $work = 0;
 		my $worst_wasted_work = 0;
@@ -229,6 +233,31 @@ sub characteristic {
 		my $difference = $worst_wasted_work - $backfilling_waste;
 		return 0 if $difference < 0;
 		return ($difference / $work);
+	}
+
+	# Find the ammount of wasted work in the trace between large jobs
+	# The distance between large jobs is based on the size of the longest job between them
+	elsif ($characteristic_id == 3) {
+		my $longest_duration = 0;
+		my $work = 0;
+		my $total_work = 0;
+		my $total_wasted_work = 0;
+
+		for my $job (@{$self->{jobs}}) {
+			if ($job->requested_cpus() < $cpus_number/2) {
+				$work += $job->requested_cpus() * $job->run_time();
+				$longest_duration = $job->run_time() if $job->run_time() > $longest_duration;
+			}
+
+			else {
+				$total_work += $work;
+				$total_wasted_work += $cpus_number * $longest_duration - $work;
+				$longest_duration = 0;
+			}
+		}
+
+		return 0 if (!$total_work);
+		return ($total_wasted_work/$total_work);
 	}
 }
 

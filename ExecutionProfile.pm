@@ -10,12 +10,12 @@ use ProcessorsSet;
 #an execution profile object encodes the set of all profiles of a schedule
 
 sub new {
-	my ($class, $processors, $cluster_size, $contiguous) = @_;
+	my ($class, $processors, $cluster_size, $version) = @_;
 
 	my $self = {
 		processors => $processors,
 		cluster_size => $cluster_size,
-		contiguous => $contiguous
+		version => $version
 	};
 
 	my $ids = [map {$_->id()} @{$self->{processors}}];
@@ -54,12 +54,16 @@ sub get_free_processors_for {
 	my @selected_processors = map {$self->{processors}->[$_]} @selected_ids;
 	my $processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}}, $self->{cluster_size});
 
-	if ($self->{contiguous}) {
+	if ($self->{version} == 0) {
+		$processors->reduce_to_contiguous_best_effort($job->requested_cpus());
+	}
+
+	elsif ($self->{version} == 1) {
 		$processors->reduce_to_cluster_contiguous($job->requested_cpus());
 	}
 
-	else {
-		$processors->reduce_to_contiguous_best_effort($job->requested_cpus());
+	elsif ($self->{version} == 2) {
+		$processors->reduce_to_contiguous($job->requested_cpus());
 	}
 
 	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();

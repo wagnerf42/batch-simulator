@@ -14,7 +14,7 @@ sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = new ExecutionProfile($self->{processors}, $self->{cluster_size}, $self->{contiguous});
+	$self->{execution_profile} = new ExecutionProfile($self->{processors}, $self->{cluster_size}, $self->{version});
 	$self->{contiguous_jobs_number} = 0;
 	$self->{local_jobs_number} = 0;
 

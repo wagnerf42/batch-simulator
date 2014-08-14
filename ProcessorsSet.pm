@@ -38,6 +38,11 @@ sub contains_at_least {
 	return (@{$self->{processors}} >= $n);
 }
 
+sub reduce_to_first {
+	my ($self, $number) = @_;
+	$self->keep_from(0, $number);
+}
+
 sub reduce_to_contiguous_best_effort {
 	my ($self, $number) = @_;
 

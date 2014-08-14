@@ -6,18 +6,21 @@ use Processor;
 use List::Util qw(max sum);
 
 sub new {
-	my ($class, $trace, $processors_number, $cluster_size, $contiguous) = @_;
+	my ($class, $trace, $processors_number, $cluster_size, $version) = @_;
 
 	my $self = {
 		trace => $trace,
 		num_processors => $processors_number,
 		cluster_size => $cluster_size,
-		contiguous => $contiguous,
+		version => $version,
 		processors => []
 	};
 
 	# If no cluster size was chosen, use the number of processors as cluster size
-	#$self->{cluster_size} = $self->{num_processors} unless defined $self->{cluster_size};
+	$self->{cluster_size} = $self->{num_processors} unless defined $self->{cluster_size};
+
+	# If no algorithm version was chosen, use 0 as the default version
+	$self->{version} = 0 unless defined $self->{version};
 
 	for my $id (0..($self->{num_processors} - 1)) {
 		my $processor = new Processor($id, int($id/$self->{cluster_size}));
