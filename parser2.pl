@@ -62,8 +62,7 @@ print STDERR "Writing results to $basic_file_name/$basic_file_name.csv\n";
 write_results_to_file(\@results, "$basic_file_name/$basic_file_name.csv");
 
 sub write_results_to_file {
-	my $results = shift;
-	my $filename = shift;
+	my ($results, $filename) = @_;
 
 	open(my $filehandle, "> $filename") or die "unable to open $filename";
 
@@ -75,8 +74,7 @@ sub write_results_to_file {
 }
 
 sub run_all_thread {
-	my $id = shift;
-	my $execution_id = shift;
+	my ($id, $execution_id) = @_;
 	my @results;
 	my $database = Database->new();
 
