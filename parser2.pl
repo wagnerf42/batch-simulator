@@ -111,6 +111,7 @@ sub run_all_thread {
 
 		push @results, [
 			$schedule4->cmax()/$schedule3->cmax(),
+			$schedule4->contiguous_jobs_number(),
 			$trace_id
 		];
 	}

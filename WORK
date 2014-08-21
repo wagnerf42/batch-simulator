@@ -34,9 +34,13 @@ performance guarantee
 
 why are both FCFS, FCFSC, backfilling good ?
 
-* -> can we find a characterization of the input such that
+-> can we find a characterization of the input such that
 ratio (for each algorithm) to optimal > 2 => charact(input) > something
 
+I tried to figure out different metrics to compare FCFS to backfilling but so far I have had no success.
+The idea that I thought was the best one is to use a metric to determine how much "wasted space" there was
+in the trace just by using the largest job in the segment of the trace as the width of that segment. The
+problem is that the measure is not good enough, it's value does not make the ratio backfilling/FCFS better or worst.
 
 3)
 
@@ -44,12 +48,15 @@ ratio (for each algorithm) to optimal > 2 => charact(input) > something
 
 contiguity
 
-* a) backfilling contiguous best effort is better than backfilling (not contiguous best effort) ?
+a) backfilling contiguous best effort is better than backfilling (not contiguous best effort) ?
 
 --> experimentally -> what traces to run on ?
 --> proof ?
 
 -> slurm / oar : what are they doing ?
+
+I ran some experiments comparing the naive version of backfilling (just take the first processors available)
+and the best effort version and it seems that they perform almost exactly the same. For reference, the experiments were numebered 109 to 112.
 
 * b) best effort contiguous : how many jobs are contiguous ?? (almost all ???)
 
