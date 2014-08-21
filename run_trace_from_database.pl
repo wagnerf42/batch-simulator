@@ -17,7 +17,7 @@ my ($trace_number, $cpus_number, $cluster_size) = @ARGV;
 die 'missing arguments: trace_number cpus_number cluster_size' unless defined $cluster_size;
 
 # Create a directory to store the output
-my $basic_file_name = "run_from_database-$trace_number-$cpus_number-$cluster_size";
+my $basic_file_name = "run_trace_from_database-$trace_number-$cpus_number-$cluster_size";
 mkdir $basic_file_name unless -f $basic_file_name;
 
 # Read the trace and write it to a file
