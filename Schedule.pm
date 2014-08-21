@@ -13,7 +13,9 @@ sub new {
 		num_processors => $processors_number,
 		cluster_size => $cluster_size,
 		version => $version,
-		processors => []
+		processors => [],
+		contiguous_jobs_number => 0,
+		local_jobs_number => 0
 	};
 
 	# If no cluster size was chosen, use the number of processors as cluster size
@@ -69,12 +71,22 @@ sub mean_flow_time {
 
 sub max_stretch {
 	my ($self) = @_;
-	return max map {$_->stretch()} @{$self->{trace}->jobs()};
+	return $self->{max_stretch};
+}
+
+sub compute_max_stretch {
+	my ($self) = @_;
+	$self->{max_stretch} = max map {$_->stretch()} @{$self->{trace}->jobs()};
 }
 
 sub mean_stretch {
 	my ($self) = @_;
-	return (sum map {$_->stretch()} @{$self->{trace}->jobs()})/@{$self->{trace}->jobs()};
+	return $self->{mean_stretch};
+}
+
+sub compute_mean_stretch {
+	my ($self) = @_;
+	$self->{mean_stretch} = (sum map {$_->stretch()} @{$self->{trace}->jobs()})/@{$self->{trace}->jobs()};
 }
 
 sub cmax {

@@ -29,7 +29,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, FCFS vs local contiguous, test property 3",
+	comments => "parser script, backfilling basic vs best effort",
 	cluster_size => $cluster_size
 );
 
@@ -89,17 +89,28 @@ sub run_all_thread {
 		$trace_random->fix_submit_times();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-		my $schedule1 = FCFS->new($trace_random, $cpus_number, $cluster_size, 1);
-		$schedule1->run();
-		$database->add_run($trace_id, 'fcfs_best_effort', $schedule1->cmax, $schedule1->run_time);
+		#my $schedule1 = FCFS->new($trace_random, $cpus_number, $cluster_size, 0);
+		#$schedule1->run();
+		#$database->add_run($trace_id, 'fcfs_best_effort', $schedule1->cmax, $schedule1->run_time);
 
-		my $schedule2 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 0);
-		$schedule2->run();
-		$database->add_run($trace_id, 'backfilling_best_effort', $schedule2->cmax, $schedule2->run_time);
+		#my $schedule2 = FCFS->new($trace_random, $cpus_number, $cluster_size, 1);
+		#$schedule2->run();
+		#$database->add_run($trace_id, 'fcfs_not_contiguous', $schedule2->cmax, $schedule2->run_time);
+
+		my $schedule3 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 3);
+		$schedule3->run();
+		$database->add_run($trace_id, 'backfilling_not_contiguous', $schedule3->cmax, $schedule3->run_time);
+
+		my $schedule4 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 0);
+		$schedule4->run();
+		$database->add_run($trace_id, 'backfilling_best_effort', $schedule4->cmax, $schedule4->run_time);
+
+		#my $schedule5 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 2);
+		#$schedule5->run();
+		#$database->add_run($trace_id, 'backfilling_contiguous', $schedule5->cmax, $schedule5->run_time);
 
 		push @results, [
-			$schedule2->cmax()/$schedule1->cmax(),
-			$trace_random->characteristic(3, $cpus_number),
+			$schedule4->cmax()/$schedule3->cmax(),
 			$trace_id
 		];
 	}

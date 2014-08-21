@@ -68,12 +68,20 @@ sub requested_cpus {
 }
 
 sub run_time {
-	my ($self) = @_;
+	my ($self, $run_time) = @_;
+	$self->{run_time} = $run_time if defined $run_time;
 	return $self->{run_time};
 }
 
+sub requested_time {
+	my ($self, $requested_time) = @_;
+	$self->{requested_time} = $requested_time if defined $requested_time;
+	return $self->{requested_time};
+}
+
 sub starting_time {
-	my ($self) = @_;
+	my ($self, $starting_time) = @_;
+	$self->{starting_time} = $starting_time if defined $starting_time;
 	return $self->{starting_time};
 }
 

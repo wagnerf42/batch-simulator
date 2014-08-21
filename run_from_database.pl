@@ -14,7 +14,7 @@ use Backfilling;
 use Database;
 
 my ($trace_number, $cpus_number, $cluster_size) = @ARGV;
-die 'missing arguments: trace_number cpus_number' unless defined $cluster_size;
+die 'missing arguments: trace_number cpus_number cluster_size' unless defined $cluster_size;
 
 # Create a directory to store the output
 my $basic_file_name = "run_from_database-$trace_number-$cpus_number-$cluster_size";
@@ -26,17 +26,16 @@ my $trace = Trace->new_from_database($trace_number);
 $trace->reset_submit_times();
 $trace->write_to_file("$basic_file_name/$basic_file_name.swf");
 
-#my $schedule_fcfs = FCFS->new($trace, $cpus_number);
-#$schedule_fcfs->run();
-#print "FCFS: " . $schedule_fcfs->cmax() . "\n";
-#$schedule_fcfs->save_svg("$basic_file_name/$basic_file_name-fcfs.svg");
+my $schedule_fcfs = FCFS->new($trace, $cpus_number, 1);
+$schedule_fcfs->run();
+$schedule_fcfs->save_svg("$basic_file_name/$basic_file_name-fcfs.svg");
 
 #my $schedule_fcfsc = FCFSC->new($trace, $cpus_number);
 #$schedule_fcfsc->run();
 #print "FCFSC " . $schedule_fcfsc->cmax() . "\n";
 #$schedule_fcfsc->save_svg("$basic_file_name/$basic_file_name-fcfsc.svg");
 
-my $schedule_backfilling = Backfilling->new($trace, $cpus_number, $cluster_size);
+my $schedule_backfilling = Backfilling->new($trace, $cpus_number, $cluster_size, 0);
 $schedule_backfilling->run();
 $schedule_backfilling->save_svg("$basic_file_name/$basic_file_name-backfilling.svg");
 

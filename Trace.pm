@@ -36,6 +36,9 @@ sub new_from_swf {
 		elsif ($fields[0] ne ' ') {
 			my $job = new Job(@fields);
 			$self->{needed_cpus} = max($self->{needed_cpus}, $job->requested_cpus);
+
+			# Do not accept jobs with no run time
+			next unless ($job->run_time() > 0);
 			push $self->{jobs}, $job;
 		}
 	}
@@ -218,7 +221,7 @@ sub characteristic {
 		return $pieces_with_large_jobs;
 	}
 
-	# Find the ammount of wasted work in the trace based on the largest job and the bumber of required CPUs 
+	# Find the ammount of wasted work in the trace based on the largest job and the bumber of required CPUs
 	elsif ($characteristic_id == 2) {
 		my $longest_duration = 0;
 		my $work = 0;
@@ -242,22 +245,28 @@ sub characteristic {
 		my $work = 0;
 		my $total_work = 0;
 		my $total_wasted_work = 0;
+		my $total_maximum_work = 0;
+		my $total_length = 0;
 
 		for my $job (@{$self->{jobs}}) {
-			if ($job->requested_cpus() < $cpus_number/2) {
-				$work += $job->requested_cpus() * $job->run_time();
-				$longest_duration = $job->run_time() if $job->run_time() > $longest_duration;
-			}
+			$work += $job->requested_cpus() * $job->run_time();
+			$longest_duration = $job->run_time() if $job->run_time() > $longest_duration;
 
-			else {
+			if ($job->requested_cpus() >= $cpus_number/2) {
 				$total_work += $work;
-				$total_wasted_work += $cpus_number * $longest_duration - $work;
+				$total_maximum_work += $longest_duration * $cpus_number;
+
 				$longest_duration = 0;
+				$work = 0;
 			}
 		}
 
-		return 0 if (!$total_work);
-		return ($total_wasted_work/$total_work);
+		if ($work) {
+			$total_work += $work;
+			$total_maximum_work += $longest_duration * $cpus_number;
+		}
+
+		return $total_work/$total_maximum_work;
 	}
 }
 

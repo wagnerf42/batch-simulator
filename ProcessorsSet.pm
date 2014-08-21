@@ -12,8 +12,8 @@ sub new {
 		processors => $processors,
 		processors_number => $processors_number,
 		cluster_size => $cluster_size,
-		contiguous_jobs_number => 0,
-		local_jobs_number => 0
+		contiguous => 0,
+		local => 0
 	};
 
 	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
@@ -46,7 +46,6 @@ sub reduce_to_first {
 sub reduce_to_contiguous_best_effort {
 	my ($self, $number) = @_;
 
-	#try each position and see if we can get a contiguous block
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
 		my $start_id = $self->{processors}->[$start_index]->id();
@@ -188,6 +187,28 @@ sub keep_from {
 		push @kept_processors, $self->{processors}->[$real_index];
 	}
 	@{$self->{processors}} = @kept_processors;
+}
+
+sub verify_locality {
+	my ($self) = @_;
+
+	my $max_clusters_number = ceil(@{$self->{processors}}/$self->{cluster_size});
+	my $current_cluster = $self->{processors}->[0]->cluster_number();
+	my $clusters_number = 1;
+
+	$self->{local} = 1;
+
+	for my $processor (@{$self->{processors}}) {
+		if ($processor->cluster_number() != $current_cluster) {
+			$current_cluster = $processor->cluster_number();
+			$clusters_number++;
+		}
+
+		if ($clusters_number > $max_clusters_number) {
+			$self->{local} = 0;
+			last;
+		}
+	}
 }
 
 sub processors {
