@@ -124,7 +124,26 @@ sub new_from_database {
 	my @job_refs = $database->get_job_refs($trace_id);
 
 	for my $job_ref (@job_refs) {
-		my $job = Job->new($job_ref->{job_number}, $job_ref->{submit_time}, $job_ref->{wait_time}, $job_ref->{run_time}, $job_ref->{allocated_cpus}, $job_ref->{avg_cpu_time}, $job_ref->{used_mem}, $job_ref->{requested_cpus}, $job_ref->{requested_time}, $job_ref->{requested_mem}, $job_ref->{status}, $job_ref->{uid}, $job_ref->{gid}, $job_ref->{exec_number}, $job_ref->{queue_number}, $job_ref->{partition_number}, $job_ref->{prec_job_number}, $job_ref->{think_time_prec_job});
+		my $job = Job->new(
+			$job_ref->{job_number},
+			$job_ref->{submit_time},
+			$job_ref->{wait_time},
+			$job_ref->{run_time},
+			$job_ref->{allocated_cpus},
+			$job_ref->{avg_cpu_time},
+			$job_ref->{used_mem},
+			$job_ref->{requested_cpus},
+			$job_ref->{requested_time},
+			$job_ref->{requested_mem},
+			$job_ref->{status},
+			$job_ref->{uid},
+			$job_ref->{gid},
+			$job_ref->{exec_number},
+			$job_ref->{queue_number},
+			$job_ref->{partition_number},
+			$job_ref->{prec_job_number},
+			$job_ref->{think_time_prec_job}
+		);
 
 		$self->{needed_cpus} = max($self->{needed_cpus}, $job->requested_cpus);
 		push $self->{jobs}, $job;
