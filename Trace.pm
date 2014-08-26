@@ -185,11 +185,12 @@ sub needed_cpus {
 
 sub print_jobs {
 	my ($self) = @_;
-	print join(',', @{$self->{jobs}})."\n";
+	print join("\n", @{$self->{jobs}});
 }
 
 sub jobs {
-	my ($self) = @_;
+	my ($self, $jobs) = @_;
+	$self->{jobs} = $jobs if defined $jobs;
 	return $self->{jobs};
 }
 

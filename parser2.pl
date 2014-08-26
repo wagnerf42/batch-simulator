@@ -11,6 +11,7 @@ use Trace;
 use FCFS;
 use FCFSC;
 use Backfilling;
+use Random;
 use Database;
 
 my ($trace_file_name, $jobs_number, $executions_number, $cpus_number, $cluster_size, $threads_number) = @ARGV;
@@ -87,6 +88,7 @@ sub run_all_thread {
 		# Generate the trace and add it to the database
 		my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
 		$trace_random->fix_submit_times();
+		#$trace_random->reset_jobs_numbers();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
 		#my $schedule1 = FCFS->new($trace_random, $cpus_number, $cluster_size, 0);
@@ -97,21 +99,28 @@ sub run_all_thread {
 		#$schedule2->run();
 		#$database->add_run($trace_id, 'fcfs_not_contiguous', $schedule2->cmax, $schedule2->run_time);
 
-		my $schedule3 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 3);
-		$schedule3->run();
-		$database->add_run($trace_id, 'backfilling_not_contiguous', $schedule3->cmax, $schedule3->run_time);
+		#my $schedule3 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 0);
+		#$schedule3->run();
+		#$database->add_run($trace_id, 'backfilling_best_effort', $schedule3->cmax, $schedule3->run_time);
 
-		my $schedule4 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 0);
-		$schedule4->run();
-		$database->add_run($trace_id, 'backfilling_best_effort', $schedule4->cmax, $schedule4->run_time);
+		#my $schedule4 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 1);
+		#$schedule4->run();
+		#$database->add_run($trace_id, 'backfilling_cluster_contiguous', $schedule4->cmax, $schedule4->run_time);
 
 		#my $schedule5 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 2);
 		#$schedule5->run();
 		#$database->add_run($trace_id, 'backfilling_contiguous', $schedule5->cmax, $schedule5->run_time);
+		
+		my $schedule6 = Random->new($trace_random, $cpus_number, $cluster_size, 0);
+		$schedule6->run();
+		$database->add_run($trace_id, 'backfilling_contiguous', $schedule6->cmax, $schedule6->run_time);
 
 		push @results, [
-			$schedule4->cmax()/$schedule3->cmax(),
-			$schedule4->contiguous_jobs_number(),
+			#$schedule4->cmax()/$schedule3->cmax(),
+			#$trace_random->characteristic(0, $cpus_number),
+			#$trace_random->characteristic(1, $cpus_number),
+			#$trace_random->characteristic(2, $cpus_number),
+			#$trace_random->characteristic(3, $cpus_number),
 			$trace_id
 		];
 	}
