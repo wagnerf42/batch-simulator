@@ -41,7 +41,7 @@ my $execution_id = $database->add_execution(\%execution);
 
 # Create a directory to store the output
 my $basic_file_name = "parser2-$jobs_number-$executions_number-$cpus_number-$execution_id";
-mkdir $basic_file_name unless -f $basic_file_name;
+mkdir "parser2/$basic_file_name";
 
 # Create threads
 my $start_time = time();
@@ -59,8 +59,8 @@ push @results, @{$_->join()} for (@threads);
 $database->update_execution_run_time($execution_id, time() - $start_time);
 
 # Print all results in a file
-print STDERR "Writing results to $basic_file_name/$basic_file_name.csv\n";
-write_results_to_file(\@results, "$basic_file_name/$basic_file_name.csv");
+print STDERR "Writing results to parser2/$basic_file_name/$basic_file_name.csv\n";
+write_results_to_file(\@results, "parser2/$basic_file_name/$basic_file_name.csv");
 
 sub write_results_to_file {
 	my ($results, $filename) = @_;

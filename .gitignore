@@ -1,3 +1,7 @@
 tags
 .Rhistory
 exp*
+parser2/
+run_from_database/
+run_from_file/
+property_test/
