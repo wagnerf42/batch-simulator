@@ -16,7 +16,7 @@ sub new {
 		local => 0
 	};
 
-	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
+	#@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
 
 	bless $self, $class;
 	return $self;
@@ -33,8 +33,7 @@ sub sort_processors {
 }
 
 sub contains_at_least {
-	my $self = shift;
-	my $n = shift;
+	my ($self, $n) = @_;
 	return (@{$self->{processors}} >= $n);
 }
 
@@ -43,8 +42,23 @@ sub reduce_to_first {
 	$self->keep_from(0, $number);
 }
 
+sub reduce_to_first_random {
+	my ($self, $number) = @_;
+	my @selected_processors;
+
+	for my $i (1..$number) {
+		my $index = int(rand(@{$self->{processors}}));
+		push @selected_processors, $self->{processors}[$index];
+		splice(@{$self->{processors}}, $index, 1);
+	}
+
+	@{$self->{processors}} = @selected_processors;
+}
+
 sub reduce_to_contiguous_best_effort {
 	my ($self, $number) = @_;
+
+	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
 
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
@@ -73,6 +87,8 @@ sub reduce_to_contiguous_best_effort {
 
 sub reduce_to_contiguous {
 	my ($self, $number) = @_;
+
+	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
 
 	#try each position and see if we can get a contiguous block
 	for my $start_index (0..$#{$self->{processors}}) {
@@ -103,6 +119,9 @@ sub reduce_to_contiguous {
 
 sub reduce_to_cluster {
 	my ($self, $number) = @_;
+
+	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
+
 	my $max_clusters_number = ceil($number/$self->{cluster_size});
 
 	for my $start_index (0..$#{$self->{processors}}) {
@@ -138,6 +157,9 @@ sub reduce_to_cluster {
 
 sub reduce_to_cluster_contiguous {
 	my ($self, $number) = @_;
+
+	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
+
 	my $max_clusters_number = ceil($number/$self->{cluster_size});
 
 	for my $start_index (0..$#{$self->{processors}}) {
@@ -186,29 +208,8 @@ sub keep_from {
 		my $real_index = $i % scalar @{$self->{processors}};
 		push @kept_processors, $self->{processors}->[$real_index];
 	}
+
 	@{$self->{processors}} = @kept_processors;
-}
-
-sub verify_locality {
-	my ($self) = @_;
-
-	my $max_clusters_number = ceil(@{$self->{processors}}/$self->{cluster_size});
-	my $current_cluster = $self->{processors}->[0]->cluster_number();
-	my $clusters_number = 1;
-
-	$self->{local} = 1;
-
-	for my $processor (@{$self->{processors}}) {
-		if ($processor->cluster_number() != $current_cluster) {
-			$current_cluster = $processor->cluster_number();
-			$clusters_number++;
-		}
-
-		if ($clusters_number > $max_clusters_number) {
-			$self->{local} = 0;
-			last;
-		}
-	}
 }
 
 sub processors {
