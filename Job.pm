@@ -62,6 +62,15 @@ sub stringification {
 	);
 }
 
+sub copy {
+	my $class = shift;
+	my $original = shift;
+	my $self = {};
+	$self->{$_} = $original->{$_} for (keys %{$original});
+	$self->{assigned_processors} = [];
+	bless $self, $class;
+}
+
 sub requested_cpus {
 	my ($self) = @_;
 	return $self->{allocated_cpus};

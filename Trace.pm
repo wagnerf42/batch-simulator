@@ -153,6 +153,19 @@ sub new_from_database {
 	return $self;
 }
 
+sub copy {
+	my $class = shift;
+	my $original = shift;
+	my $self = {
+		jobs => []
+	};
+	push @{$self->{jobs}}, copy Job($_) for @{$original->{jobs}};
+	$self->{needed_cpus} = $original->{needed_cpus};
+	bless $self, $class;
+	return $self;
+}
+
+
 sub reset_submit_times {
 	my ($self) = @_;
 	$_->submit_time(0) for (@{$self->{jobs}});
