@@ -13,24 +13,24 @@ sub new {
 	my $class = shift;
 
 	my $self = {
-		job_number => shift,
-		submit_time => shift,
-		wait_time => shift,
-		run_time => shift,
-		allocated_cpus => shift,
-		avg_cpu_time => shift,
-		used_mem => shift,
-		requested_cpus => shift,
-		requested_time => shift,
-		requested_mem => shift,
-		status => shift,
-		uid => shift,
-		gid => shift,
-		exec_number => shift,
-		queue_number => shift,
-		partition_number => shift,
-		prec_job_number => shift,
-		think_time_prec_job => shift,
+		job_number => shift, #1
+		submit_time => shift, #2
+		wait_time => shift, #3
+		run_time => shift, #4
+		allocated_cpus => shift, #5
+		avg_cpu_time => shift, #6
+		used_mem => shift, #7
+		requested_cpus => shift, #8
+		requested_time => shift, #9
+		requested_mem => shift, #10
+		status => shift, #11
+		uid => shift, #12
+		gid => shift, #13
+		exec_number => shift, #14
+		queue_number => shift, #15
+		partition_number => shift, #16
+		prec_job_number => shift, #17
+		think_time_prec_job => shift, #18
 	};
 
 	bless $self, $class;

@@ -70,6 +70,11 @@ sub get_free_processors_for {
 		$processors->reduce_to_first($job->requested_cpus());
 	}
 
+	elsif ($self->{version} == 4) {
+		$processors->reduce_to_contiguous($job->requested_cpus());
+	}
+
+
 	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
 }
 
