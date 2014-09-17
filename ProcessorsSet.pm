@@ -23,13 +23,8 @@ sub new {
 }
 
 sub sort_processors {
-	my %processors;
-
-	$processors{$_} = $_ for @_;
-	my @sorted_ids = sort {$a <=> $b} (keys %processors);
-	my $sorted_processors = [];
-	push @{$sorted_processors}, $processors{$_} for @sorted_ids;
-	return $sorted_processors;
+	my ($self) = @_;
+	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
 }
 
 sub contains_at_least {
@@ -40,6 +35,7 @@ sub contains_at_least {
 sub reduce_to_first {
 	my ($self, $number) = @_;
 	$self->keep_from(0, $number);
+	$self->verify_locality_contiguity();
 }
 
 sub reduce_to_first_random {
@@ -58,7 +54,7 @@ sub reduce_to_first_random {
 sub reduce_to_contiguous_best_effort {
 	my ($self, $number) = @_;
 
-	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
+	$self->sort_processors();
 
 	for my $start_index (0..$#{$self->{processors}}) {
 		my $ok = 1;
@@ -120,7 +116,7 @@ sub reduce_to_contiguous {
 sub reduce_to_cluster {
 	my ($self, $number) = @_;
 
-	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
+	$self->sort_processors();
 
 	my $max_clusters_number = ceil($number/$self->{cluster_size});
 
@@ -210,6 +206,42 @@ sub keep_from {
 	}
 
 	@{$self->{processors}} = @kept_processors;
+}
+
+sub verify_locality_contiguity {
+	my ($self) = @_;
+
+	my $start_id = $self->{processors}->[0]->id();
+	my $max_clusters_number = ceil(@{$self->{processors}}/$self->{cluster_size});
+	my $current_cluster = $self->{processors}[0]->cluster_number();
+	my $clusters_number = 1;
+
+	$self->{local} = 1;
+	$self->{contiguous} = 1;
+
+	for my $i (1..(@{$self->{processors}} - 1)) {
+		if ($self->{contiguous}) {
+			my $expected_id = ($start_id + $i) % $self->{processors_number};
+			my $id = $self->{processors}->[$i]->id();
+
+			if ($id != $expected_id) {
+				$self->{contiguous} = 0;
+			}
+		}
+
+		if ($self->{local}) {
+			my $cluster = $self->{processors}[$i]->cluster_number();
+
+			if ($cluster != $current_cluster) {
+				$clusters_number++;
+				$current_cluster = $cluster;
+			}
+
+			if ($clusters_number > $max_clusters_number) {
+				$self->{local} = 0;
+			}
+		}
+	}
 }
 
 sub processors {
