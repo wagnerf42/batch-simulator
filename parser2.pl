@@ -83,8 +83,8 @@ sub run_all_thread {
 
 	# Read the original trace
 	my $trace = Trace->new_from_swf($trace_file_name);
-	#$trace->remove_large_jobs($cpus_number);
-	#$trace->reset_submit_times();
+	$trace->remove_large_jobs($cpus_number);
+	$trace->reset_submit_times();
 
 	for my $i (1..($executions_number/$threads_number)) {
 		if (!$id) {
@@ -93,7 +93,7 @@ sub run_all_thread {
 
 		# Generate the trace and add it to the database
 		my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
-		$trace_random->fix_submit_times();
+		#$trace_random->fix_submit_times();
 		#$trace_random->reset_jobs_numbers();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
@@ -125,7 +125,7 @@ sub run_all_thread {
 
 		push @results, [
 			$schedule5->cmax()/$schedule4->cmax(),
-			$schedule5->mean_stretch()/$schedule4->mean_stretch(),
+			#$schedule5->mean_stretch()/$schedule4->mean_stretch(),
 			$schedule4->contiguous_jobs_number(),
 			$trace_id
 		];
