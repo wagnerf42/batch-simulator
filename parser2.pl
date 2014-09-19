@@ -11,6 +11,7 @@ use Trace;
 use FCFS;
 use FCFSC;
 use Backfilling;
+use ExecutionProfile ':stooges';
 use Random;
 use Database;
 
@@ -32,7 +33,7 @@ my %execution = (
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "parser script, backfilling best effort vs forced contiguous, blocks of jobs, with submit times",
+	comments => "parser script, backfilling best effort vs local contiguous, blocks of jobs, without submit times",
 	cluster_size => $cluster_size
 );
 
@@ -97,36 +98,34 @@ sub run_all_thread {
 		#$trace_random->reset_jobs_numbers();
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
-		#my $schedule1 = FCFS->new($trace_random, $cpus_number, $cluster_size, 0);
-		#$schedule1->run();
-		#$database->add_run($trace_id, 'fcfs_best_effort', $schedule1->cmax, $schedule1->run_time);
+		#my $schedule_first = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_FIRST);
+		#$schedule_first->run();
+		#$database->add_run($trace_id, 'backfilling_not_contiguous', $schedule_first->cmax, $schedule_first->run_time);
 
-		#my $schedule2 = FCFS->new($trace_random, $cpus_number, $cluster_size, 1);
-		#$schedule2->run();
-		#$database->add_run($trace_id, 'fcfs_not_contiguous', $schedule2->cmax, $schedule2->run_time);
+		my $schedule_best_effort = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_BEST_EFFORT);
+		$schedule_best_effort->run();
+		$database->add_run($trace_id, 'backfilling_best_effort', $schedule_best_effort->cmax, $schedule_best_effort->run_time);
 
-		#my $schedule3 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 3);
-		#$schedule3->run();
-		#$database->add_run($trace_id, 'backfilling_not_contiguous', $schedule3->cmax, $schedule3->run_time);
-
-		my $schedule4 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 0);
-		$schedule4->run();
-		$schedule4->compute_mean_stretch();
-		$database->add_run($trace_id, 'backfilling_best_effort', $schedule4->cmax, $schedule4->run_time);
-
-		my $schedule5 = Backfilling->new($trace_random, $cpus_number, $cluster_size, 2);
-		$schedule5->run();
-		$schedule5->compute_mean_stretch();
-		$database->add_run($trace_id, 'backfilling_contiguous', $schedule5->cmax, $schedule5->run_time);
+		#my $schedule_contiguous = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_CONTIGUOUS);
+		#$schedule_contiguous->run();
+		#$database->add_run($trace_id, 'backfilling_contiguous', $schedule_contiguous->cmax, $schedule_contiguous->run_time);
 		
-		#my $schedule6 = Random->new($trace_random, $cpus_number, $cluster_size, 0);
-		#$schedule6->run();
-		#$database->add_run($trace_id, 'backfilling_cluster_contiguous', $schedule6->cmax, $schedule6->run_time);
+		#my $schedule_cluster_contiguous = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_CLUSTER_CONTIGUOUS);
+		#$schedule_cluster_contiguous->run();
+		#$database->add_run($trace_id, 'backfilling_cluster_contiguous', $schedule_cluster_contiguous->cmax, $schedule_cluster_contiguous->run_time);
+
+		my $schedule_cluster = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_CLUSTER);
+		$schedule_cluster->run();
+		$database->add_run($trace_id, 'backfilling_cluster', $schedule_cluster->cmax, $schedule_cluster->run_time);
 
 		push @results, [
-			$schedule5->cmax()/$schedule4->cmax(),
-			#$schedule5->mean_stretch()/$schedule4->mean_stretch(),
-			$schedule4->contiguous_jobs_number(),
+			#$schedule_cluster->cmax()/$schedule_first->cmax(),
+			$schedule_cluster->cmax()/$schedule_best_effort->cmax(),
+			#$schedule_cluster_contiguous->cmax()/$schedule_first->cmax(),
+			#$schedule_contiguous->cmax()/$schedule_first->cmax(),
+			#$schedule_best_effort->cmax()/$schedule_first->cmax(),
+			#$schedule_contiguous->mean_stretch()/$schedule_best_effort->mean_stretch(),
+			#$schedule_best_effort->contiguous_jobs_number(),
 			$trace_id
 		];
 	}

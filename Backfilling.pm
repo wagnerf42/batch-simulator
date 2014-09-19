@@ -10,6 +10,8 @@ use Job;
 use Processor;
 use ExecutionProfile;
 
+#local $| = 1;
+
 sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);

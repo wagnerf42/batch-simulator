@@ -3,9 +3,22 @@ package ExecutionProfile;
 use strict;
 use warnings;
 
+use base 'Exporter';
+
 use Profile;
 use Data::Dumper;
 use ProcessorsSet;
+
+use constant EP_BEST_EFFORT => 0;
+use constant EP_CLUSTER_CONTIGUOUS => 1;
+use constant EP_CONTIGUOUS => 2;
+use constant EP_FIRST => 3;
+use constant EP_CLUSTER => 4;
+
+our @EXPORT_OK = ('EP_BEST_EFFORT', 'EP_CLUSTER_CONTIGUOUS', 'EP_CONTIGUOUS', 'EP_FIRST', 'EP_CLUSTER');
+our %EXPORT_TAGS = (
+	stooges => ['EP_BEST_EFFORT', 'EP_CLUSTER_CONTIGUOUS', 'EP_CONTIGUOUS', 'EP_FIRST', 'EP_CLUSTER']
+);
 
 #an execution profile object encodes the set of all profiles of a schedule
 
@@ -54,24 +67,24 @@ sub get_free_processors_for {
 	my @selected_processors = map {$self->{processors}->[$_]} @selected_ids;
 	my $processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}}, $self->{cluster_size});
 
-	if ($self->{version} == 0) {
+	if ($self->{version} == EP_BEST_EFFORT) {
 		$processors->reduce_to_contiguous_best_effort($job->requested_cpus());
 	}
 
-	elsif ($self->{version} == 1) {
+	elsif ($self->{version} == EP_CLUSTER_CONTIGUOUS) {
 		$processors->reduce_to_cluster_contiguous($job->requested_cpus());
 	}
 
-	elsif ($self->{version} == 2) {
+	elsif ($self->{version} == EP_CONTIGUOUS) {
 		$processors->reduce_to_contiguous($job->requested_cpus());
 	}
 
-	elsif ($self->{version} == 3) {
+	elsif ($self->{version} == EP_FIRST) {
 		$processors->reduce_to_first($job->requested_cpus());
 	}
 
-	elsif ($self->{version} == 4) {
-		$processors->reduce_to_contiguous($job->requested_cpus());
+	elsif ($self->{version} == EP_CLUSTER) {
+		$processors->reduce_to_cluster($job->requested_cpus());
 	}
 
 

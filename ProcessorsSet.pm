@@ -84,7 +84,7 @@ sub reduce_to_contiguous_best_effort {
 sub reduce_to_contiguous {
 	my ($self, $number) = @_;
 
-	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
+	$self->sort_processors();
 
 	#try each position and see if we can get a contiguous block
 	for my $start_index (0..$#{$self->{processors}}) {
@@ -118,43 +118,36 @@ sub reduce_to_cluster {
 
 	$self->sort_processors();
 
-	my $max_clusters_number = ceil($number/$self->{cluster_size});
+	my $clusters_number = ceil($number/$self->{cluster_size});
 
-	for my $start_index (0..$#{$self->{processors}}) {
-		my $ok = 1;
-		my $start_id = $self->{processors}->[$start_index]->id();
-		my $current_cluster = $self->{processors}->[$start_index]->cluster_number();
-		my $clusters_number = 1;
+	my @clusters = map {{processors_number => 0, processors => []}} 0..(ceil($self->{processors_number}/$self->{cluster_size}) - 1);
 
-		for my $num (1..($number-1)) {
-			my $index = ($start_index + $num) % @{$self->{processors}};
-			my $cluster = $self->{processors}[$index]->cluster_number();
-
-			if ($cluster != $current_cluster) {
-				$clusters_number++;
-				$current_cluster = $cluster;
-			}
-
-			if ($clusters_number > $max_clusters_number) {
-				$ok = 0;
-				last;
-			}
-		}
-
-		if ($ok) {
-			$self->keep_from($start_index, $number);
-			$self->{local} = 1;
-			return;
-		}
+	for my $processor (@{$self->{processors}}) {
+		$clusters[$processor->cluster_number()]->{processors_number}++;
+		push @{$clusters[$processor->cluster_number()]->{processors}}, $processor;
 	}
 
-	@{$self->{processors}} = ();
+	@clusters = sort {$b->{processors_number} <=> $a->{processors_number}} @clusters;
+
+	my @selected_clusters = @clusters[0..($clusters_number - 1)];
+	my @selected_processors;
+
+	for my $selected_cluster (@selected_clusters) {
+		push @selected_processors, @{$selected_cluster->{processors}};
+	}
+
+	if (scalar @selected_processors >= $number) {
+		@{$self->{processors}} = @selected_processors[0..($number - 1)];
+	
+	} else {
+		@{$self->{processors}} = ();
+	}
 }
 
 sub reduce_to_cluster_contiguous {
 	my ($self, $number) = @_;
 
-	@{$self->{processors}} = sort {$a->id <=> $b->id} @{$self->{processors}};
+	$self->sort_processors();
 
 	my $max_clusters_number = ceil($number/$self->{cluster_size});
 
@@ -166,7 +159,9 @@ sub reduce_to_cluster_contiguous {
 
 		for my $num (1..($number-1)) {
 			my $index = ($start_index + $num) % @{$self->{processors}};
+
 			my $cluster = $self->{processors}[$index]->cluster_number();
+
 			my $id = $self->{processors}->[$index]->id();
 			my $expected_id = ($start_id + $num) % $self->{processors_number};
 
