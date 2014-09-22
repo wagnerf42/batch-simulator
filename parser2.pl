@@ -102,9 +102,14 @@ sub run_all_thread {
 		#$schedule_first->run();
 		#$database->add_run($trace_id, 'backfilling_not_contiguous', $schedule_first->cmax, $schedule_first->run_time);
 
-		my $schedule_best_effort = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_BEST_EFFORT);
-		$schedule_best_effort->run();
-		$database->add_run($trace_id, 'backfilling_best_effort', $schedule_best_effort->cmax, $schedule_best_effort->run_time);
+		#my $schedule_best_effort = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_BEST_EFFORT);
+		#$schedule_best_effort->run();
+		#$database->add_run($trace_id, 'backfilling_best_effort', $schedule_best_effort->cmax, $schedule_best_effort->run_time);
+
+		my $schedule_best_effort_locality = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_BEST_EFFORT_LOCALITY);
+		$schedule_best_effort_locality->run();
+		$database->add_run($trace_id, 'backfilling_best_effort_locality', $schedule_best_effort_locality->cmax, $schedule_best_effort_locality->run_time);
+
 
 		#my $schedule_contiguous = Backfilling->new($trace_random, $cpus_number, $cluster_size, EP_CONTIGUOUS);
 		#$schedule_contiguous->run();
@@ -119,12 +124,13 @@ sub run_all_thread {
 		$database->add_run($trace_id, 'backfilling_cluster', $schedule_cluster->cmax, $schedule_cluster->run_time);
 
 		push @results, [
-			#$schedule_cluster->cmax()/$schedule_first->cmax(),
-			$schedule_cluster->cmax()/$schedule_best_effort->cmax(),
+			#$schedule_cluster->cmax()/$schedule_best_effort->cmax(),
+			$schedule_cluster->cmax()/$schedule_best_effort_locality->cmax(),
+			$schedule_best_effort_locality->local_jobs_number(),
 			#$schedule_cluster_contiguous->cmax()/$schedule_first->cmax(),
-			#$schedule_contiguous->cmax()/$schedule_first->cmax(),
 			#$schedule_best_effort->cmax()/$schedule_first->cmax(),
 			#$schedule_contiguous->mean_stretch()/$schedule_best_effort->mean_stretch(),
+			#$schedule_contiguous->cmax()/$schedule_best_effort->cmax(),
 			#$schedule_best_effort->contiguous_jobs_number(),
 			$trace_id
 		];

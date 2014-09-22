@@ -14,10 +14,11 @@ use constant EP_CLUSTER_CONTIGUOUS => 1;
 use constant EP_CONTIGUOUS => 2;
 use constant EP_FIRST => 3;
 use constant EP_CLUSTER => 4;
+use constant EP_BEST_EFFORT_LOCALITY => 5;
 
-our @EXPORT_OK = ('EP_BEST_EFFORT', 'EP_CLUSTER_CONTIGUOUS', 'EP_CONTIGUOUS', 'EP_FIRST', 'EP_CLUSTER');
+our @EXPORT_OK = ('EP_BEST_EFFORT', 'EP_CLUSTER_CONTIGUOUS', 'EP_CONTIGUOUS', 'EP_FIRST', 'EP_CLUSTER', 'EP_BEST_EFFORT_LOCALITY');
 our %EXPORT_TAGS = (
-	stooges => ['EP_BEST_EFFORT', 'EP_CLUSTER_CONTIGUOUS', 'EP_CONTIGUOUS', 'EP_FIRST', 'EP_CLUSTER']
+	stooges => ['EP_BEST_EFFORT', 'EP_CLUSTER_CONTIGUOUS', 'EP_CONTIGUOUS', 'EP_FIRST', 'EP_CLUSTER', 'EP_BEST_EFFORT_LOCALITY']
 );
 
 #an execution profile object encodes the set of all profiles of a schedule
@@ -87,6 +88,9 @@ sub get_free_processors_for {
 		$processors->reduce_to_cluster($job->requested_cpus());
 	}
 
+	elsif ($self->{version} == EP_BEST_EFFORT_LOCALITY) {
+		$processors->reduce_to_cluster_best_effort($job->requested_cpus());
+	}
 
 	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
 }

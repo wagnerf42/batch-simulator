@@ -12,6 +12,7 @@ use FCFS;
 use FCFSC;
 use Backfilling;
 use Database;
+use ExecutionProfile ':stooges';
 
 my ($trace_number, $cpus_number, $cluster_size) = @ARGV;
 die 'missing arguments: trace_number cpus_number cluster_size' unless defined $cluster_size;
@@ -25,26 +26,22 @@ my $database = Database->new();
 my $trace = Trace->new_from_database($trace_number);
 $trace->write_to_file("run_trace_from_database/$basic_file_name/$basic_file_name.swf");
 
-#my $schedule1 = FCFS->new($trace, $cpus_number, $cluster_size, 0);
-#$schedule1->run();
-#$schedule1->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-fcfs0.svg");
-
-# FCFS best effort
-my $schedule2 = FCFS->new($trace, $cpus_number, $cluster_size, 1);
-$schedule2->run();
-$schedule2->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-fcfs_best_effort.svg");
-
 # Backfilling best effort
-my $schedule3 = Backfilling->new($trace, $cpus_number, $cluster_size, 0);
-$schedule3->run();
-$schedule3->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-backfilling_best_effort.svg");
+my $schedule_best_effort = Backfilling->new($trace, $cpus_number, $cluster_size, EP_BEST_EFFORT);
+$schedule_best_effort->run();
+$schedule_best_effort->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-backfilling_best_effort.svg");
+
+# Backfilling best effort locality
+my $schedule_best_effort_locality = Backfilling->new($trace, $cpus_number, $cluster_size, EP_BEST_EFFORT_LOCALITY);
+$schedule_best_effort_locality->run();
+$schedule_best_effort_locality->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-backfilling_best_effort_locality.svg");
 
 # Backfilling cluster contiguous
-my $schedule4 = Backfilling->new($trace, $cpus_number, $cluster_size, 1);
-$schedule4->run();
-$schedule4->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-backfilling_cluster_contiguous.svg");
+my $schedule_cluster_contiguous = Backfilling->new($trace, $cpus_number, $cluster_size, EP_CLUSTER_CONTIGUOUS);
+$schedule_cluster_contiguous->run();
+$schedule_cluster_contiguous->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-backfilling_cluster_contiguous.svg");
 
-#my $schedule5 = Backfilling->new($trace, $cpus_number, $cluster_size, 2);
-#$schedule5->run();
-#$schedule5->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-backfilling2.svg");
+my $schedule5 = Backfilling->new($trace, $cpus_number, $cluster_size, 2);
+$schedule5->run();
+$schedule5->save_svg("run_trace_from_database/$basic_file_name/$basic_file_name-backfilling2.svg");
 

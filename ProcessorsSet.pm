@@ -113,6 +113,45 @@ sub reduce_to_contiguous {
 	@{$self->{processors}} = ();
 }
 
+sub reduce_to_cluster_best_effort {
+	my ($self, $number) = @_;
+
+	$self->sort_processors();
+
+	my $clusters_number = ceil($number/$self->{cluster_size});
+
+	my @clusters = map {{processors_number => 0, processors => []}} 0..(ceil($self->{processors_number}/$self->{cluster_size}) - 1);
+
+	for my $processor (@{$self->{processors}}) {
+		$clusters[$processor->cluster_number()]->{processors_number}++;
+		push @{$clusters[$processor->cluster_number()]->{processors}}, $processor;
+	}
+
+	@clusters = sort {$b->{processors_number} <=> $a->{processors_number}} @clusters;
+
+	my @selected_clusters = @clusters[0..($clusters_number - 1)];
+	my @selected_processors;
+
+	for my $selected_cluster (@selected_clusters) {
+		push @selected_processors, @{$selected_cluster->{processors}};
+	}
+
+	if (scalar @selected_processors >= $number) {
+		@{$self->{processors}} = @selected_processors[0..($number - 1)];
+		$self->{local} = 1;
+	
+	} else {
+		@selected_processors = ();
+
+		for my $cluster (@clusters) {
+			push @selected_processors, @{$cluster->{processors}};
+		}
+
+		@{$self->{processors}} = @selected_processors[0..($number - 1)];
+		$self->{local} = 0;
+	}
+}
+
 sub reduce_to_cluster {
 	my ($self, $number) = @_;
 
