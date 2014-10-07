@@ -10,8 +10,6 @@ use Job;
 use Processor;
 use ExecutionProfile;
 
-#local $| = 1;
-
 sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
@@ -24,8 +22,6 @@ sub new {
 sub assign_job {
 	my ($self, $job) = @_;
 	my $requested_cpus = $job->requested_cpus();
-
-	#print "job " . $job->{job_number} . "\n";
 
 	#get the first valid profile_id for our job
 	$self->{execution_profile}->set_current_time($job->submit_time());
@@ -40,6 +36,9 @@ sub assign_job {
 
 	#update profiles
 	$self->{execution_profile}->add_job_at($job);
+
+	#print the job
+	#print STDERR "$job\n";
 }
 
 sub contiguous_jobs_number {

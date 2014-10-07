@@ -23,7 +23,7 @@ sub new {
 		requested_cpus => shift, #8
 		requested_time => shift, #9
 		requested_mem => shift, #10
-		status => shift, #11
+		status => shift, #11, 0 = failed, 5 = cancelled, 1 = completed
 		uid => shift, #12
 		gid => shift, #13
 		exec_number => shift, #14
@@ -43,7 +43,7 @@ sub stringification {
 	return join(' ',
 		$self->{job_number},
 		$self->{submit_time},
-		$self->{wait_time},
+		$self->{wait_time}, #update
 		$self->{run_time},
 		$self->{allocated_cpus},
 		$self->{avg_cpu_time},
@@ -106,8 +106,14 @@ sub flow_time {
 
 sub stretch {
 	my ($self) = @_;
-	return ($self->{starting_time} + $self->{run_time} - $self->{submit_time})/$self->{run_time};
+	return $self->{wait_time}/$self->{run_time} + 1;
 }
+
+sub cmax {
+	my ($self) = @_;
+	return $self->{submit_time} + $self->{wait_time} + $self->{run_time};
+}
+
 
 sub submit_time {
 	my ($self, $submit_time) = @_;
@@ -116,7 +122,8 @@ sub submit_time {
 }
 
 sub wait_time {
-	my ($self) = @_;
+	my ($self, $wait_time) = @_;
+	$self->{wait_time} = $wait_time if defined $wait_time;
 	return $self->{wait_time};
 }
 
@@ -128,8 +135,9 @@ sub job_number {
 
 sub assign_to {
 	my ($self, $starting_time, $assigned_processors) = @_;
-	$self->{starting_time} = $starting_time if defined $starting_time;
-	$self->{assigned_processors} = $assigned_processors if defined $assigned_processors;
+	$self->{starting_time} = $starting_time;
+	$self->{assigned_processors} = $assigned_processors;
+	$self->{wait_time} = $self->{starting_time} - $self->{submit_time};
 
 	$_->assign_job($self) for @{$self->{assigned_processors}};
 }

@@ -5,6 +5,8 @@ use warnings;
 use Processor;
 use List::Util qw(max sum);
 
+local $| = 1;
+
 sub new {
 	my ($class, $trace, $processors_number, $cluster_size, $version) = @_;
 
@@ -42,8 +44,8 @@ sub run {
 
 	die "not enough processors (we need " . $self->{trace}->needed_cpus() . ", we have " . $self->{num_processors} . ")" if $self->{trace}->needed_cpus() > $self->{num_processors};
 
-	for my $job (@{$self->{trace}->jobs()}) {
-		$self->assign_job($job);
+	for my $i (0..(@{$self->{trace}->jobs()} - 1)) {
+		$self->assign_job($self->{trace}->jobs()->[$i]);
 	}
 
 	$self->{run_time} = time() - $start;
