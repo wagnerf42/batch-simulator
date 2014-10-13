@@ -70,11 +70,10 @@ sub processors_ids {
 	my @ids;
 	$self->ranges_loop(
 		sub {
-			my ($start, $end, $ids) = @_;
-			push @{$ids}, ($start..$end);
+			my ($start, $end) = @_;
+			push @ids, ($start..$end);
 			return 1;
-		},
-		\@ids
+		}
 	);
 	return @ids;
 }
@@ -84,11 +83,10 @@ sub stringification {
 	my @strings;
 	$self->ranges_loop(
 		sub {
-			my ($start, $end, $strings) = @_;
-			push @{$strings}, "[$start-$end]";
+			my ($start, $end) = @_;
+			push @strings, "[$start-$end]";
 			return 1;
-		},
-		\@strings
+		}
 	);
 	return join(' ', @strings);
 }
@@ -107,11 +105,10 @@ sub contains_at_least {
 	my $count = 0;
 	$self->ranges_loop(
 		sub {
-			my ($start, $end, $count_ref) = @_;
-			${$count_ref} += 1 + $end - $start;
+			my ($start, $end) = @_;
+			$count += 1 + $end - $start;
 			return 1;
-		},
-		\$count
+		}
 	);
 	return ($count >= $limit);
 }
@@ -122,18 +119,17 @@ sub reduce_to_first {
 	my @remaining_ranges;
 	$self->ranges_loop(
 		sub {
-			my ($start, $end, $target_number, $remaining_ranges) = @_;
-			my $taking = ${$target_number};
-			if ($end +1 - $start < ${$target_number}) {
-				$taking = $end + 1 - $start;
+			my ($start, $end) = @_;
+			my $taking = $target_number;
+			my $available_processors = $end + 1 - $start;
+			if ($available_processors < $target_number) {
+				$taking = $available_processors;
 			}
-			push @{$remaining_ranges}, $start;
-			push @{$remaining_ranges}, $start + $taking - 1;
-			${$target_number} -= $taking;
-			return (${$target_number} != 0);
+			push @remaining_ranges, $start;
+			push @remaining_ranges, $start + $taking - 1;
+			$target_number -= $taking;
+			return ($target_number != 0);
 		},
-		\$target_number,
-		\@remaining_ranges
 	);
 	$self->{ranges} = [@remaining_ranges];
 }
