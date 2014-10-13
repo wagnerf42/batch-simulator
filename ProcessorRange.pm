@@ -26,7 +26,44 @@ sub new {
 
 
 sub intersection {
-	die 'TODO';
+	# ranges[0] is $self and ranges[1] is other
+	my @ranges = @_;
+
+	my $inside_segments = 0;
+	my $starting_point;
+	my @result;
+	
+	my @indices = (0, 0);
+	while (($indices[0] <= $#{$ranges[0]->{ranges}}) and ($indices[1] <= $#{$ranges[1]->{ranges}})) {
+		# find next event
+		my $advancing_range;
+		my $event_type;
+
+		if ($ranges[0]->{ranges}->[$indices[0]] <= $ranges[1]->{ranges}->[$indices[1]]) {
+			$advancing_range = 0;
+		} else {
+			$advancing_range = 1;
+		}
+
+		$event_type = $indices[$advancing_range] % 2;
+		if ($event_type == 0) {
+			# start
+			if ($inside_segments == 1) {
+				$starting_point = $ranges[$advancing_range]->{ranges}->[$indices[$advancing_range]];
+			}
+			$inside_segments++;
+		} else {
+			# end of segment
+			if ($inside_segments == 2) {
+				push @result, $starting_point;
+				push @result, $ranges[$advancing_range]->{ranges}->[$indices[$advancing_range]];
+			}
+			$inside_segments--;
+		}
+		$indices[$advancing_range]++;
+	}
+
+	$ranges[0]->{ranges} = [@result];
 }
 
 sub processors_ids {
