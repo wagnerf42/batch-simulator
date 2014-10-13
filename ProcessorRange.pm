@@ -6,6 +6,9 @@ use overload '""' => \&stringification;
 use Carp;
 use Data::Dumper;
 
+use constant INTERSECTION_OPERATION => 0;
+use constant REMOVAL_OPERATION => 1;
+
 sub new {
 	my $class = shift;
 	my $self = {};
@@ -18,13 +21,13 @@ sub new {
 			$self->{ranges} = [@{$processors->{ranges}}];
 		} else {
 			#take a list of ids
-			my @processor_ids = sort {$a <=> $b} @{$processors};
+			die "empty" unless @{$processors};
+			my @processors_ids = sort {$a <=> $b} @{$processors};
 
 			$self->{ranges} = [];
-			die "empty" unless @{$processors_ids};
 			my $previous_id;
 
-			for my $id (@{$processors_ids}) {
+			for my $id (@processors_ids) {
 				if ((not defined $previous_id) or ($previous_id != $id -1)) {
 					push @{$self->{ranges}}, $previous_id if defined $previous_id;
 					push @{$self->{ranges}}, $id;
@@ -44,12 +47,18 @@ sub new {
 #when operation_type is 1 performs removal
 sub set_operation {
 	my ($self, $other, $operation_type) = @_;
+	my @ranges = ($self, $other);
 
+	#we count whether we are inside or outside target zone :
+	#for INTERSECTION_OPERATION we need to be inside both ranges
+	#for REMOVAL_OPERATION we need to be inside first range and outside second one
+	# -> instead we consider being "inside" the outside of second range
 	my $inside_segments = $operation_type;
 	my $starting_point;
 	my @result;
 
 	my @indices = (0, 0);
+	#loop on points from left to right
 	while (($indices[0] <= $#{$ranges[0]->{ranges}}) and ($indices[1] <= $#{$ranges[1]->{ranges}})) {
 		# find next event
 		my $advancing_range;
@@ -62,7 +71,10 @@ sub set_operation {
 		}
 
 		$event_type = $indices[$advancing_range] % 2;
-		die "YADA YADA";
+		if (($operation_type == REMOVAL_OPERATION) and ($advancing_range == 1)) {
+			#invert events for removal for second range
+			$event_type = 1 - $event_type;
+		}
 		if ($event_type == 0) {
 			# start
 			if ($inside_segments == 1) {
@@ -85,11 +97,11 @@ sub set_operation {
 
 #code is factorized with remove operation
 sub intersection {
-	set_operation(@_, 0);
+	set_operation(@_, INTERSECTION_OPERATION);
 }
 
 sub remove {
-	set_operation(@_, 1);
+	set_operation(@_, REMOVAL_OPERATION);
 }
 
 sub is_empty {
