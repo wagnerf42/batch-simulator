@@ -8,6 +8,7 @@ use base 'Exporter';
 use Profile;
 use Data::Dumper;
 use ProcessorsSet;
+use ProcessorRange;
 
 use constant EP_BEST_EFFORT => 0;
 use constant EP_CLUSTER_CONTIGUOUS => 1;
@@ -43,8 +44,7 @@ sub get_free_processors_for {
 	my ($self, $job, $profile_index) = @_;
 	my $left_duration = $job->run_time();
 	my $candidate_processors = $self->{profiles}->[$profile_index]->processors_ids();
-	my %left_processors; #processors which might be ok for job
-	$left_processors{$_} = $_ for @{$candidate_processors};
+	my $left_processors = new ProcessorRange($candidate_processors);
 	my $starting_time = $self->{profiles}->[$profile_index]->starting_time();
 
 	while ($left_duration > 0) {
@@ -52,8 +52,8 @@ sub get_free_processors_for {
 		return unless $starting_time == $current_profile->starting_time(); #profiles must all be contiguous
 		my $duration = $current_profile->duration();
 		$starting_time += $duration if defined $duration;
-		$current_profile->filter_processors_ids(\%left_processors);
-		last if (keys %left_processors) == 0; #abort if nothing left
+		$left_processors->intersection($current_profile->processor_range());
+		last if $left_processors->is_empty(); #abort if nothing left
 		if (defined $current_profile->duration()) {
 			$left_duration -= $current_profile->duration();
 			$profile_index++;
@@ -62,7 +62,7 @@ sub get_free_processors_for {
 		}
 	}
 
-	my @selected_ids = values %left_processors;
+	my @selected_ids = $left_processors->processors_ids();
 	return unless @selected_ids >= $job->requested_cpus();
 
 	my @selected_processors = map {$self->{processors}->[$_]} @selected_ids;

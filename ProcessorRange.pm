@@ -3,24 +3,18 @@ package ProcessorRange;
 use strict;
 use warnings;
 use overload '""' => \&stringification;
+use Carp;
 
 sub new {
 	my $class = shift;
-	my $self = {};
-	$self->{ranges} = [];
 	my $processor_ids = shift;
-	die 'not enough processors' unless @{$processor_ids};
+	my $self = {};
 	my @processor_ids = sort {$a <=> $b} @{$processor_ids};
-	my $previous_id;
-	for my $id (@processor_ids) {
-		if ((not defined $previous_id) or ($previous_id != $id -1)) {
-			push @{$self->{ranges}}, $previous_id if defined $previous_id;
-			push @{$self->{ranges}}, $id;
-		}
-		$previous_id = $id;
-	}
-	push @{$self->{ranges}}, $previous_id;
+
 	bless $self, $class;
+
+	$self->processors_ids(\@processor_ids);
+
 	return $self;
 }
 
@@ -66,17 +60,40 @@ sub intersection {
 	$ranges[0]->{ranges} = [@result];
 }
 
-sub processors_ids {
+sub is_empty {
 	my $self = shift;
-	my @ids;
-	for my $i (0..(@{$self->{ranges}}-2)/2) {
-		my $start = $self->{ranges}->[$i*2];
-		my $end = $self->{ranges}->[$i*2+1];
-		for my $j ($start..$end) {
-			push @ids, $j;
+	return scalar @{$self->{ranges}};
+}
+
+sub processors_ids {
+	my ($self, $processors_ids) = @_;
+
+	if (defined $processors_ids) {
+		$self->{ranges} = [];
+		my $previous_id;
+
+		for my $id (@{$processors_ids}) {
+			if ((not defined $previous_id) or ($previous_id != $id -1)) {
+				push @{$self->{ranges}}, $previous_id if defined $previous_id;
+				push @{$self->{ranges}}, $id;
+			}
+			$previous_id = $id;
 		}
+		push @{$self->{ranges}}, $previous_id;
 	}
-	return @ids;
+
+	else {
+		my @ids;
+		for my $i (0..(@{$self->{ranges}}-2)/2) {
+			my $start = $self->{ranges}->[$i*2];
+			my $end = $self->{ranges}->[$i*2+1];
+			print STDERR "$start - $end\n";
+			for my $j ($start..$end) {
+				push @ids, $j;
+			}
+		}
+		return @ids;
+	}
 }
 
 sub stringification {
