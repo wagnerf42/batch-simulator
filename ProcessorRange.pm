@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use overload '""' => \&stringification;
 use Carp;
+use Data::Dumper;
 
 sub new {
 	my $class = shift;
@@ -69,6 +70,7 @@ sub processors_ids {
 
 	if (defined $processors_ids) {
 		$self->{ranges} = [];
+		return unless @{$processors_ids};
 		my $previous_id;
 
 		for my $id (@{$processors_ids}) {
@@ -79,9 +81,7 @@ sub processors_ids {
 			$previous_id = $id;
 		}
 		push @{$self->{ranges}}, $previous_id;
-	}
-
-	else {
+	} else {
 		my @ids;
 		$self->ranges_loop(
 			sub {
@@ -110,6 +110,7 @@ sub stringification {
 sub ranges_loop {
 	my $self = shift;
 	my $callback = shift;
+	return unless @{$self->{ranges}};
 	for my $i (0..($#{$self->{ranges}}/2)) {
 		return unless $callback->($self->{ranges}->[2*$i], $self->{ranges}->[2*$i+1], @_);
 	}
