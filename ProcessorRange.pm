@@ -85,7 +85,9 @@ sub set_operation {
 			# end of segment
 			if ($inside_segments == 2) {
 				push @result, $starting_point;
-				push @result, $ranges[$advancing_range]->{ranges}->[$indices[$advancing_range]];
+				my $end_point = $ranges[$advancing_range]->{ranges}->[$indices[$advancing_range]];
+				$end_point -= $operation_type * $advancing_range; # REMOVAL_OPERATION stops before
+				push @result, $end_point;
 			}
 			$inside_segments--;
 		}
