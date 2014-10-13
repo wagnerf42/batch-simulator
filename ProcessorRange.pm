@@ -151,4 +151,59 @@ sub reduce_to_first {
 	$self->{ranges} = [@remaining_ranges];
 }
 
+#TODO Implement
+sub sort_ranges_by_size {
+	my ($self) = @_;
+	$self->ranges_loop(
+		sub {
+		}
+	);
+}
+
+sub reduce_to_forced_contiguous {
+	my $self = shift;
+	my $target_number = shift;
+	my @remaining_ranges;
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			my $available_processors = $end + 1 - $start;
+			if ($available_processors < $target_number) {
+				return 1;
+			}
+
+			push @remaining_ranges, $start;
+			push @remaining_ranges, $start + $target_number - 1;
+			return 0;
+		},
+	);
+
+	$self->{ranges} = [@remaining_ranges];
+}
+
+sub reduce_to_best_effort_contiguous {
+	my $self = shift;
+	my $target_number = shift;
+	my @remaining_ranges;
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			my $available_processors = $end + 1 - $start;
+			if ($available_processors < $target_number) {
+				return 1;
+			}
+
+			push @remaining_ranges, $start;
+			push @remaining_ranges, $start + $target_number - 1;
+			return 0;
+		},
+	);
+
+	if (scalar @remaining_ranges) {
+		$self->{ranges} = [@remaining_ranges];
+	} else {
+		$self->reduce_to_first($target_number);
+	}
+}
+
 1;

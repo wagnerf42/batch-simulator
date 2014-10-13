@@ -8,7 +8,7 @@ use Trace;
 use Backfilling;
 
 my $trace = Trace->new_from_swf($ARGV[0]);
-my $schedule = new Backfilling($trace, 8, 8, 3);
+my $schedule = new Backfilling($trace, 84640, 16, 3);
 
 $schedule->run();
 $schedule->tycat();
