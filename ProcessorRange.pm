@@ -10,9 +10,9 @@ sub new {
 	$self->{ranges} = [];
 	my $processor_ids = shift;
 	die 'not enough processors' unless @{$processor_ids};
-	my @processor_ids = sort {$a <=> $b} @{$processor_ids};
+	my @processors_ids = sort {$a <=> $b} @{$processor_ids};
 	my $previous_id;
-	for my $id (@processor_ids) {
+	for my $id (@processors_ids) {
 		if ((not defined $previous_id) or ($previous_id != $id -1)) {
 			push @{$self->{ranges}}, $previous_id if defined $previous_id;
 			push @{$self->{ranges}}, $id;
@@ -24,7 +24,6 @@ sub new {
 	return $self;
 }
 
-
 sub intersection {
 	# ranges[0] is $self and ranges[1] is other
 	my @ranges = @_;
@@ -32,7 +31,7 @@ sub intersection {
 	my $inside_segments = 0;
 	my $starting_point;
 	my @result;
-	
+
 	my @indices = (0, 0);
 	while (($indices[0] <= $#{$ranges[0]->{ranges}}) and ($indices[1] <= $#{$ranges[1]->{ranges}})) {
 		# find next event
@@ -69,25 +68,74 @@ sub intersection {
 sub processors_ids {
 	my $self = shift;
 	my @ids;
-	for my $i (0..(@{$self->{ranges}}-2)/2) {
-		my $start = $self->{ranges}->[$i*2];
-		my $end = $self->{ranges}->[$i*2+1];
-		for my $j ($start..$end) {
-			push @ids, $j;
-		}
-	}
+	$self->ranges_loop(
+		sub {
+			my ($start, $end, $ids) = @_;
+			push @{$ids}, ($start..$end);
+			return 1;
+		},
+		\@ids
+	);
 	return @ids;
 }
 
 sub stringification {
 	my $self = shift;
 	my @strings;
-	for my $i (0..((@{$self->{ranges}}-2)/2)) {
-		my $start = $self->{ranges}->[$i*2];
-		my $end = $self->{ranges}->[$i*2+1];
-		push @strings, "[$start-$end]";
-	}
+	$self->ranges_loop(
+		sub {
+			my ($start, $end, $strings) = @_;
+			push @{$strings}, "[$start-$end]";
+			return 1;
+		},
+		\@strings
+	);
 	return join(' ', @strings);
+}
+
+sub ranges_loop {
+	my $self = shift;
+	my $callback = shift;
+	for my $i (0..($#{$self->{ranges}}/2)) {
+		return unless $callback->($self->{ranges}->[2*$i], $self->{ranges}->[2*$i+1], @_);
+	}
+}
+
+sub contains_at_least {
+	my $self = shift;
+	my $limit = shift;
+	my $count = 0;
+	$self->ranges_loop(
+		sub {
+			my ($start, $end, $count_ref) = @_;
+			${$count_ref} += 1 + $end - $start;
+			return 1;
+		},
+		\$count
+	);
+	return ($count >= $limit);
+}
+
+sub reduce_to_first {
+	my $self = shift;
+	my $target_number = shift;
+	my @remaining_ranges;
+	$self->ranges_loop(
+		sub {
+			my ($start, $end, $target_number, $remaining_ranges) = @_;
+			my $taking = ${$target_number};
+			if ($end +1 - $start < ${$target_number}) {
+				$taking = $end + 1 - $start;
+			}
+			push @{$remaining_ranges}, $start;
+			push @{$remaining_ranges}, $start + $taking - 1;
+			${$target_number} -= $taking;
+			return (${$target_number} != 0);
+		},
+		\$target_number,
+		\@remaining_ranges
+	);
+	$self->{ranges} = [@remaining_ranges];
 }
 
 1;
