@@ -8,22 +8,44 @@ use Data::Dumper;
 
 sub new {
 	my $class = shift;
-	my $processor_ids = shift;
 	my $self = {};
-	my @processor_ids = sort {$a <=> $b} @{$processor_ids};
 
+	my $processors = shift; #processors might come in different formats
+
+	if (defined $processors) {
+		if (ref $processors eq $class) {
+			#copy constructor
+			$self->{ranges} = [@{$processors->{ranges}}];
+		} else {
+			#take a list of ids
+			my @processor_ids = sort {$a <=> $b} @{$processors};
+
+			$self->{ranges} = [];
+			die "empty" unless @{$processors_ids};
+			my $previous_id;
+
+			for my $id (@{$processors_ids}) {
+				if ((not defined $previous_id) or ($previous_id != $id -1)) {
+					push @{$self->{ranges}}, $previous_id if defined $previous_id;
+					push @{$self->{ranges}}, $id;
+				}
+				$previous_id = $id;
+			}
+			push @{$self->{ranges}}, $previous_id;
+		}
+	}
 	bless $self, $class;
-
-	$self->processors_ids(\@processor_ids);
-
 	return $self;
 }
 
-sub intersection {
-	# ranges[0] is $self and ranges[1] is other
-	my @ranges = @_;
 
-	my $inside_segments = 0;
+#performs a set operation
+#when operation_type is 0 performs intersection
+#when operation_type is 1 performs removal
+sub set_operation {
+	my ($self, $other, $operation_type) = @_;
+
+	my $inside_segments = $operation_type;
 	my $starting_point;
 	my @result;
 
@@ -40,6 +62,7 @@ sub intersection {
 		}
 
 		$event_type = $indices[$advancing_range] % 2;
+		die "YADA YADA";
 		if ($event_type == 0) {
 			# start
 			if ($inside_segments == 1) {
@@ -60,6 +83,15 @@ sub intersection {
 	$ranges[0]->{ranges} = [@result];
 }
 
+#code is factorized with remove operation
+sub intersection {
+	set_operation(@_, 0);
+}
+
+sub remove {
+	set_operation(@_, 1);
+}
+
 sub is_empty {
 	my $self = shift;
 	return scalar @{$self->{ranges}};
@@ -68,30 +100,15 @@ sub is_empty {
 sub processors_ids {
 	my ($self, $processors_ids) = @_;
 
-	if (defined $processors_ids) {
-		$self->{ranges} = [];
-		return unless @{$processors_ids};
-		my $previous_id;
-
-		for my $id (@{$processors_ids}) {
-			if ((not defined $previous_id) or ($previous_id != $id -1)) {
-				push @{$self->{ranges}}, $previous_id if defined $previous_id;
-				push @{$self->{ranges}}, $id;
-			}
-			$previous_id = $id;
+	my @ids;
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			push @ids, ($start..$end);
+			return 1;
 		}
-		push @{$self->{ranges}}, $previous_id;
-	} else {
-		my @ids;
-		$self->ranges_loop(
-			sub {
-				my ($start, $end) = @_;
-				push @ids, ($start..$end);
-				return 1;
-			}
-		);
-		return @ids;
-	}
+	);
+	return @ids;
 }
 
 sub stringification {
