@@ -13,3 +13,7 @@ print "$r\n$r2\n";
 $r->intersection($r2);
 
 print "intersect in $r\n";
+print "contains : ".join(' ', $r->processors_ids())."\n";
+
+$r->reduce_to_first(5);
+print("after reducing to 5 processors : $r\n");
