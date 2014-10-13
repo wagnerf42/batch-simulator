@@ -16,8 +16,12 @@ sub new {
 	my $self = {};
 	$self->{starting_time} = shift;
 	my $ids = shift;
+	if (ref $ids eq "ProcessorRange") {
+		$self->{processors} = $ids;
+	} else {
+		$self->{processors} = new ProcessorRange($ids);
+	}
 	$self->{duration} = shift;
-	$self->{processors} = new ProcessorRange($ids);
 
 	bless $self, $class;
 	return $self;
@@ -37,6 +41,8 @@ sub stringification {
 
 sub processors_ids {
 	my $self = shift;
+	#TODO : make processors_ids in ProcessorRange return
+	#directly a reference
 	return [$self->{processors}->processors_ids()];
 }
 
@@ -79,7 +85,7 @@ sub split {
 	}
 
 	my $middle_duration = $middle_end - $middle_start if defined $middle_end;
-	my $middle_profile = new Profile($middle_start, [$self->{processors}->processors_ids()], $middle_duration);
+	my $middle_profile = new Profile($middle_start, new ProcessorRange($self->{processors}), $middle_duration);
 	$middle_profile->remove_used_processors($job);
 	push @profiles, $middle_profile;
 
@@ -88,7 +94,7 @@ sub split {
 		if (defined $self->{duration}) {
 			$end_duration = $self->ending_time() - $job->ending_time();
 		}
-		my $end_profile = new Profile($job->ending_time(), [$self->{processors}->processors_ids()], $end_duration);
+		my $end_profile = new Profile($job->ending_time(), new ProcessorRange($self->{processors}), $end_duration);
 		push @profiles, $end_profile;
 	}
 	return @profiles;
@@ -99,20 +105,10 @@ sub is_fully_loaded {
 	return $self->{processors}->is_empty();
 }
 
-#TODO : remove processors_ids
 sub remove_used_processors {
 	my $self = shift;
 	my $job = shift;
-	my %processors_ids_to_remove;
-	for my $processor_id (map {$_->id()} @{$job->assigned_processors()}) {
-		$processors_ids_to_remove{$processor_id} = 1;
-	}
-	my @left_processors_ids;
-	for my $processor_id ($self->{processors}->processors_ids()) {
-		push @left_processors_ids, $processor_id unless exists $processors_ids_to_remove{$processor_id};
-	}
-
-	$self->{processors}->processors_ids(\@left_processors_ids);
+	$self->{range}->remove($job->get_processor_range());
 }
 
 sub starting_time {
