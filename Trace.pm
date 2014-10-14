@@ -77,9 +77,11 @@ sub new_from_trace {
 		needed_cpus => 0
 	};
 
-	for my $job_number (0..($size - 1)) {
-		my $job_id = int(rand(@{$trace->jobs()}));
-		my $new_job = dclone($trace->job($job_id));
+	die "creating from empty trace" unless defined $trace->{jobs}->[0];
+
+	for my $job_number (1..$size) {
+		my $job_id = int(rand(@{$trace->{jobs}}));
+		my $new_job = dclone($trace->{jobs}->[$job_id]);
 
 		$self->{needed_cpus} = max($self->{needed_cpus}, $new_job->requested_cpus);
 		push @{$self->{jobs}}, $new_job;

@@ -9,6 +9,7 @@ use Profile;
 use Data::Dumper;
 use ProcessorsSet;
 use ProcessorRange;
+use overload '""' => \&stringification;
 
 use constant EP_BEST_EFFORT => 0;
 use constant EP_CLUSTER_CONTIGUOUS => 1;
@@ -125,6 +126,11 @@ sub set_current_time {
 	}
 
 	$self->{profiles} = [@remaining_profiles];
+}
+
+sub stringification {
+	my $self = shift;
+	return join(', ', @{$self->{profiles}});
 }
 
 1;

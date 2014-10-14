@@ -118,7 +118,7 @@ sub is_fully_loaded {
 sub remove_used_processors {
 	my $self = shift;
 	my $job = shift;
-	$self->{range}->remove($job->get_processor_range());
+	$self->{processors}->remove($job->get_processor_range());
 }
 
 sub starting_time {

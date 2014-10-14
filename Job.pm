@@ -137,9 +137,11 @@ sub assign_to {
 	$self->{starting_time} = $starting_time;
 	$self->{assigned_processors_ids} = $assigned_processors;
 	$self->{wait_time} = $self->{starting_time} - $self->{submit_time};
+}
 
-	die "TODO: PROCESSORS";
-	#$_->assign_job($self) for @{$self->{assigned_processors}};
+sub get_processor_range {
+	my $self = shift;
+	return $self->{assigned_processors_ids};
 }
 
 sub first_processor {
@@ -151,8 +153,7 @@ sub first_processor {
 sub svg {
 	my ($self, $fh, $w_ratio, $h_ratio) = @_;
 
-	for my $processor (@{$self->{assigned_processors}}) {
-		my $processor_id = $processor->id();
+	for my $processor_id ($self->{assigned_processors_ids}->processors_ids()) {
 		my $x = $self->{starting_time} * $w_ratio;
 		my $y = $processor_id * $h_ratio;
 		my $w = $self->{run_time} * $w_ratio;
@@ -172,7 +173,7 @@ sub reset {
 	my ($self) = @_;
 	delete $self->{starting_time};
 	delete $self->{first_processor};
-	delete $self->{assigned_processors};
+	delete $self->{assigned_processors_ids};
 }
 
 sub save_svg {

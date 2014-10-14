@@ -92,7 +92,7 @@ sub save_svg {
 	my $w_ratio = 800/$cmax;
 	my $h_ratio = 600/$self->{num_processors};
 
-	$_->svg($filehandle, $w_ratio, $h_ratio) for (@{$self->{trace}->jobs});
+	$_->svg($filehandle, $w_ratio, $h_ratio) for (@{$self->{jobs}});
 
 	print $filehandle "</svg>\n";
 	close $filehandle;
