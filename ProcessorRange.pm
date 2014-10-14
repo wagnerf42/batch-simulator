@@ -102,6 +102,13 @@ sub intersection {
 	set_operation(@_, INTERSECTION_OPERATION);
 }
 
+#compute a list of paired (start,end) ranges
+sub compute_pairs {
+	my $self = shift;
+	return unless @{$self->{ranges}};
+	return map { [$self->{ranges}->[2*$_], $self->{ranges}->[2*$_+1]] } (0..($#{$self->{ranges}}/2));
+}
+
 sub remove {
 	set_operation(@_, REMOVAL_OPERATION);
 }
@@ -182,15 +189,6 @@ sub reduce_to_first {
 	$self->{ranges} = [@remaining_ranges];
 }
 
-#TODO Implement
-sub sort_ranges_by_size {
-	my ($self) = @_;
-	$self->ranges_loop(
-		sub {
-		}
-	);
-}
-
 sub reduce_to_forced_contiguous {
 	my $self = shift;
 	my $target_number = shift;
@@ -215,26 +213,23 @@ sub reduce_to_forced_contiguous {
 sub reduce_to_best_effort_contiguous {
 	my $self = shift;
 	my $target_number = shift;
-	my @remaining_ranges;
-	$self->ranges_loop(
-		sub {
-			my ($start, $end) = @_;
-			my $available_processors = $end + 1 - $start;
-			if ($available_processors < $target_number) {
-				return 1;
-			}
+	my $remaining_ranges = [];
 
-			push @remaining_ranges, $start;
-			push @remaining_ranges, $start + $target_number - 1;
-			return 0;
-		},
-	);
+	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
 
-	if (scalar @remaining_ranges) {
-		$self->{ranges} = [@remaining_ranges];
-	} else {
-		$self->reduce_to_first($target_number);
+	print Dumper(@sorted_pairs);
+
+	for my $pair (@sorted_pairs) {
+		my ($start, $end) = @{$pair};
+		my $available_processors = $end + 1 - $start;
+		my $taking = ($available_processors > $target_number)?$target_number:$available_processors;
+
+		push @{$remaining_ranges}, $start;
+		push @{$remaining_ranges}, $start + $taking - 1;
+		$target_number -= $taking;
+		last if $target_number == 0;
 	}
+	$self->{ranges} = $remaining_ranges;
 }
 
 1;
