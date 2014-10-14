@@ -8,7 +8,10 @@ use Data::Dumper;
 
 sub new {
 	my $class = shift;
-	my $self = {};
+	my $self = {
+		local => 0,
+		contiguous => 0
+	};
 
 	if (@_ == 2) {
 		$self->{ranges} = [@_];
@@ -249,19 +252,62 @@ sub reduce_to_best_effort_contiguous {
 
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
 
-	print Dumper(@sorted_pairs);
-
 	for my $pair (@sorted_pairs) {
 		my ($start, $end) = @{$pair};
 		my $available_processors = $end + 1 - $start;
-		my $taking = ($available_processors > $target_number)?$target_number:$available_processors;
+		my $taking = min($target_number, $available_processors);
+
+		push @{$remaining_ranges}, $start;
+		push @{$remaining_ranges}, $start + $taking - 1;
+
+		$target_number -= $taking;
+		last if $target_number == 0;
+	}
+
+	$self->{ranges} = $remaining_ranges;
+
+	if (scalar @{$self->{ranges}} == 1) {
+		$self->{contiguous} = 1;
+	}
+}
+
+sub reduce_to_best_effort_local {
+	my ($self, $target_number, $cluster_size) = @_;
+	my $remaining_ranges = [];
+
+	my $used_clusters_number = 0;
+	my $current_cluster;
+
+	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
+
+	for my $pair (@sorted_pairs) {
+		my ($start, $end) = @{$pair};
+		my $available_processors = $end - $start + 1;
+		my $taking = min($target_number, $available_processors);
+
+		# check if the processors are in the same cluster or not
+		if ($start/$cluster_size != $end/$cluster_size) {
+			$current_cluster = $end/$cluster_size;
+			$used_clusters_number += ($start/$cluster_size != $current_cluster) ? 2 : 1;
+		}
+
+		elsif ($start/$cluster_size != $current_cluster) {
+			$current_cluster = $start/$cluster_size;
+			$used_clusters_number += 1;
+		}
+
 
 		push @{$remaining_ranges}, $start;
 		push @{$remaining_ranges}, $start + $taking - 1;
 		$target_number -= $taking;
 		last if $target_number == 0;
 	}
+
 	$self->{ranges} = $remaining_ranges;
+
+	if ($used_clusters_number == ceil($target_number/$cluster_size)) {
+		$self->{local} = 1;
+	}
 }
 
 #returns true if all processors form a contiguous block
