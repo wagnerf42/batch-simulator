@@ -7,14 +7,13 @@ use Data::Dumper qw(Dumper);
 
 use Trace;
 use Job;
-use Processor;
 use ExecutionProfile;
 
 sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = new ExecutionProfile($self->{processors}, $self->{cluster_size}, $self->{version});
+	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{version});
 
 	return $self;
 }
@@ -25,29 +24,26 @@ sub assign_job {
 
 	#get the first valid profile_id for our job
 	$self->{execution_profile}->set_current_time($job->submit_time());
-	my ($chosen_profile, $chosen_processors, $local, $contiguous) = $self->{execution_profile}->find_first_profile_for($job);
+	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 	my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
-	$self->{contiguous_jobs_number}++ if $contiguous;
-	$self->{local_jobs_number}++ if $local;
+	$self->{contiguous_jobs_number}++ if $chosen_processors->contiguous($self->{num_processors});
+	$self->{local_jobs_number}++ if $chosen_processors->local($self->{cluster_size});
 
 	#assign job
 	$job->assign_to($starting_time, $chosen_processors);
 
 	#update profiles
 	$self->{execution_profile}->add_job_at($job);
-
-	#print the job
-	#print STDERR "$job\n";
 }
 
 sub contiguous_jobs_number {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->{contiguous_jobs_number};
 }
 
 sub local_jobs_number {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->{local_jobs_number};
 }
 

@@ -2,7 +2,6 @@ package Schedule;
 use strict;
 use warnings;
 
-use Processor;
 use List::Util qw(max sum);
 
 local $| = 1;
@@ -15,7 +14,6 @@ sub new {
 		num_processors => $processors_number,
 		cluster_size => $cluster_size,
 		version => $version,
-		processors => [],
 		contiguous_jobs_number => 0,
 		local_jobs_number => 0
 	};
@@ -26,74 +24,62 @@ sub new {
 	# If no algorithm version was chosen, use 0 as the default version
 	$self->{version} = 0 unless defined $self->{version};
 
-	for my $id (0..($self->{num_processors} - 1)) {
-		my $processor = new Processor($id, int($id/$self->{cluster_size}));
-		push $self->{processors}, $processor;
-	}
-
 	# Make sure the trace is clean
 	$self->{trace}->reset();
+
+	#shortcut for access to jobs list (which is also in trace)
+	$self->{jobs} = $self->{trace}->jobs();
 
 	bless $self, $class;
 	return $self;
 }
 
 sub run {
-	my ($self) = @_;
+	my $self = shift;
 	my $start = time();
 
 	die "not enough processors (we need " . $self->{trace}->needed_cpus() . ", we have " . $self->{num_processors} . ")" if $self->{trace}->needed_cpus() > $self->{num_processors};
 
-	for my $i (0..(@{$self->{trace}->jobs()} - 1)) {
-		$self->assign_job($self->{trace}->jobs()->[$i]);
+	for my $job (@{$self->{jobs}}) {
+		$self->assign_job($job);
 	}
 
 	$self->{run_time} = time() - $start;
 }
 
 sub run_time {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->{run_time};
 }
 
 sub sum_flow_time {
-	my ($self) = @_;
-	return sum map {$_->flow_time()} @{$self->{trace}->jobs()};
+	my $self = shift;
+	return sum map {$_->flow_time()} @{$self->{jobs}};
 }
 
 sub max_flow_time {
-	my ($self) = @_;
-	return max map {$_->flow_time()} @{$self->{trace}->jobs()};
+	my $self = shift;
+	return max map {$_->flow_time()} @{$self->{jobs}};
 }
 
 sub mean_flow_time {
-	my ($self) = @_;
-	return $self->sum_flow_time()/scalar $self->{trace}->jobs();
+	my $self = shift;
+	return $self->sum_flow_time() / @{$self->{jobs}};
 }
 
 sub max_stretch {
-	my ($self) = @_;
-	return $self->{max_stretch};
-}
-
-sub compute_max_stretch {
-	my ($self) = @_;
-	$self->{max_stretch} = max map {$_->stretch()} @{$self->{trace}->jobs()};
+	my $self = shift;
+	return max map {$_->stretch()} @{$self->{jobs}};
 }
 
 sub mean_stretch {
 	my ($self) = @_;
-	return $self->{mean_stretch};
-}
-
-sub compute_mean_stretch {
-	my ($self) = @_;
-	$self->{mean_stretch} = (sum map {$_->stretch()} @{$self->{trace}->jobs()})/@{$self->{trace}->jobs()};
+	return (sum map {$_->stretch()} @{$self->{jobs}}) / @{$self->{jobs}};
 }
 
 sub cmax {
-	my ($self) = @_;
-	return max map {$_->cmax()} @{$self->{processors}};
+	my $self = shift;
+	return max map {$_->ending_time()} @{$self->{jobs}};
 }
 
 sub save_svg {
@@ -122,34 +108,6 @@ sub tycat {
 	$self->save_svg("$dir/$file_count.svg");
 	`tycat $dir/$file_count.svg`;
 	$file_count++;
-}
-
-sub print_svg {
-	my ($self, $svg_filename, $pdf_filename) = @_;
-
-	open(my $filehandler, '>', $svg_filename);
-
-	my @sorted_processors = sort {$a->cmax <=> $b->cmax} @{$self->{processors}};
-	print $filehandler "<svg width=\"" . $sorted_processors[$#sorted_processors]->cmax * 5 . "\" height=\"" . @{$self->{processors}} * 20 . "\">\n";
-
-	for my $processor (@{$self->{processors}}) {
-		for my $job (@{$processor->jobs}) {
-			$job->save_svg($filehandler, $processor->id);
-		}
-	}
-
-	print $filehandler "</svg>\n";
-	close $filehandler;
-
-	# Convert the SVG file to PDF so that both are available
-	`inkscape $svg_filename --export-pdf=$pdf_filename`
-}
-
-sub DESTROY {
-	my ($self) = @_;
-	for my $processor (@{$self->{processors}}) {
-		$processor->remove_all_jobs();
-	}
 }
 
 1;
