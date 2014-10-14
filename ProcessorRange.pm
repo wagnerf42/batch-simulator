@@ -13,30 +13,35 @@ sub new {
 	my $class = shift;
 	my $self = {};
 
-	my $processors = shift; #processors might come in different formats
+	if (@_ == 2) {
+		$self->{ranges} = [@_];
+	} else {
+		my $processors = shift; #processors might come in different formats
 
-	if (defined $processors) {
-		if (ref $processors eq $class) {
-			#copy constructor
-			$self->{ranges} = [@{$processors->{ranges}}];
-		} else {
-			#take a list of ids
-			die "empty" unless @{$processors};
-			my @processors_ids = sort {$a <=> $b} @{$processors};
+		if (defined $processors) {
+			if (ref $processors eq $class) {
+				#copy constructor
+				$self->{ranges} = [@{$processors->{ranges}}];
+			} else {
+				#take a list of ids
+				die "empty" unless @{$processors};
+				my @processors_ids = sort {$a <=> $b} @{$processors};
 
-			$self->{ranges} = [];
-			my $previous_id;
+				$self->{ranges} = [];
+				my $previous_id;
 
-			for my $id (@processors_ids) {
-				if ((not defined $previous_id) or ($previous_id != $id -1)) {
-					push @{$self->{ranges}}, $previous_id if defined $previous_id;
-					push @{$self->{ranges}}, $id;
+				for my $id (@processors_ids) {
+					if ((not defined $previous_id) or ($previous_id != $id -1)) {
+						push @{$self->{ranges}}, $previous_id if defined $previous_id;
+						push @{$self->{ranges}}, $id;
+					}
+					$previous_id = $id;
 				}
-				$previous_id = $id;
+				push @{$self->{ranges}}, $previous_id;
 			}
-			push @{$self->{ranges}}, $previous_id;
 		}
 	}
+
 	bless $self, $class;
 	return $self;
 }
@@ -115,7 +120,7 @@ sub remove {
 
 sub is_empty {
 	my $self = shift;
-	return scalar @{$self->{ranges}};
+	return not (scalar @{$self->{ranges}});
 }
 
 sub processors_ids {
@@ -230,6 +235,35 @@ sub reduce_to_best_effort_contiguous {
 		last if $target_number == 0;
 	}
 	$self->{ranges} = $remaining_ranges;
+}
+
+#returns true if all processors form a contiguous block
+#needs processors number as jobs can wrap around
+sub contiguous {
+	my $self = shift;
+	my $processors_number = shift;
+	die "are 0 processors contiguous ?" if $self->is_empty();
+	return 1 if @{$self->{ranges}} == 2;
+	if (@{$self->{ranges}} == 4) {
+		#complex case
+		return (($self->{ranges} == 0) and ($self->{ranges}->[4] == $processors_number - 1));
+	} else {
+		return 0;
+	}
+}
+
+#returns true if all processors fall within the same cluster
+#needs cluster size
+sub local {
+	my $self = shift;
+	my $cluster_size = shift;
+	die "are 0 processors local ?" if $self->is_empty();
+	my $first_cluster_id = $self->{ranges}->[0] % $cluster_size;
+	for my $processor_id (@{$self->{ranges}}) {
+		my $cluster_id = $processor_id % $cluster_size;
+		return 0 if $cluster_id != $first_cluster_id;
+	}
+	return 1;
 }
 
 1;

@@ -25,16 +25,15 @@ our %EXPORT_TAGS = (
 #an execution profile object encodes the set of all profiles of a schedule
 
 sub new {
-	my ($class, $processors, $cluster_size, $version) = @_;
+	my ($class, $processors_number, $cluster_size, $version) = @_;
 
 	my $self = {
-		processors => $processors,
+		processors_number => $processors_number,
 		cluster_size => $cluster_size,
 		version => $version
 	};
 
-	my $ids = [map {$_->id()} @{$self->{processors}}];
-	$self->{profiles} = [new Profile(0, $ids)];
+	$self->{profiles} = [initial Profile(0, 0, $self->{processors_number}-1)];
 
 	bless $self, $class;
 	return $self;
@@ -62,37 +61,22 @@ sub get_free_processors_for {
 		}
 	}
 
-	my @selected_ids = $left_processors->processors_ids();
-	return unless @selected_ids >= $job->requested_cpus();
-
-	my @selected_processors = map {$self->{processors}->[$_]} @selected_ids;
-	my $processors = new ProcessorsSet(\@selected_processors, scalar @{$self->{processors}}, $self->{cluster_size});
-
 	if ($self->{version} == EP_BEST_EFFORT) {
-		$processors->reduce_to_contiguous_best_effort($job->requested_cpus());
+		$left_processors->reduce_to_contiguous_best_effort($job->requested_cpus());
+	} elsif ($self->{version} == EP_CLUSTER_CONTIGUOUS) {
+		$left_processors->reduce_to_cluster_contiguous($job->requested_cpus());
+	} elsif ($self->{version} == EP_CONTIGUOUS) {
+		$left_processors->reduce_to_contiguous($job->requested_cpus());
+	} elsif ($self->{version} == EP_FIRST) {
+		$left_processors->reduce_to_first($job->requested_cpus());
+	} elsif ($self->{version} == EP_CLUSTER) {
+		$left_processors->reduce_to_cluster($job->requested_cpus());
+	} elsif ($self->{version} == EP_BEST_EFFORT_LOCALITY) {
+		$left_processors->reduce_to_cluster_best_effort($job->requested_cpus());
 	}
 
-	elsif ($self->{version} == EP_CLUSTER_CONTIGUOUS) {
-		$processors->reduce_to_cluster_contiguous($job->requested_cpus());
-	}
-
-	elsif ($self->{version} == EP_CONTIGUOUS) {
-		$processors->reduce_to_contiguous($job->requested_cpus());
-	}
-
-	elsif ($self->{version} == EP_FIRST) {
-		$processors->reduce_to_first($job->requested_cpus());
-	}
-
-	elsif ($self->{version} == EP_CLUSTER) {
-		$processors->reduce_to_cluster($job->requested_cpus());
-	}
-
-	elsif ($self->{version} == EP_BEST_EFFORT_LOCALITY) {
-		$processors->reduce_to_cluster_best_effort($job->requested_cpus());
-	}
-
-	return ([$processors->processors()], $processors->local(), $processors->contiguous()) if $processors->processors();
+	return if $left_processors->is_empty();
+	return $left_processors;
 }
 
 #precondition : job should be assigned first
@@ -113,8 +97,8 @@ sub starting_time {
 sub find_first_profile_for {
 	my ($self, $job) = @_;
 	for my $profile_id (0..$#{$self->{profiles}}) {
-		my ($processors, $local, $contiguous) = $self->get_free_processors_for($job, $profile_id);
-		return ($profile_id, $processors, $local, $contiguous) if $processors;
+		my $processors = $self->get_free_processors_for($job, $profile_id);
+		return ($profile_id, $processors) if $processors;
 	}
 
 	die "at least last profile should be ok for job";

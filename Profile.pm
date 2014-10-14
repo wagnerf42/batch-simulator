@@ -11,6 +11,16 @@ use List::Util qw(min);
 
 #a profile objects encodes a set of free processors at a given time
 
+sub initial {
+	my $class = shift;
+	my $self = {};
+	$self->{starting_time} = shift;
+	$self->{processors} = new ProcessorRange(@_);
+	$self->{duration} = undef;
+	bless $self, $class;
+	return $self;
+}
+
 sub new {
 	my $class = shift;
 	my $self = {};

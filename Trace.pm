@@ -8,7 +8,6 @@ use List::MoreUtils qw(natatime);
 use Storable qw(dclone);
 
 use Job;
-use Processor;
 use Database;
 
 sub new_from_swf {
@@ -29,14 +28,14 @@ sub new_from_swf {
 
 		# Status line
 		if ($fields[0] eq ';') {
-			push $self->{status}, [@fields];
+			push @{$self->{status}}, [@fields];
 		}
 
 		# Job line
 		elsif ($fields[0] ne ' ') {
 			my $job = new Job(@fields);
 			$self->{needed_cpus} = max($self->{needed_cpus}, $job->requested_cpus);
-			push $self->{jobs}, $job;
+			push @{$self->{jobs}}, $job;
 		}
 	}
 
@@ -83,7 +82,7 @@ sub new_from_trace {
 		my $new_job = dclone($trace->job($job_id));
 
 		$self->{needed_cpus} = max($self->{needed_cpus}, $new_job->requested_cpus);
-		push $self->{jobs}, $new_job;
+		push @{$self->{jobs}}, $new_job;
 	}
 
 	bless $self, $class;
@@ -100,7 +99,7 @@ sub copy_from_trace {
 
 	for my $job (@{$trace->jobs()}) {
 		my $new_job = dclone($job);
-		push $self->{jobs}, $new_job;
+		push @{$self->{jobs}}, $new_job;
 	}
 
 	bless $self, $class;
@@ -143,7 +142,7 @@ sub new_from_database {
 		);
 
 		$self->{needed_cpus} = max($self->{needed_cpus}, $job->requested_cpus);
-		push $self->{jobs}, $job;
+		push @{$self->{jobs}}, $job;
 	}
 
 	bless $self, $class;

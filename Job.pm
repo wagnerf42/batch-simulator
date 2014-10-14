@@ -67,7 +67,6 @@ sub copy {
 	my $original = shift;
 	my $self = {};
 	$self->{$_} = $original->{$_} for (keys %{$original});
-	$self->{assigned_processors} = [];
 	bless $self, $class;
 }
 
@@ -136,15 +135,11 @@ sub job_number {
 sub assign_to {
 	my ($self, $starting_time, $assigned_processors) = @_;
 	$self->{starting_time} = $starting_time;
-	$self->{assigned_processors} = $assigned_processors;
+	$self->{assigned_processors_ids} = $assigned_processors;
 	$self->{wait_time} = $self->{starting_time} - $self->{submit_time};
 
-	$_->assign_job($self) for @{$self->{assigned_processors}};
-}
-
-sub assigned_processors {
-	my ($self) = @_;
-	return $self->{assigned_processors};
+	die "TODO: PROCESSORS";
+	#$_->assign_job($self) for @{$self->{assigned_processors}};
 }
 
 sub first_processor {
