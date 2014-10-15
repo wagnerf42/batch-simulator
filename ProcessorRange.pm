@@ -6,6 +6,8 @@ use overload '""' => \&stringification;
 use EventLine;
 use Carp;
 use Data::Dumper;
+use POSIX qw(floor ceil);
+use List::Util qw(max min);
 
 sub new {
 	my $class = shift;
@@ -108,6 +110,36 @@ sub compute_pairs {
 	my $self = shift;
 	return unless @{$self->{ranges}};
 	return map { [$self->{ranges}->[2*$_], $self->{ranges}->[2*$_+1]] } (0..($#{$self->{ranges}}/2));
+}
+
+sub compute_ranges_in_clusters {
+	my $self = shift;
+	my $cluster_size = shift;
+	return unless @{$self->{ranges}};
+
+	print "cluster size $cluster_size\n";
+
+	my $clusters = [];
+	my $current_cluster = 0;
+
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+
+			my $start_cluster = floor($start/$cluster_size);
+			my $end_cluster = floor($end/$cluster_size);
+
+			for my $cluster ($start_cluster..$end_cluster) {
+				my $start_point_in_cluster = max($start, $cluster*$cluster_size);
+				my $end_point_in_cluster = min($end, ($cluster+1)*$cluster_size-1);
+				push @{$clusters}, [] if ($cluster != $current_cluster);
+				$current_cluster = $cluster;
+				push @{$clusters->[$cluster]}, [$start_point_in_cluster, $end_point_in_cluster];
+			}
+
+		}
+	);
+	return $clusters;
 }
 
 sub is_empty {
@@ -236,11 +268,11 @@ sub reduce_to_best_effort_contiguous {
 sub reduce_to_best_effort_local {
 	my ($self, $target_number, $cluster_size) = @_;
 	my $remaining_ranges = [];
-
 	my $used_clusters_number = 0;
 	my $current_cluster;
-
-	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
+	my @sorted_pairs = $self->compute_ranges_in_clusters($cluster_size);
+	
+	print Dumper(@sorted_pairs);
 
 	for my $pair (@sorted_pairs) {
 		my ($start, $end) = @{$pair};

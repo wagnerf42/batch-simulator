@@ -63,7 +63,7 @@ sub get_free_processors_for {
 	}
 
 	if ($self->{version} == EP_BEST_EFFORT) {
-		$left_processors->reduce_to_contiguous_best_effort($job->requested_cpus());
+		$left_processors->reduce_to_best_effort_contiguous($job->requested_cpus());
 	} elsif ($self->{version} == EP_CLUSTER_CONTIGUOUS) {
 		$left_processors->reduce_to_cluster_contiguous($job->requested_cpus());
 	} elsif ($self->{version} == EP_CONTIGUOUS) {
@@ -73,7 +73,7 @@ sub get_free_processors_for {
 	} elsif ($self->{version} == EP_CLUSTER) {
 		$left_processors->reduce_to_cluster($job->requested_cpus());
 	} elsif ($self->{version} == EP_BEST_EFFORT_LOCALITY) {
-		$left_processors->reduce_to_cluster_best_effort($job->requested_cpus());
+		$left_processors->reduce_to_best_effort_local($job->requested_cpus(), $self->{cluster_size});
 	}
 
 	return if $left_processors->is_empty();
