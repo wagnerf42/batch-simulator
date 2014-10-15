@@ -7,7 +7,7 @@ use EventLine;
 use Carp;
 use Data::Dumper;
 use POSIX qw(floor ceil);
-use List::Util qw(max min);
+use List::Util qw(max min sum);
 
 sub new {
 	my $class = shift;
@@ -117,10 +117,8 @@ sub compute_ranges_in_clusters {
 	my $cluster_size = shift;
 	return unless @{$self->{ranges}};
 
-	print "cluster size $cluster_size\n";
-
-	my $clusters = [];
-	my $current_cluster = 0;
+	my $clusters;
+	my $current_cluster = -1;
 
 	$self->ranges_loop(
 		sub {
@@ -134,7 +132,7 @@ sub compute_ranges_in_clusters {
 				my $end_point_in_cluster = min($end, ($cluster+1)*$cluster_size-1);
 				push @{$clusters}, [] if ($cluster != $current_cluster);
 				$current_cluster = $cluster;
-				push @{$clusters->[$cluster]}, [$start_point_in_cluster, $end_point_in_cluster];
+				push @{$clusters->[$#{$clusters}]}, [$start_point_in_cluster, $end_point_in_cluster];
 			}
 
 		}
@@ -145,6 +143,18 @@ sub compute_ranges_in_clusters {
 sub is_empty {
 	my $self = shift;
 	return not (scalar @{$self->{ranges}});
+}
+
+sub size {
+	my $self = shift;
+	my $size = 0;
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			$size += $end - $start + 1;
+		}
+	);
+	return $size;
 }
 
 sub processors_ids {
@@ -265,43 +275,54 @@ sub reduce_to_best_effort_contiguous {
 	}
 }
 
+sub cluster_size {
+	my $cluster = shift;
+	return sum (map {$_->[1] - $_->[0] + 1} @{$cluster});
+}
+
+sub sort_and_fuse_contiguous_ranges {
+	my $ranges = shift;
+	my @sorted_ranges = sort {$a->[1] <=> $b->[1]} @{$ranges};
+
+	my @remaining_ranges;
+	push @remaining_ranges, (shift @sorted_ranges);
+
+	for my $range (@sorted_ranges) {
+		if ($range->[0] == $remaining_ranges[$#remaining_ranges]->[1] + 1) {
+			$remaining_ranges[$#remaining_ranges]->[1] = $range->[1];
+		} else {
+			push @remaining_ranges, $range;
+		}
+	}
+
+	my $result = [];
+	push @{$result}, ($_->[0], $_->[1]) for @remaining_ranges;
+	return $result;
+}
+
 sub reduce_to_best_effort_local {
 	my ($self, $target_number, $cluster_size) = @_;
 	my $remaining_ranges = [];
 	my $used_clusters_number = 0;
 	my $current_cluster;
-	my @sorted_pairs = $self->compute_ranges_in_clusters($cluster_size);
-	
-	print Dumper(@sorted_pairs);
+	my $clusters = $self->compute_ranges_in_clusters($cluster_size);
+	my @sorted_clusters = sort { cluster_size($b) - cluster_size($a) } @{$clusters};
 
-	for my $pair (@sorted_pairs) {
-		my ($start, $end) = @{$pair};
-		my $available_processors = $end - $start + 1;
-		my $taking = min($target_number, $available_processors);
+	for my $cluster (@sorted_clusters) {
+		for my $pair (@{$cluster}) {
+			my ($start, $end) = @{$pair};
+			my $available_processors = $end - $start + 1;
+			my $taking = min($target_number, $available_processors);
 
-		# check if the processors are in the same cluster or not
-		if ($start/$cluster_size != $end/$cluster_size) {
-			$current_cluster = $end/$cluster_size;
-			$used_clusters_number += ($start/$cluster_size != $current_cluster) ? 2 : 1;
+			push @{$remaining_ranges}, [$start, $start + $taking - 1];
+			$target_number -= $taking;
+			last if $target_number == 0;
 		}
 
-		elsif ($start/$cluster_size != $current_cluster) {
-			$current_cluster = $start/$cluster_size;
-			$used_clusters_number += 1;
-		}
-
-
-		push @{$remaining_ranges}, $start;
-		push @{$remaining_ranges}, $start + $taking - 1;
-		$target_number -= $taking;
 		last if $target_number == 0;
 	}
 
-	$self->{ranges} = $remaining_ranges;
-
-	if ($used_clusters_number == ceil($target_number/$cluster_size)) {
-		$self->{local} = 1;
-	}
+	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
 }
 
 #returns true if all processors form a contiguous block

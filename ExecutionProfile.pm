@@ -53,7 +53,7 @@ sub get_free_processors_for {
 		my $duration = $current_profile->duration();
 		$starting_time += $duration if defined $duration;
 		$left_processors->intersection($current_profile->processor_range());
-		last if $left_processors->is_empty(); #abort if nothing left
+		return if $left_processors->size() < $job->requested_cpus(); #abort if nothing left
 		if (defined $current_profile->duration()) {
 			$left_duration -= $current_profile->duration();
 			$profile_index++;

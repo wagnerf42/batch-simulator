@@ -51,9 +51,7 @@ sub stringification {
 
 sub processors_ids {
 	my $self = shift;
-	#TODO : make processors_ids in ProcessorRange return
-	#directly a reference
-	return [$self->{processors}->processors_ids()];
+	return $self->{processors};
 }
 
 sub duration {
