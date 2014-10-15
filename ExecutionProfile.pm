@@ -71,7 +71,7 @@ sub get_free_processors_for {
 	} elsif ($self->{version} == EP_FIRST) {
 		$left_processors->reduce_to_first($job->requested_cpus());
 	} elsif ($self->{version} == EP_CLUSTER) {
-		$left_processors->reduce_to_cluster($job->requested_cpus());
+		$left_processors->reduce_to_forced_local($job->requested_cpus(), $self->{cluster_size});
 	} elsif ($self->{version} == EP_BEST_EFFORT_LOCALITY) {
 		$left_processors->reduce_to_best_effort_local($job->requested_cpus(), $self->{cluster_size});
 	}

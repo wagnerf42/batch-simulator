@@ -331,6 +331,39 @@ sub reduce_to_best_effort_local {
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
 }
 
+sub reduce_to_forced_local {
+	my ($self, $target_number, $cluster_size) = @_;
+	my $remaining_ranges = [];
+	my $used_clusters_number = 0;
+	my $current_cluster;
+	my $clusters = $self->compute_ranges_in_clusters($cluster_size);
+	my @sorted_clusters = sort { cluster_size($b) - cluster_size($a) } @{$clusters};
+	my $target_clusters_number = ceil($target_number/$cluster_size);
+
+	for my $cluster (@sorted_clusters) {
+		for my $pair (@{$cluster}) {
+			my ($start, $end) = @{$pair};
+			my $available_processors = $end - $start + 1;
+			my $taking = min($target_number, $available_processors);
+
+			push @{$remaining_ranges}, [$start, $start + $taking - 1];
+			$target_number -= $taking;
+			last if $target_number == 0;
+		}
+
+		$used_clusters_number++;
+
+		if (($used_clusters_number == $target_clusters_number) and ($target_number > 0)) {
+			$self->{ranges} = [];
+			return;
+		}
+
+		last if $target_number == 0;
+	}
+
+	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+}
+
 #returns true if all processors form a contiguous block
 #needs processors number as jobs can wrap around
 sub contiguous {
