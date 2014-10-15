@@ -3,6 +3,7 @@ package ProcessorRange;
 use strict;
 use warnings;
 use overload '""' => \&stringification;
+use EventLine;
 use Carp;
 use Data::Dumper;
 
@@ -46,96 +47,57 @@ sub new {
 
 
 sub intersection {
-	my @ranges = @_;
+	set_operation(@_, 0);
+}
 
-	my $inside_segments = 0;
+sub remove {
+	set_operation(@_, 1);
+}
+
+sub set_operation {
+	my ($self, $other, $invert) = @_;
+
+	my $inside_segments = $invert;
 	my $starting_point;
 	my @result;
 
-	my @indices = (0, 0);
+	my @lines;
+	push @lines, new EventLine($self->{ranges}, 0);
+	my $limit = $lines[0]->get_last_limit();
+	push @lines, new EventLine($other->{ranges}, $invert);
+
 	#loop on points from left to right
-	while (($indices[0] <= $#{$ranges[0]->{ranges}}) and ($indices[1] <= $#{$ranges[1]->{ranges}})) {
+	while ($lines[0]->is_not_completed() and $lines[1]->is_not_completed($limit)) {
 		# find next event
 		my $advancing_range;
 		my $event_type;
 
-		if ($ranges[0]->{ranges}->[$indices[0]] <= $ranges[1]->{ranges}->[$indices[1]]) {
+		if ($lines[0]->get_x() < $lines[1]->get_x()) {
 			$advancing_range = 0;
 		} else {
 			$advancing_range = 1;
 		}
 
-		$event_type = $indices[$advancing_range] % 2;
+		$event_type = $lines[$advancing_range]->get_event_type;
 		if ($event_type == 0) {
 			# start
 			if ($inside_segments == 1) {
-				$starting_point = $ranges[$advancing_range]->{ranges}->[$indices[$advancing_range]];
+				$starting_point = $lines[$advancing_range]->get_x();
 			}
 			$inside_segments++;
 		} else {
 			# end of segment
 			if ($inside_segments == 2) {
 				push @result, $starting_point;
-				my $end_point = $ranges[$advancing_range]->{ranges}->[$indices[$advancing_range]];
+				my $end_point = $lines[$advancing_range]->get_x();
 				push @result, $end_point;
 			}
 			$inside_segments--;
 		}
-		$indices[$advancing_range]++;
+		$lines[$advancing_range]->advance;
 	}
 
-	$ranges[0]->{ranges} = [@result];
-}
-
-#TODO: factorize and simplify code
-sub remove {
-	my @ranges = @_;
-
-	my $inside_segments = 1;
-	my $starting_point;
-	my @result;
-
-	my @indices = (0, 0);
-	#loop on points from left to right
-	while ($indices[0] <= $#{$ranges[0]->{ranges}}) {
-		# find next event
-		my $advancing_range;
-		my $event_type;
-
-		if (($indices[1] > $#{$ranges[1]->{ranges}}) or ($ranges[0]->{ranges}->[$indices[0]] <= $ranges[1]->{ranges}->[$indices[1]])) {
-			$advancing_range = 0;
-		} else {
-			$advancing_range = 1;
-		}
-
-		$event_type = $indices[$advancing_range] % 2;
-		if ($advancing_range == 1) {
-			#invert events for removal for second range
-			$event_type = 1 - $event_type;
-		}
-		if ($event_type == 0) {
-			# start
-			if ($inside_segments == 1) {
-				$starting_point = $ranges[$advancing_range]->{ranges}->[$indices[$advancing_range]];
-				$starting_point += $advancing_range;
-			}
-			$inside_segments++;
-		} else {
-			# end of segment
-			if ($inside_segments == 2) {
-				my $end_point = $ranges[$advancing_range]->{ranges}->[$indices[$advancing_range]];
-				$end_point -= $advancing_range; # REMOVAL_OPERATION stops before
-				if ($end_point >= $starting_point) {
-					push @result, $starting_point;
-					push @result, $end_point;
-				}
-			}
-			$inside_segments--;
-		}
-		$indices[$advancing_range]++;
-	}
-
-	$ranges[0]->{ranges} = [@result];
+	$self->{ranges} = [@result];
 }
 
 #compute a list of paired (start,end) ranges
