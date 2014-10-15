@@ -77,24 +77,29 @@ sub set_operation {
 		my $advancing_range;
 		my $event_type;
 
-		if ($lines[0]->get_x() < $lines[1]->get_x()) {
+		my @x = map {$_->get_x()} @lines;
+		if ($x[0] < $x[1]) {
 			$advancing_range = 0;
-		} else {
+		} elsif($x[0] > $x[1]) {
 			$advancing_range = 1;
+		} elsif($lines[1]->get_event_type() == 0) {
+			$advancing_range = 1;
+		} else {
+			$advancing_range = 0;
 		}
 
 		$event_type = $lines[$advancing_range]->get_event_type;
 		if ($event_type == 0) {
 			# start
 			if ($inside_segments == 1) {
-				$starting_point = $lines[$advancing_range]->get_x();
+				$starting_point = $x[$advancing_range];
 			}
 			$inside_segments++;
 		} else {
 			# end of segment
 			if ($inside_segments == 2) {
 				push @result, $starting_point;
-				my $end_point = $lines[$advancing_range]->get_x();
+				my $end_point = $x[$advancing_range];
 				push @result, $end_point;
 			}
 			$inside_segments--;
@@ -211,6 +216,7 @@ sub reduce_to_first {
 	my $self = shift;
 	my $target_number = shift;
 	my @remaining_ranges;
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;

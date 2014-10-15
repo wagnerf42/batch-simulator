@@ -10,9 +10,9 @@ use Backfilling;
 my $trace = Trace->new_from_swf($ARGV[0]);
 $trace->reset_submit_times();
 
-my $schedule = new Backfilling($trace, 84640, 16, 3);
+my $schedule = new Backfilling($trace, 4, 2, 3);
 
 $schedule->run();
-#$schedule->tycat();
+$schedule->tycat();
 
 print "Done\n";
