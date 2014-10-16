@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use List::Util qw(max sum);
+use Time::HiRes qw(time);
 
 local $| = 1;
 
@@ -42,6 +43,8 @@ sub run {
 
 	for my $job (@{$self->{jobs}}) {
 		$self->assign_job($job);
+
+		$job->schedule_time(time() - $start);
 	}
 
 	$self->{run_time} = time() - $start;

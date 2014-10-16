@@ -70,6 +70,12 @@ sub copy {
 	bless $self, $class;
 }
 
+sub schedule_time {
+	my ($self, $schedule_time) = @_;
+	$self->{schedule_time} = $schedule_time if defined $schedule_time;
+	return $self->{schedule_time};
+}
+
 sub requested_cpus {
 	my ($self) = @_;
 	return $self->{allocated_cpus};

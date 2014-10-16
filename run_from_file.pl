@@ -28,7 +28,7 @@ sub write_results_to_file {
 }
 
 my ($trace_file_name, $cpus_number, $cluster_size) = @ARGV;
-die 'missing arguments: trace_file_name cpus_number cluster_size' unless defined $cluster_size;
+die unless defined $cluster_size;
 
 # Create a directory to store the output
 my $basic_file_name = "run_from_file-$cpus_number-$cluster_size";
@@ -36,9 +36,32 @@ mkdir "run_from_file/$basic_file_name" unless -f "run_from_file/$basic_file_name
 
 # Read the trace and write it to a file
 my $trace = Trace->new_from_swf($trace_file_name);
-#$trace->remove_large_jobs($cpus_number);
+$trace->reset_submit_times();
+$trace->remove_large_jobs($cpus_number);
 
-my $schedule_first = Backfilling->new($trace, $cpus_number, $cluster_size, EP_BEST_EFFORT_LOCALITY);
+my $schedule_first = Backfilling->new($trace, $cpus_number, $cluster_size, EP_FIRST);
 $schedule_first->run();
+
+my $schedule_best_effort_contiguous = Backfilling->new($trace, $cpus_number, $cluster_size, EP_BEST_EFFORT);
+$schedule_best_effort_contiguous->run();
+
+my $schedule_contiguous = Backfilling->new($trace, $cpus_number, $cluster_size, EP_CONTIGUOUS);
+$schedule_contiguous->run();
+
+my $schedule_best_effort_local = Backfilling->new($trace, $cpus_number, $cluster_size, EP_BEST_EFFORT_LOCALITY);
+$schedule_best_effort_local->run();
+
+my $schedule_local = Backfilling->new($trace, $cpus_number, $cluster_size, EP_CONTIGUOUS);
+$schedule_local->run();
+
+for my $job_number (0..$#{$schedule_first->{jobs}}) {
+	print join(' ', (
+		$schedule_first->{jobs}->[$job_number]->schedule_time(),
+		$schedule_best_effort_contiguous->{jobs}->[$job_number]->schedule_time(),
+		$schedule_contiguous->{jobs}->[$job_number]->schedule_time(),
+		$schedule_best_effort_local->{jobs}->[$job_number]->schedule_time(),
+		$schedule_local->{jobs}->[$job_number]->schedule_time()
+	)) . "\n";
+}
 
 

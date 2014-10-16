@@ -67,7 +67,7 @@ sub get_free_processors_for {
 	} elsif ($self->{version} == EP_CLUSTER_CONTIGUOUS) {
 		$left_processors->reduce_to_cluster_contiguous($job->requested_cpus());
 	} elsif ($self->{version} == EP_CONTIGUOUS) {
-		$left_processors->reduce_to_contiguous($job->requested_cpus());
+		$left_processors->reduce_to_forced_contiguous($job->requested_cpus());
 	} elsif ($self->{version} == EP_FIRST) {
 		$left_processors->reduce_to_first($job->requested_cpus());
 	} elsif ($self->{version} == EP_CLUSTER) {
