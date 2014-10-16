@@ -39,23 +39,29 @@ my $trace = Trace->new_from_swf($trace_file_name);
 $trace->reset_submit_times();
 $trace->remove_large_jobs($cpus_number);
 
-my $schedule_first = Backfilling->new($trace, $cpus_number, $cluster_size, EP_FIRST);
+my $trace_first = Trace->copy_from_trace($trace);
+my $schedule_first = Backfilling->new($trace_first, $cpus_number, $cluster_size, EP_FIRST);
 $schedule_first->run();
 
-my $schedule_best_effort_contiguous = Backfilling->new($trace, $cpus_number, $cluster_size, EP_BEST_EFFORT);
+my $trace_best_effort_contiguous = Trace->copy_from_trace($trace);
+my $schedule_best_effort_contiguous = Backfilling->new($trace_best_effort_contiguous, $cpus_number, $cluster_size, EP_BEST_EFFORT);
 $schedule_best_effort_contiguous->run();
 
-my $schedule_contiguous = Backfilling->new($trace, $cpus_number, $cluster_size, EP_CONTIGUOUS);
+my $trace_contiguous = Trace->copy_from_trace($trace);
+my $schedule_contiguous = Backfilling->new($trace_contiguous, $cpus_number, $cluster_size, EP_CONTIGUOUS);
 $schedule_contiguous->run();
 
-my $schedule_best_effort_local = Backfilling->new($trace, $cpus_number, $cluster_size, EP_BEST_EFFORT_LOCALITY);
+my $trace_best_effort_local = Trace->copy_from_trace($trace);
+my $schedule_best_effort_local = Backfilling->new($trace_best_effort_local, $cpus_number, $cluster_size, EP_BEST_EFFORT_LOCALITY);
 $schedule_best_effort_local->run();
 
-my $schedule_local = Backfilling->new($trace, $cpus_number, $cluster_size, EP_CONTIGUOUS);
+my $trace_local = Trace->copy_from_trace($trace);
+my $schedule_local = Backfilling->new($trace_local, $cpus_number, $cluster_size, EP_CONTIGUOUS);
 $schedule_local->run();
 
 for my $job_number (0..$#{$schedule_first->{jobs}}) {
 	print join(' ', (
+		$job_number,
 		$schedule_first->{jobs}->[$job_number]->schedule_time(),
 		$schedule_best_effort_contiguous->{jobs}->[$job_number]->schedule_time(),
 		$schedule_contiguous->{jobs}->[$job_number]->schedule_time(),
