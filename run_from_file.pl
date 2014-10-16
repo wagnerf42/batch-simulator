@@ -56,7 +56,7 @@ my $schedule_best_effort_local = Backfilling->new($trace_best_effort_local, $cpu
 $schedule_best_effort_local->run();
 
 my $trace_local = Trace->copy_from_trace($trace);
-my $schedule_local = Backfilling->new($trace_local, $cpus_number, $cluster_size, EP_CONTIGUOUS);
+my $schedule_local = Backfilling->new($trace_local, $cpus_number, $cluster_size, EP_CLUSTER);
 $schedule_local->run();
 
 for my $job_number (0..$#{$schedule_first->{jobs}}) {

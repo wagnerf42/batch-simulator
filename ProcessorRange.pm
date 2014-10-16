@@ -258,7 +258,7 @@ sub reduce_to_forced_contiguous {
 sub reduce_to_best_effort_contiguous {
 	my $self = shift;
 	my $target_number = shift;
-	my $remaining_ranges = [];
+	my @remaining_ranges;
 
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
 
@@ -267,18 +267,14 @@ sub reduce_to_best_effort_contiguous {
 		my $available_processors = $end + 1 - $start;
 		my $taking = min($target_number, $available_processors);
 
-		push @{$remaining_ranges}, $start;
-		push @{$remaining_ranges}, $start + $taking - 1;
+		push @remaining_ranges, [ $start, $start + $taking - 1 ];
 
 		$target_number -= $taking;
 		last if $target_number == 0;
 	}
 
-	$self->{ranges} = $remaining_ranges;
+	$self->{ranges} = [map {($_->[0], $_->[1])} sort {$a->[0] <=> $b->[0]} @remaining_ranges];
 
-	if (scalar @{$self->{ranges}} == 1) {
-		$self->{contiguous} = 1;
-	}
 }
 
 sub cluster_size {

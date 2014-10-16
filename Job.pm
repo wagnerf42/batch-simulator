@@ -159,20 +159,26 @@ sub first_processor {
 sub svg {
 	my ($self, $fh, $w_ratio, $h_ratio) = @_;
 
-	for my $processor_id ($self->{assigned_processors_ids}->processors_ids()) {
-		my $x = $self->{starting_time} * $w_ratio;
-		my $y = $processor_id * $h_ratio;
-		my $w = $self->{run_time} * $w_ratio;
-		my $h = $h_ratio;
-		my $sw = min($w_ratio, $h_ratio) / 10;
-		my $color = $svg_colors[$self->{job_number} % @svg_colors];
-		print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:$color;fill-opacity:0.2;stroke:black;stroke-width:$sw\"/>\n";
-		$x = ($self->{starting_time}+$self->{run_time}/2) * $w_ratio;
-		$y = ($processor_id+0.5) * $h_ratio;
-		my $fs = min($h_ratio, $w/5);
-		my $text_y = $y + $fs*0.35;
-		print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"white\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
-	}
+	$self->{assigned_processors_ids}->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			#rectangle
+			my $x = $self->{starting_time} * $w_ratio;
+			my $w = $self->{run_time} * $w_ratio;
+
+			my $y = $start * $h_ratio;
+			my $h = $h_ratio * ($end - $start + 1);
+			my $color = $svg_colors[$self->{job_number} % @svg_colors];
+			my $sw = min($w_ratio, $h_ratio) / 10;
+			print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:$color;fill-opacity:0.2;stroke:black;stroke-width:$sw\"/>\n";
+			#label
+			$x = ($self->{starting_time}+$self->{run_time}/2) * $w_ratio;
+			$y = (($start+$end+1)/2) * $h_ratio;
+			my $fs = min($h_ratio, $w/5);
+			my $text_y = $y + $fs*0.35;
+			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
+		}
+	);
 }
 
 sub reset {
