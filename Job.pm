@@ -111,7 +111,7 @@ sub flow_time {
 
 sub stretch {
 	my ($self) = @_;
-	return $self->{wait_time}/$self->{run_time} + 1;
+	return $self->{wait_time}/$self->{run_time};
 }
 
 sub cmax {
@@ -186,6 +186,7 @@ sub reset {
 	delete $self->{starting_time};
 	delete $self->{first_processor};
 	delete $self->{assigned_processors_ids};
+	delete $self->{wait_time};
 }
 
 sub save_svg {

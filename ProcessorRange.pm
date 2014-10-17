@@ -47,9 +47,25 @@ sub new {
 	}
 
 	bless $self, $class;
+	$self->check_ok();
 	return $self;
 }
 
+sub check_ok {
+	my $self = shift;
+	my $last_end;
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			if (defined $last_end) {
+				die "bad range $self" if $start <= $last_end + 1;
+				die "bad range $self" if $end < $last_end;
+			}
+			$last_end = $end;
+			return 1;
+		}
+	);
+}
 
 sub intersection {
 	set_operation(@_, 0);
@@ -108,6 +124,7 @@ sub set_operation {
 	}
 
 	$self->{ranges} = [@result];
+	$self->check_ok();
 }
 
 #compute a list of paired (start,end) ranges
@@ -232,6 +249,7 @@ sub reduce_to_first {
 		},
 	);
 	$self->{ranges} = [@remaining_ranges];
+	$self->check_ok();
 }
 
 sub reduce_to_forced_contiguous {
@@ -253,6 +271,7 @@ sub reduce_to_forced_contiguous {
 	);
 
 	$self->{ranges} = [@remaining_ranges];
+	$self->check_ok();
 }
 
 sub reduce_to_best_effort_contiguous {
@@ -274,6 +293,7 @@ sub reduce_to_best_effort_contiguous {
 	}
 
 	$self->{ranges} = [map {($_->[0], $_->[1])} sort {$a->[0] <=> $b->[0]} @remaining_ranges];
+	$self->check_ok();
 
 }
 
@@ -325,6 +345,7 @@ sub reduce_to_best_effort_local {
 	}
 
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+	$self->check_ok();
 }
 
 sub reduce_to_forced_local {
@@ -358,6 +379,7 @@ sub reduce_to_forced_local {
 	}
 
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+	$self->check_ok();
 }
 
 #returns true if all processors form a contiguous block

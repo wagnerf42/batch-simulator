@@ -15,59 +15,39 @@ use Database;
 use Random;
 use ExecutionProfile ':stooges';
 
-sub write_results_to_file {
-	my ($results, $filename) = @_;
-
-	open(my $filehandle, "> $filename") or die "unable to open $filename";
-
-	for my $results_item (@{$results}) {
-		print $filehandle join(' ', @{$results_item}) . "\n";
-	}
-
-	close $filehandle;
-}
-
 my ($trace_file_name, $cpus_number, $cluster_size) = @ARGV;
 die unless defined $cluster_size;
 
-# Create a directory to store the output
-my $basic_file_name = "run_from_file-$cpus_number-$cluster_size";
-mkdir "run_from_file/$basic_file_name" unless -f "run_from_file/$basic_file_name";
-
 # Read the trace and write it to a file
 my $trace = Trace->new_from_swf($trace_file_name);
-$trace->reset_submit_times();
+#$trace->reset_submit_times();
 $trace->remove_large_jobs($cpus_number);
 
-my $trace_first = Trace->copy_from_trace($trace);
-my $schedule_first = Backfilling->new($trace_first, $cpus_number, $cluster_size, EP_FIRST);
-$schedule_first->run();
+my @variants = (
+	EP_FIRST,
+	EP_BEST_EFFORT,
+	EP_CONTIGUOUS,
+	EP_BEST_EFFORT_LOCALITY,
+	EP_CLUSTER
+);
 
-my $trace_best_effort_contiguous = Trace->copy_from_trace($trace);
-my $schedule_best_effort_contiguous = Backfilling->new($trace_best_effort_contiguous, $cpus_number, $cluster_size, EP_BEST_EFFORT);
-$schedule_best_effort_contiguous->run();
+my @traces = map {Trace->copy_from_trace($trace)} (0..$#variants);
+my @schedules = map {Backfilling->new($traces[$_], $cpus_number, $cluster_size, $variants[$_])} (0..$#variants);
 
-my $trace_contiguous = Trace->copy_from_trace($trace);
-my $schedule_contiguous = Backfilling->new($trace_contiguous, $cpus_number, $cluster_size, EP_CONTIGUOUS);
-$schedule_contiguous->run();
+$_->run() for @schedules;
 
-my $trace_best_effort_local = Trace->copy_from_trace($trace);
-my $schedule_best_effort_local = Backfilling->new($trace_best_effort_local, $cpus_number, $cluster_size, EP_BEST_EFFORT_LOCALITY);
-$schedule_best_effort_local->run();
+my @stretch_values = (0) x scalar @variants;
 
-my $trace_local = Trace->copy_from_trace($trace);
-my $schedule_local = Backfilling->new($trace_local, $cpus_number, $cluster_size, EP_CLUSTER);
-$schedule_local->run();
+for my $job_number (0..$#{$schedules[0]->{jobs}}) {
+	$stretch_values[$_] += $schedules[$_]->{jobs}->[$job_number]->wait_time() for (0..$#variants);
 
-for my $job_number (0..$#{$schedule_first->{jobs}}) {
-	print join(' ', (
+	print join(' ',
 		$job_number,
-		$schedule_first->{jobs}->[$job_number]->schedule_time(),
-		$schedule_best_effort_contiguous->{jobs}->[$job_number]->schedule_time(),
-		$schedule_contiguous->{jobs}->[$job_number]->schedule_time(),
-		$schedule_best_effort_local->{jobs}->[$job_number]->schedule_time(),
-		$schedule_local->{jobs}->[$job_number]->schedule_time()
-	)) . "\n";
+#		(map { $_->{jobs}->[$job_number]->schedule_time() } @schedules),
+#		(map { $_->{jobs}->[$job_number]->requested_cpus() } @schedules),
+#		(map { $_->{jobs}->[$job_number]->run_time() } @schedules),
+		(@stretch_values),
+	) . "\n";
 }
 
 

@@ -9,10 +9,10 @@ use Backfilling;
 use ExecutionProfile ':stooges';
 
 my $trace = Trace->new_from_swf($ARGV[0]);
-$trace->remove_large_jobs(9);
+$trace->remove_large_jobs(10240);
 $trace->reset_submit_times();
 
-my $schedule = new Backfilling($trace, 9, 9, EP_BEST_EFFORT);
+my $schedule = new Backfilling($trace, 10240, 16, EP_CONTIGUOUS);
 
 $schedule->run();
 $schedule->tycat();
