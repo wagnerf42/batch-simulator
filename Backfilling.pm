@@ -21,6 +21,7 @@ sub new {
 sub assign_job {
 	my ($self, $job) = @_;
 	#print STDERR "assigning job $job to exec-profile $self->{execution_profile}\n";
+	#print "assigning job " . $job->job_number() . "\n";
 	my $requested_cpus = $job->requested_cpus();
 
 	#get the first valid profile_id for our job

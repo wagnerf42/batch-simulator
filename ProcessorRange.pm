@@ -47,7 +47,6 @@ sub new {
 	}
 
 	bless $self, $class;
-	$self->check_ok();
 	return $self;
 }
 
@@ -124,7 +123,6 @@ sub set_operation {
 	}
 
 	$self->{ranges} = [@result];
-	$self->check_ok();
 }
 
 #compute a list of paired (start,end) ranges
@@ -249,7 +247,6 @@ sub reduce_to_first {
 		},
 	);
 	$self->{ranges} = [@remaining_ranges];
-	$self->check_ok();
 }
 
 sub reduce_to_forced_contiguous {
@@ -271,7 +268,6 @@ sub reduce_to_forced_contiguous {
 	);
 
 	$self->{ranges} = [@remaining_ranges];
-	$self->check_ok();
 }
 
 sub reduce_to_best_effort_contiguous {
@@ -293,7 +289,6 @@ sub reduce_to_best_effort_contiguous {
 	}
 
 	$self->{ranges} = [map {($_->[0], $_->[1])} sort {$a->[0] <=> $b->[0]} @remaining_ranges];
-	$self->check_ok();
 
 }
 
@@ -345,7 +340,6 @@ sub reduce_to_best_effort_local {
 	}
 
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
-	$self->check_ok();
 }
 
 sub reduce_to_forced_local {
@@ -379,7 +373,6 @@ sub reduce_to_forced_local {
 	}
 
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
-	$self->check_ok();
 }
 
 #returns true if all processors form a contiguous block
@@ -397,18 +390,25 @@ sub contiguous {
 	}
 }
 
-#returns true if all processors fall within the same cluster
+#returns true if we use a minimal number of clusters
 #needs cluster size
 sub local {
 	my $self = shift;
 	my $cluster_size = shift;
 	die "are 0 processors local ?" if $self->is_empty();
-	my $first_cluster_id = $self->{ranges}->[0] % $cluster_size;
-	for my $processor_id (@{$self->{ranges}}) {
-		my $cluster_id = $processor_id % $cluster_size;
-		return 0 if $cluster_id != $first_cluster_id;
-	}
-	return 1;
+	my %used_clusters_ids;
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			my $start_cluster = floor($start/$cluster_size);
+			my $end_cluster = floor($end/$cluster_size);
+			$used_clusters_ids{$_} = 1 for ($start_cluster..$end_cluster);
+			return 1;
+		}
+	);
+
+	my $needed_clusters = ceil($self->size() / $cluster_size);
+	return ($needed_clusters == (keys %used_clusters_ids));
 }
 
 1;
