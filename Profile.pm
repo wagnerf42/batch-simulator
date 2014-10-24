@@ -44,9 +44,8 @@ sub processor_range {
 
 sub stringification {
 	my $self = shift;
-	my $processors_ids = join(',', $self->{processors}->processors_ids());
-	return "[$self->{starting_time} ; ($processors_ids) ; $self->{duration}]" if defined $self->{duration};
-	return "[$self->{starting_time} ; ($processors_ids) ]";
+	return "[$self->{starting_time} ; ($self->{processors}) ; $self->{duration}]" if defined $self->{duration};
+	return "[$self->{starting_time} ; ($self->{processors}) ]";
 }
 
 sub processors_ids {

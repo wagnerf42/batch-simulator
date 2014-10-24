@@ -154,6 +154,7 @@ sub compute_ranges_in_clusters {
 				$current_cluster = $cluster;
 				push @{$clusters->[$#{$clusters}]}, [$start_point_in_cluster, $end_point_in_cluster];
 			}
+			return 1;
 
 		}
 	);
@@ -172,6 +173,7 @@ sub size {
 		sub {
 			my ($start, $end) = @_;
 			$size += $end - $start + 1;
+			return 1;
 		}
 	);
 	return $size;

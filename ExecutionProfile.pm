@@ -77,6 +77,7 @@ sub get_free_processors_for {
 	}
 
 	return if $left_processors->is_empty();
+	die "buggy code" if $left_processors->size() < $job->requested_cpus();
 	return $left_processors;
 }
 

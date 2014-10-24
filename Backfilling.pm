@@ -20,7 +20,7 @@ sub new {
 
 sub assign_job {
 	my ($self, $job) = @_;
-	#print STDERR "assigning job $job to exec-profile $self->{execution_profile}\n";
+	#print STDERR "assigning job ".$job->job_number()." to exec-profile $self->{execution_profile}\n";
 	#print "assigning job " . $job->job_number() . "\n";
 	my $requested_cpus = $job->requested_cpus();
 
@@ -33,6 +33,7 @@ sub assign_job {
 	$self->{local_jobs_number}++ if $chosen_processors->local($self->{cluster_size});
 
 	#assign job
+	#print "choosing to put it in $chosen_processors\n";
 	$job->assign_to($starting_time, $chosen_processors);
 
 	#update profiles
