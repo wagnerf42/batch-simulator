@@ -29,25 +29,12 @@ sub assign_job {
 	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 	my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
-	$self->{contiguous_jobs_number}++ if $chosen_processors->contiguous($self->{num_processors});
-	$self->{local_jobs_number}++ if $chosen_processors->local($self->{cluster_size});
-
 	#assign job
 	#print "choosing to put it in $chosen_processors\n";
 	$job->assign_to($starting_time, $chosen_processors);
 
 	#update profiles
 	$self->{execution_profile}->add_job_at($job);
-}
-
-sub contiguous_jobs_number {
-	my $self = shift;
-	return $self->{contiguous_jobs_number};
-}
-
-sub local_jobs_number {
-	my $self = shift;
-	return $self->{local_jobs_number};
 }
 
 1;

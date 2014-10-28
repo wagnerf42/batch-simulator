@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use List::Util qw(min);
 use Data::Dumper qw(Dumper);
+use POSIX;
 
 use overload
     '""' => \&stringification;
@@ -196,6 +197,18 @@ sub save_svg {
 
 	print $fh "\t<rect x=\"" . $self->{starting_time} * $default_time_ratio . "\" y=\"" . $processor_id * $default_processor_ratio . "\" width=\"" . $self->{run_time} * $default_time_ratio . "\" height=\"20\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
 	print $fh "\t<text x=\"" . ($self->{starting_time} * $default_time_ratio + 4) . "\" y=\"" . ($processor_id * $default_processor_ratio + 15) . "\" fill=\"black\">" . $self->{job_number} . "</text>\n";
+}
+
+sub used_clusters {
+	my $self = shift;
+	my $cluster_size = shift;
+	return $self->{assigned_processors_ids}->used_clusters($cluster_size);
+}
+
+sub clusters_required {
+	my $self = shift;
+	my $cluster_size = shift;
+	return POSIX::ceil($self->requested_cpus() / $cluster_size);
 }
 
 1;

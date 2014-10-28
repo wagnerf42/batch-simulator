@@ -47,6 +47,7 @@ sub new {
 	}
 
 	bless $self, $class;
+	$self->check_ok();
 	return $self;
 }
 
@@ -56,6 +57,8 @@ sub check_ok {
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
+			confess "invalid range $self" unless defined $end;
+			confess "invalid range $self" unless defined $start;
 			if (defined $last_end) {
 				die "bad range $self" if $start <= $last_end + 1;
 				die "bad range $self" if $end < $last_end;
@@ -249,6 +252,7 @@ sub reduce_to_first {
 		},
 	);
 	$self->{ranges} = [@remaining_ranges];
+	$self->check_ok();
 }
 
 sub reduce_to_forced_contiguous {
@@ -270,6 +274,7 @@ sub reduce_to_forced_contiguous {
 	);
 
 	$self->{ranges} = [@remaining_ranges];
+	$self->check_ok();
 }
 
 sub reduce_to_best_effort_contiguous {
@@ -291,6 +296,7 @@ sub reduce_to_best_effort_contiguous {
 	}
 
 	$self->{ranges} = [map {($_->[0], $_->[1])} sort {$a->[0] <=> $b->[0]} @remaining_ranges];
+	$self->check_ok();
 
 }
 
@@ -342,6 +348,7 @@ sub reduce_to_best_effort_local {
 	}
 
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+	$self->check_ok();
 }
 
 sub reduce_to_forced_local {
@@ -375,6 +382,7 @@ sub reduce_to_forced_local {
 	}
 
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+	$self->check_ok();
 }
 
 #returns true if all processors form a contiguous block
@@ -397,6 +405,15 @@ sub contiguous {
 sub local {
 	my $self = shift;
 	my $cluster_size = shift;
+	my $needed_clusters = ceil($self->size() / $cluster_size);
+	return ($needed_clusters == $self->used_clusters($cluster_size));
+}
+
+#returns the number of different clusters in use
+#needs cluster size
+sub used_clusters {
+	my $self = shift;
+	my $cluster_size = shift;
 	die "are 0 processors local ?" if $self->is_empty();
 	my %used_clusters_ids;
 	$self->ranges_loop(
@@ -409,8 +426,7 @@ sub local {
 		}
 	);
 
-	my $needed_clusters = ceil($self->size() / $cluster_size);
-	return ($needed_clusters == (keys %used_clusters_ids));
+	return scalar (keys %used_clusters_ids);
 }
 
 1;

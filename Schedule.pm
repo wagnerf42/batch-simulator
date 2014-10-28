@@ -85,6 +85,27 @@ sub cmax {
 	return max map {$_->ending_time()} @{$self->{jobs}};
 }
 
+sub contiguous_jobs_number {
+	my $self = shift;
+	return scalar grep {$_->get_processor_range()->contiguous($self->{num_processors})} @{$self->{jobs}};
+}
+
+sub local_jobs_number {
+	my $self = shift;
+	return scalar grep {$_->get_processor_range()->local($self->{cluster_size})} @{$self->{jobs}};
+}
+
+sub locality_factor {
+	my $self = shift;
+	my $used_clusters = 0;
+	my $optimum_clusters = 0;
+	for my $job (@{$self->{jobs}}) {
+		$used_clusters += $job->used_clusters($self->{cluster_size});
+		$optimum_clusters += $job->clusters_required($self->{cluster_size});
+	}
+	return ($used_clusters / $optimum_clusters);
+}
+
 sub save_svg {
 	my ($self, $svg_filename) = @_;
 

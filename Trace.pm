@@ -187,7 +187,6 @@ sub write_to_file {
 	}
 }
 
-
 sub needed_cpus {
 	my ($self, $needed_cpus) = @_;
 	$self->{needed_cpus} = $needed_cpus if defined $needed_cpus;

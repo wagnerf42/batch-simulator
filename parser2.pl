@@ -93,11 +93,12 @@ sub write_results_to_file {
 	open(my $filehandle, "> $filename") or die "unable to open $filename";
 
 	print $filehandle join(' ',
-		'FIRST_CMAX', 'FIRST_CONTJ', 'FIRST_LOCJ', 'FIRST_RT',
-		'BECONT_CMAX', 'BECONT_CONTJ', 'BECONT_LOCJ', 'BECONT_RT',
-		'CONT_CMAX', 'CONT_CONTJ', 'CONT_LOCJ', 'CONT_RT',
-		'BELOC_CMAX', 'BELOC_CONTJ', 'BELOC_LOCJ', 'BELOC_RT',
-		'LOC_CMAX', 'LOC_CONTJ', 'LOC_LOCJ', 'LOC_RT', 'TRACE_ID'
+		'FIRST_CMAX', 'FIRST_CONTJ', 'FIRST_LOCJ', 'FIRST_LOCF', 'FIRST_RT',
+		'BECONT_CMAX', 'BECONT_CONTJ', 'BECONT_LOCJ', 'BECONT_LOCF', 'BECONT_RT',
+		'CONT_CMAX', 'CONT_CONTJ', 'CONT_LOCJ', 'CONT_LOCF', 'CONT_RT',
+		'BELOC_CMAX', 'BELOC_CONTJ', 'BELOC_LOCJ', 'BELOC_LOCF', 'BELOC_RT',
+		'LOC_CMAX', 'LOC_CONTJ', 'LOC_LOCJ', 'LOC_LOCF', 'LOC_RT',
+		'TRACE_ID'
 	) . "\n";
 
 	for my $results_item (@{$results}) {
@@ -123,7 +124,6 @@ sub run_all_thread {
 
 		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 		#$trace_random->reset_jobs_numbers();
-		$trace_random->write_to_file("output$i.swf");
 
 		my $trace_id = $database->add_trace($trace_random, $execution_id);
 
@@ -137,6 +137,7 @@ sub run_all_thread {
 				$_->cmax(),
 				$_->contiguous_jobs_number(),
 				$_->local_jobs_number(),
+				$_->locality_factor(),
 				$_->run_time(),
 			} @schedules),
 			$trace_id
