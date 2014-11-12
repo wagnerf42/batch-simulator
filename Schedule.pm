@@ -106,6 +106,17 @@ sub locality_factor {
 	return ($used_clusters / $optimum_clusters);
 }
 
+sub locality_factor_2 {
+	my $self = shift;
+	my $sum_of_ratios = 0;
+	for my $job (@{$self->{jobs}}) {
+		my $used_clusters = $job->used_clusters($self->{cluster_size});
+		my $optimum_clusters = $job->clusters_required($self->{cluster_size});
+		$sum_of_ratios += $used_clusters / $optimum_clusters;
+	}
+	return $sum_of_ratios;
+}
+
 sub save_svg {
 	my ($self, $svg_filename) = @_;
 
