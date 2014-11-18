@@ -4,7 +4,6 @@ use warnings;
 
 use threads;
 use threads::shared;
-use Thread::Queue;
 use Data::Dumper qw(Dumper);
 
 use Trace;
@@ -15,25 +14,15 @@ use Database;
 use Random;
 use ExecutionProfile ':stooges';
 
-sub write_results_to_file {
-	my ($results, $filename) = @_;
-
-	open(my $filehandle, "> $filename") or die "unable to open $filename";
-
-	for my $results_item (@{$results}) {
-		print $filehandle join(' ', @{$results_item}) . "\n";
-	}
-
-	close $filehandle;
-}
+local $| = 1;
 
 my ($trace_file_name, $instances_number, $jobs_number, $cpus_number, $cluster_size) = @ARGV;
 die unless defined $cluster_size;
 
 # Read the trace and write it to a file
 my $trace = Trace->new_from_swf($trace_file_name);
-#$trace->reset_submit_times();
 $trace->remove_large_jobs($cpus_number);
+$trace->reset_submit_times();
 
 my @variants = (
 	EP_FIRST,
@@ -43,31 +32,42 @@ my @variants = (
 	EP_CLUSTER
 );
 
+my @results;
+
 for my $instance (1..$instances_number) {
+	print "Running instance $instance/$instances_number\n";
 	my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 	my @traces = map {Trace->copy_from_trace($trace_random)} (0..$#variants);
 	my @schedules = map {Backfilling->new($traces[$_], $cpus_number, $cluster_size, $variants[$_])} (0..$#variants);
-	$_->run() for @schedules;
+	$_->run() for (@schedules);
+	my @results_instance;
+	$results_instance[$_] = [] for (0..$#variants);
 
-	my @results;
-
-	for my $job_number (0..($jobs_number - 1)) {
-		push @results, [
-			$job_number,
-			$schedules[0]->{jobs}->[$job_number]->submit_time(),
-			$schedules[0]->{jobs}->[$job_number]->run_time(),
-			(map {
-				$_->{jobs}->[$job_number]->wait_time(),
-				$_->{jobs}->[$job_number]->schedule_time(),
-			} @schedules),
-		];
+	for my $variant_number (0..$#variants) {
+		for my $job_number (0..($jobs_number - 1)) {
+			push @{$results_instance[$variant_number]}, $schedules[$variant_number]->{jobs}->[$job_number]->cmax();
+		}
 	}
 
-
-	# save results on a file
-	write_results_to_file(\@results, "test.csv");
+	push @results, [@results_instance];
 }
 
-#		(map { $_->{jobs}->[$job_number]->schedule_time() } @schedules),
-#		(map { $_->{jobs}->[$job_number]->requested_cpus() } @schedules),
-#		(map { $_->{jobs}->[$job_number]->run_time() } @schedules),
+# save results on a file
+print "Writing results\n";
+write_results_to_file(\@results);
+
+sub write_results_to_file {
+	my ($results, $filename) = @_;
+
+	for my $variant_number (0..$#variants) {
+		open(my $filehandle, "> run_from_file_instances-$variant_number.csv") or die "unable to open $filename";
+
+
+		for my $instance_number (0..($instances_number - 1)) {
+			print $filehandle join (' ', @{$results[$instance_number]->[$variant_number]}) . "\n";
+		}
+
+		close $filehandle;
+	}
+
+}

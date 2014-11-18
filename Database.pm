@@ -14,10 +14,11 @@ sub new {
 		driver => "mysql",
 		database => "parser",
 		userid => "parser",
-		password => "parser"
+		password => "parser",
+		host => "172.16.107.128",
 	};
 
-	$self->{dsn} = "DBI:$self->{driver}:database=$self->{database}";
+	$self->{dsn} = "DBI:$self->{driver}:database=$self->{database};host=$self->{host}";
 	$self->{dbh} = DBI->connect($self->{dsn}, $self->{userid}, $self->{password}) or die $DBI::errstr;
 	
 	bless $self, $class;

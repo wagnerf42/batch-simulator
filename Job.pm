@@ -4,6 +4,7 @@ use warnings;
 use List::Util qw(min);
 use Data::Dumper qw(Dumper);
 use POSIX;
+use Carp;
 
 use overload
     '""' => \&stringification;
