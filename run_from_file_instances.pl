@@ -24,6 +24,9 @@ my $trace = Trace->new_from_swf($trace_file_name);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 
+print "Generating $instances_number random traces\n";
+my @traces_random = map {Trace->new_from_trace($trace, $jobs_number)} (0..($instances_number - 1));
+
 my @variants = (
 	EP_FIRST,
 	EP_BEST_EFFORT,
@@ -32,42 +35,51 @@ my @variants = (
 	EP_CLUSTER
 );
 
-my @results;
-
-for my $instance (1..$instances_number) {
-	print "Running instance $instance/$instances_number\n";
-	my $trace_random = Trace->new_from_trace($trace, $jobs_number);
-	my @traces = map {Trace->copy_from_trace($trace_random)} (0..$#variants);
-	my @schedules = map {Backfilling->new($traces[$_], $cpus_number, $cluster_size, $variants[$_])} (0..$#variants);
-	$_->run() for (@schedules);
-	my @results_instance;
-	$results_instance[$_] = [] for (0..$#variants);
-
-	for my $variant_number (0..$#variants) {
-		for my $job_number (0..($jobs_number - 1)) {
-			push @{$results_instance[$variant_number]}, $schedules[$variant_number]->{jobs}->[$job_number]->{schedule_cmax};
-		}
-	}
-
-	push @results, [@results_instance];
+my @threads;
+for my $i (0..$#variants) {
+	my $thread = threads->create(\&run_all_thread, $i);
+	push @threads, $thread;
 }
 
-# save results on a file
-print "Writing results\n";
-write_results_to_file(\@results);
-
-sub write_results_to_file {
-	my ($results, $filename) = @_;
-
-	for my $variant_number (0..$#variants) {
-		open(my $filehandle, "> run_from_file_instances-$variant_number.csv") or die "unable to open $filename";
+# Wait for all threads to finish
+$_->join() for (@threads);
 
 
-		for my $instance_number (0..($instances_number - 1)) {
-			print $filehandle join (' ', @{$results[$instance_number]->[$variant_number]}) . "\n";
+sub run_all_thread {
+	my ($id) = @_;
+	my @results;
+
+	for my $instance (0..($instances_number - 1)) {
+		print "Running instance $id:$instance/" . ($instances_number - 1) . "\n";
+		my $trace = Trace->copy_from_trace($traces_random[$instance]);
+		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variants[$id]);
+		$schedule->run();
+
+		my @results_instance;
+
+		for my $variant_number (0..$#variants) {
+			for my $job_number (0..($jobs_number - 1)) {
+				push @results_instance, $schedule->{jobs}->[$job_number]->{schedule_cmax};
+			}
 		}
 
-		close $filehandle;
+		push @results, [@results_instance];
 	}
+
+	# save results on a file
+	print "Writing results $id\n";
+	write_results_to_file(\@results, $id);
+}
+
+sub write_results_to_file {
+	my ($results, $variant_number) = @_;
+
+	open(my $filehandle, "> run_from_file_instances-$variant_number.csv") or die;
+
+	for my $instance_number (0..($instances_number - 1)) {
+		print $filehandle join (' ', @{$results->[$instance_number]}) . "\n";
+	}
+
+	close $filehandle;
 
 }

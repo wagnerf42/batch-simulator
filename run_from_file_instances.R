@@ -10,9 +10,9 @@ rm(list=ls());
 #input_title <- 'test';
 
 # input parameters
-file<-commandArgs(TRUE)[1];
-output_file<-commandArgs(TRUE)[2];
-input_title<-commandArgs(TRUE)[3];
+file <- commandArgs(TRUE)[1];
+output_file <- commandArgs(TRUE)[2];
+input_title <- commandArgs(TRUE)[3];
 
 # helper function for the error
 sem <- function(x) {
@@ -30,25 +30,26 @@ rm(row);
 
 # compute statistical estimators
 mean_val <- array();
-median_val <- array();
-min_val <- array();
-max_val <- array();
-ratio_val <- array();
+sd_val <- array();
+error_val <- array();
+error_p_val <- array();
+error_m_val <- array();
 
 for (i in 1:length(data[1,])) {
   mean_val[i] <- mean(data[,i]);
-  median_val[i] <- median(data[,i]);
-  min_val[i] <- min(data[,i]);
-  max_val[i] <- max(data[,i]);
-  ratio_val[i] <- (max_val[i] - min_val[i])/mean_val[i];
+  sd_val[i] <- sd(data[,i]);
+  error_val[i] <- qt(0.975, df=(length(data[,i])-1))*sd_val[i]/sqrt(length(data[,1]));
+  error_p_val[i] <- mean_val[i] + error_val[i];
+  error_m_val[i] <- mean_val[i] - error_val[i];
 }
 rm(i);
 
 # put in shape to plot
-values <- data.frame(id=seq_along(mean_val), mean=mean_val, median=median_val, min=min_val, max=max_val, ratio=ratio_val);
+values <- data.frame(id=seq_along(mean_val), mean=mean_val, error_p=error_p_val, error_m=error_m_val);
 
-plot_val <- ggplot(values, aes(x=id, y=values$ratio));
+plot_val <- ggplot(values, aes(x=id, y=values$mean));
 plot_val <- plot_val + geom_step();
+plot_val <- plot_val + geom_step(aes(y=error_p)) + geom_step(aes(y=error_m));
 #plot_val <- plot_val + scale_y_log10();
 plot_val <- plot_val + labs(title=input_title)
 
