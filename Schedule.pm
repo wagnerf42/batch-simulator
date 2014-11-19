@@ -16,7 +16,8 @@ sub new {
 		cluster_size => $cluster_size,
 		version => $version,
 		contiguous_jobs_number => 0,
-		local_jobs_number => 0
+		local_jobs_number => 0,
+		cmax => 0
 	};
 
 	# If no cluster size was chosen, use the number of processors as cluster size
@@ -81,8 +82,21 @@ sub mean_stretch {
 }
 
 sub cmax {
-	my $self = shift;
+	my ($self, $cmax) = @_;
+	$self->{cmax} = $cmax if defined $cmax;
+	return $self->{cmax};
+}
+
+sub compute_cmax {
+	my ($self) = @_;
 	return max map {$_->ending_time()} @{$self->{jobs}};
+}
+
+sub update_cmax {
+	my ($self, $cmax) = @_;
+	die unless defined $cmax;
+
+	$self->{cmax} = max($self->{cmax}, $cmax);
 }
 
 sub contiguous_jobs_number {

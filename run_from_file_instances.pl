@@ -45,7 +45,7 @@ for my $instance (1..$instances_number) {
 
 	for my $variant_number (0..$#variants) {
 		for my $job_number (0..($jobs_number - 1)) {
-			push @{$results_instance[$variant_number]}, $schedules[$variant_number]->{jobs}->[$job_number]->cmax();
+			push @{$results_instance[$variant_number]}, $schedules[$variant_number]->{jobs}->[$job_number]->{schedule_cmax};
 		}
 	}
 

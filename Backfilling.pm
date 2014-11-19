@@ -30,8 +30,13 @@ sub assign_job {
 	my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
 	#assign job
-	#print "choosing to put it in $chosen_processors\n";
 	$job->assign_to($starting_time, $chosen_processors);
+
+	# update cmax
+	$self->update_cmax($job->cmax());
+
+	# temporary to a experiment
+	$job->{schedule_cmax} = $self->{cmax};
 
 	#update profiles
 	$self->{execution_profile}->add_job_at($job);
