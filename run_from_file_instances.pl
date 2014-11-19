@@ -36,17 +36,12 @@ my $trace = Trace->new_from_swf($trace_file_name);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 
-print "Generating $instances_number random traces\n";
+print STDERR "Generating $instances_number random traces\n";
 my @traces_random = map {Trace->new_from_trace($trace, $jobs_number)} (0..($instances_number - 1));
 
 my $q = Thread::Queue->new();
 
-my @threads;
-for my $i (0..($threads_number - 1)) {
-	my $thread = threads->create(\&run_all_thread, $i);
-	push @threads, $thread;
-}
-
+print STDERR "Populating queue\n";
 for my $instance_number (0..($instances_number - 1)) {
 	for my $variant_number (0..$#variants) {
 		my $instance = {
@@ -58,11 +53,18 @@ for my $instance_number (0..($instances_number - 1)) {
 }
 $q->end();
 
+print STDERR "Creating threads\n";
+my @threads;
+for my $i (0..($threads_number - 1)) {
+	my $thread = threads->create(\&run_all_thread, $i);
+	push @threads, $thread;
+}
+
 # Wait for all threads to finish
 $_->join() for (@threads);
 
 # save results on a file
-print "Writing results\n";
+print STDERR "Writing results\n";
 write_results_to_file($results);
 
 sub run_all_thread {
@@ -71,6 +73,8 @@ sub run_all_thread {
 	while (defined(my $instance = $q->dequeue())) {
 		my $results_instance = [];
 		share($results_instance);
+
+		print STDERR "Running $instance->{number}:$instance->{variant}:" . $q->pending() . "\n";
 
 		my $trace = Trace->copy_from_trace($traces_random[$instance->{number}]);
 		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variants[$instance->{variant}]);
