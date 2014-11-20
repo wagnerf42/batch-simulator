@@ -13,9 +13,9 @@ sub new {
 	my $self = {
 		driver => "mysql",
 		database => "parser",
-		userid => "parser",
-		password => "parser",
-		host => "172.16.107.128",
+		userid => "root",
+		password => "q3w2e1",
+		host => "localhost",
 	};
 
 	$self->{dsn} = "DBI:$self->{driver}:database=$self->{database};host=$self->{host}";

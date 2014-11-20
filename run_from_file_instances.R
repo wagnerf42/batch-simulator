@@ -5,14 +5,14 @@ library(ggplot2)
 rm(list=ls());
 
 #default values
-file <- 'run_from_file_instances-0.csv'
-output_file <- 'run_from_file_instances-0.pdf';
-input_title <- 'test';
+#file <- 'run_from_file_instances-0.csv'
+#output_file <- 'run_from_file_instances-0.pdf';
+#input_title <- 'test';
 
 # input parameters
-#file <- commandArgs(TRUE)[1];
-#output_file <- commandArgs(TRUE)[2];
-#input_title <- commandArgs(TRUE)[3];
+file <- commandArgs(TRUE)[1];
+output_file <- commandArgs(TRUE)[2];
+input_title <- commandArgs(TRUE)[3];
 
 # helper function for the error
 sem <- function(x) {
@@ -66,5 +66,5 @@ plot_val <- plot_val + labs(title=input_title);
 
 plot_val <- plot_val + geom_pointrange(aes(ymax=mean+error, ymin=mean-error));
 
-#ggsave(filename=output_file, plot=plot_val);
-plot_val
+ggsave(filename=output_file, plot=plot_val);
+#plot_val
