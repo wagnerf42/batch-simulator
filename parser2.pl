@@ -63,10 +63,20 @@ my @variants_names = (
 	"backfilling_cluster",
 );
 
+my $results = [];
+share($results);
+
 # Read the original trace
 my $trace = Trace->new_from_swf($trace_file_name);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
+
+# Create thread queue
+my $q = Thread::Queue->new();
+for my $instance_number (0..($executions_number - 1)) {
+	$q->enqueue($instance_number);
+}
+$q->end();
 
 # Create threads
 my $start_time = time();
@@ -77,16 +87,16 @@ for my $i (0..($threads_number - 1)) {
 }
 
 # Wait for all threads to finish
-my @results;
-push @results, @{$_->join()} for (@threads);
+$_->join() for (@threads);
 
 # Update run time in the database
 $database->update_execution_run_time($execution_id, time() - $start_time);
 
 # Print all results in a file
 print STDERR "Writing results to experiment/parser2/$basic_file_name/$basic_file_name.csv\n";
-write_results_to_file(\@results, "experiment/parser2/$basic_file_name/$basic_file_name.csv");
+write_results_to_file($results, "experiment/parser2/$basic_file_name/$basic_file_name.csv");
 
+#TODO update this subroutine
 sub write_results_to_file {
 	my ($results, $filename) = @_;
 
@@ -113,15 +123,13 @@ sub run_all_thread {
 	my @results;
 	my $database = Database->new();
 
-	for my $i (1..($executions_number/$threads_number)) {
-		if (!$id) {
-			print "Running trace $i/" . $executions_number/$threads_number . "\r";
-		}
+	while (defined(my $instance_number = $q->dequeue())) {
+		print STDERR "Running $instance_number:" . ($q->pending() ? $q->pending() : 0) . "\n";
 
 		# Generate the trace and add it to the database
 		#my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
 		#$trace_random->fix_submit_times();
-
+		
 		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 		#$trace_random->reset_jobs_numbers();
 
@@ -132,19 +140,22 @@ sub run_all_thread {
 
 		$_->run() for @schedules;
 
-		push @results, [
+		my $results_instance = [];
+	        share($results_instance);
+
+		push @{$results_instance},
 			(map {
 				$_->cmax(),
 				$_->contiguous_jobs_number(),
 				$_->local_jobs_number(),
 				$_->locality_factor(),
 				$_->locality_factor_2(),
-				$_->run_time(),
+				$_->run_time()
 			} @schedules),
 			$trace_id
-		];
-	}
+		;
 
-	return [@results];
+		$results->[$instance_number] = $results_instance;
+	}
 }
 
