@@ -62,6 +62,8 @@ $trace->reset_submit_times();
 print STDERR "Generating $instances_number random traces\n";
 my @traces_random = map {Trace->new_from_trace($trace, $jobs_number)} (0..($instances_number - 1));
 
+undef $trace;
+
 my $q = Thread::Queue->new();
 
 print STDERR "Populating queue\n";
@@ -107,11 +109,7 @@ sub run_all_thread {
 		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variants[$instance->{variant}]);
 		$schedule->run();
 
-		#TODO use map here
-		for my $job_number (0..($jobs_number - 1)) {
-			push @{$results_instance}, $schedule->{jobs}->[$job_number]->{schedule_cmax};
-		}
-
+		push @{$results_instance}, map { $schedule->{jobs}->[$_]->{schedule_cmax} } (0..($jobs_number - 1));
 		$results->[$instance->{variant} * $instances_number + $instance->{number}] = $results_instance;
 	}
 }
@@ -121,11 +119,7 @@ sub write_results_to_file {
 
 	for my $variant (0..$#variants) {
 		open(my $filehandle, "> $basic_dir/$basic_file_name-$variant.csv") or die;
-
-		for my $instance_number (0..($instances_number - 1)) {
-			print $filehandle join (' ', @{$results->[$variant * $instances_number + $instance_number]}) . "\n";
-		}
-
+		print $filehandle join (' ', @{$results->[$variant * $instances_number + $_]}) . "\n" for (0..($instances_number - 1));
 		close $filehandle;
 	}
 }

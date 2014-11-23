@@ -129,7 +129,7 @@ sub run_all_thread {
 		# Generate the trace and add it to the database
 		#my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
 		#$trace_random->fix_submit_times();
-		
+
 		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 		#$trace_random->reset_jobs_numbers();
 
@@ -141,7 +141,7 @@ sub run_all_thread {
 		$_->run() for @schedules;
 
 		my $results_instance = [];
-	        share($results_instance);
+		share($results_instance);
 
 		push @{$results_instance},
 			(map {
