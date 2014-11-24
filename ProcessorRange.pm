@@ -57,6 +57,7 @@ sub check_ok {
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
+			confess "invalid range $self" unless $end >= $start;
 			confess "invalid range $self" unless defined $end;
 			confess "invalid range $self" unless defined $start;
 			if (defined $last_end) {
@@ -235,6 +236,7 @@ sub contains_at_least {
 sub reduce_to_first {
 	my $self = shift;
 	my $target_number = shift;
+	confess "invalid argument $target_number" if $target_number <= 0;
 	my @remaining_ranges;
 
 	$self->ranges_loop(
@@ -242,6 +244,7 @@ sub reduce_to_first {
 			my ($start, $end) = @_;
 			my $taking = $target_number;
 			my $available_processors = $end + 1 - $start;
+			confess "big pb : $self" if $available_processors == 0;
 			if ($available_processors < $target_number) {
 				$taking = $available_processors;
 			}
