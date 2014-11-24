@@ -103,11 +103,11 @@ sub write_results_to_file {
 	open(my $filehandle, "> $filename") or die "unable to open $filename";
 
 	print $filehandle join(' ',
-		'FIRST_CMAX', 'FIRST_CONTJ', 'FIRST_LOCJ', 'FIRST_LOCF', 'FIRST_LOCF2', 'FIRST_RT',
-		'BECONT_CMAX', 'BECONT_CONTJ', 'BECONT_LOCJ', 'BECONT_LOCF', 'BECONT_LOCF2', 'BECONT_RT',
-		'CONT_CMAX', 'CONT_CONTJ', 'CONT_LOCJ', 'CONT_LOCF', 'CONT_LOCF2', 'CONT_RT',
-		'BELOC_CMAX', 'BELOC_CONTJ', 'BELOC_LOCJ', 'BELOC_LOCF', 'BELOC_LOCF2', 'BELOC_RT',
-		'LOC_CMAX', 'LOC_CONTJ', 'LOC_LOCJ', 'LOC_LOCF', 'LOC_LOCF2', 'LOC_RT',
+		'FIRST_CMAX', 'FIRST_CONTJ', 'FIRST_LOCJ', 'FIRST_LOCF', 'FIRST_RT',
+		'BECONT_CMAX', 'BECONT_CONTJ', 'BECONT_LOCJ', 'BECONT_LOCF', 'BECONT_RT',
+		'CONT_CMAX', 'CONT_CONTJ', 'CONT_LOCJ', 'CONT_LOCF', 'CONT_RT',
+		'BELOC_CMAX', 'BELOC_CONTJ', 'BELOC_LOCJ', 'BELOC_LOCF', 'BELOC_RT',
+		'LOC_CMAX', 'LOC_CONTJ', 'LOC_LOCJ', 'LOC_LOCF', 'LOC_RT',
 		'TRACE_ID'
 	) . "\n";
 
@@ -129,7 +129,7 @@ sub run_all_thread {
 		# Generate the trace and add it to the database
 		#my $trace_random = Trace->new_block_from_trace($trace, $jobs_number);
 		#$trace_random->fix_submit_times();
-		
+
 		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 		#$trace_random->reset_jobs_numbers();
 
@@ -141,7 +141,7 @@ sub run_all_thread {
 		$_->run() for @schedules;
 
 		my $results_instance = [];
-	        share($results_instance);
+		share($results_instance);
 
 		push @{$results_instance},
 			(map {
@@ -149,7 +149,6 @@ sub run_all_thread {
 				$_->contiguous_jobs_number(),
 				$_->local_jobs_number(),
 				$_->locality_factor(),
-				$_->locality_factor_2(),
 				$_->run_time()
 			} @schedules),
 			$trace_id

@@ -28,9 +28,6 @@ my @variants = (
 	EP_CLUSTER
 );
 
-my $results = [];
-share($results);
-
 # Create new execution in the database
 my %execution = (
 	trace_file => $trace_file_name,
@@ -54,26 +51,19 @@ my $basic_file_name = "run_from_file_instances-$instances_number-$jobs_number-$c
 my $basic_dir = "experiment/run_from_file_instances/$basic_file_name";
 mkdir "$basic_dir";
 
+# Main results array
+my $results = [];
+share($results);
+
 # Read the trace and write it to a file
 my $trace = Trace->new_from_swf($trace_file_name);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 
-print STDERR "Generating $instances_number random traces\n";
-my @traces_random = map {Trace->new_from_trace($trace, $jobs_number)} (0..($instances_number - 1));
-
 my $q = Thread::Queue->new();
 
 print STDERR "Populating queue\n";
-for my $instance_number (0..($instances_number - 1)) {
-	for my $variant_number (0..$#variants) {
-		my $instance = {
-			number => $instance_number,
-			variant => $variant_number
-		};
-		$q->enqueue($instance);
-	}
-}
+$q->enqueue($_) for (0..($instances_number - 1));
 $q->end();
 
 print STDERR "Creating threads\n";
@@ -101,19 +91,22 @@ sub run_all_thread {
 		my $results_instance = [];
 		share($results_instance);
 
-		print STDERR "Running $instance->{number}:$instance->{variant}:" . ($q->pending() ? $q->pending() : 0) . "\n";
+		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 
-		my $trace = Trace->copy_from_trace($traces_random[$instance->{number}]);
-		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variants[$instance->{variant}]);
-		$schedule->run();
+		print STDERR "Running $instance:" . ($q->pending() ? $q->pending() : 0) . "\n";
 
-		#TODO use map here
-		for my $job_number (0..($jobs_number - 1)) {
-			push @{$results_instance}, $schedule->{jobs}->[$job_number]->{schedule_cmax};
+		for my $variant (0..$#variants) {
+			my $schedule = Backfilling->new($trace_random, $cpus_number, $cluster_size, $variants[$variant]);
+			$schedule->run();
+
+			my $results_instance = [];
+			share($results_instance);
+			push @{$results_instance}, map { $schedule->{jobs}->[$_]->{schedule_cmax} } (0..($jobs_number - 1));
+			$results->[$variant * $instances_number + $instance] = $results_instance;
 		}
-
-		$results->[$instance->{variant} * $instances_number + $instance->{number}] = $results_instance;
 	}
+
+	print STDERR "Thread $id finished\n";
 }
 
 sub write_results_to_file {
@@ -121,11 +114,7 @@ sub write_results_to_file {
 
 	for my $variant (0..$#variants) {
 		open(my $filehandle, "> $basic_dir/$basic_file_name-$variant.csv") or die;
-
-		for my $instance_number (0..($instances_number - 1)) {
-			print $filehandle join (' ', @{$results->[$variant * $instances_number + $instance_number]}) . "\n";
-		}
-
+		print $filehandle join (' ', @{$results->[$variant * $instances_number + $_]}) . "\n" for (0..($instances_number - 1));
 		close $filehandle;
 	}
 }
