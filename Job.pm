@@ -35,7 +35,9 @@ sub new {
 		think_time_prec_job => shift, #18
 	};
 
+
 	bless $self, $class;
+	die "invalid job $self" if $self->{requested_cpus} <= 0;
 	return $self;
 }
 
@@ -164,6 +166,7 @@ sub svg {
 	$self->{assigned_processors_ids}->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
+			die "$start is after $end" if $end < $start;
 			#rectangle
 			my $x = $self->{starting_time} * $w_ratio;
 			my $w = $self->{run_time} * $w_ratio;
@@ -177,6 +180,7 @@ sub svg {
 			$x = ($self->{starting_time}+$self->{run_time}/2) * $w_ratio;
 			$y = (($start+$end+1)/2) * $h_ratio;
 			my $fs = min($h_ratio*($end-$start+1), $w/5);
+			die "negative font size :$fs ; $end ; $start" if $fs <= 0;
 			my $text_y = $y + $fs*0.35;
 			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
 		}
