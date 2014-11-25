@@ -8,13 +8,16 @@ use Trace;
 use Backfilling;
 use ExecutionProfile ':stooges';
 
-my $trace = Trace->new_from_swf($ARGV[0]);
-$trace->remove_large_jobs(10240);
-$trace->reset_submit_times();
+my ($trace_file_name, $processors_number) = @ARGV;
+die unless defined $processors_number;
 
-my $schedule = new Backfilling($trace, 10240, 16, EP_CONTIGUOUS);
+my $trace = Trace->new_from_swf($trace_file_name);
+#$trace->remove_large_jobs($jobs_number);
+#$trace->reset_submit_times();
+$trace->load($processors_number);
 
-$schedule->run();
-$schedule->tycat();
+#for my $job (@{$trace->{jobs}}) {
+#	print join(' ', $job->{run_time}, $job->{allocated_cpus}) . "\n";
+#}
 
-print "Done\n";
+

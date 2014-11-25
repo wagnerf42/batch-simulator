@@ -3,9 +3,10 @@ use strict;
 use warnings;
 
 use Data::Dumper qw(Dumper);
-use List::Util qw(max reduce);
+use List::Util qw(max reduce sum);
 use List::MoreUtils qw(natatime);
 use Storable qw(dclone);
+use POSIX qw(ceil floor);
 
 use Job;
 use Database;
@@ -298,6 +299,25 @@ sub characteristic {
 
 		return $total_work/$total_maximum_work;
 	}
+}
+
+sub load {
+	my ($self, $processors_number) = @_;
+
+	my $jobs_number = scalar @{$self->{jobs}};
+
+	my $first_job_index = floor($jobs_number * 0.01);
+	my $first_job = $self->{jobs}->[$first_job_index];
+	my $t_start = $first_job->submit_time() + $first_job->wait_time();
+	my @valid_jobs = @{$self->{jobs}}[$first_job_index..$#{$self->{jobs}}];
+
+	my $last_submit_time = $self->{jobs}->[$#{$self->{jobs}}]->submit_time();
+	@valid_jobs = grep {$_->submit_time() + $_->wait_time() + $_->run_time() < $last_submit_time} @valid_jobs;
+	my $t_end = max map {$_->submit_time() + $_->wait_time() + $_->run_time()} @valid_jobs;
+
+	my $load = sum map {$_->requested_cpus() * $_->run_time() / ($processors_number * ($t_end - $t_start))} @valid_jobs;
+
+	return $load;
 }
 
 1;
