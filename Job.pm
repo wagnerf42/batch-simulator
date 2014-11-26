@@ -37,7 +37,7 @@ sub new {
 
 
 	bless $self, $class;
-	die "invalid job $self" if $self->{requested_cpus} <= 0;
+	die "invalid job $self" if $self->{allocated_cpus} <= 0;
 	return $self;
 }
 
