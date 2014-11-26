@@ -102,7 +102,7 @@ sub run_all_thread {
 
 		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 
-		print STDERR "Running $instance:" . ($q->pending() ? $q->pending() : 0) . "\n";
+		print STDERR "Running $instance\n";
 
 		for my $variant (0..$#variants) {
 			my $schedule = Backfilling->new($trace_random, $cpus_number, $cluster_size, $variants[$variant]);

@@ -28,7 +28,7 @@ sub prepare_tables {
 	my ($self) = @_;
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS execution (
-		id INTEGER PRIMARY KEY NOT NULL,
+		id INTEGER NOT NULL,
 		trace_file VARCHAR(255),
 		jobs_number INT,
 		executions_number INT,
@@ -36,40 +36,40 @@ sub prepare_tables {
 		threads_number INT,
 		cluster_size INT,
 		git_revision VARCHAR(255),
+		git_tree_dirty INT,
 		run_time INT,
 		comments VARCHAR(255),
 		add_time DATETIME,
-		PRIMARY KEY (id),
+		PRIMARY KEY (id)
 	)");
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS instance (
 		id INTEGER NOT NULL,
+		trace INTEGER NOT NULL,
 		execution INTEGER NOT NULL,
-		algorithm INTEGER NOT NULL,
+		algorithm VARCHAR(255),
 		cmax INT,
 		run_time INT,
 		PRIMARY KEY (id),
 		FOREIGN KEY (execution) REFERENCES execution(id) ON DELETE CASCADE,
 		FOREIGN KEY (algorithm) REFERENCES algorithm(id) ON DELETE CASCADE,
+		FOREIGN KEY (trace) REFERENCES trace(id) ON DELETE CASCADE
 	)");
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS algorithm (
 		id INTEGER NOT NULL,
 		name VARCHAR(255) NOT NULL,
-		PRIMARY KEY (id),
+		PRIMARY KEY (id)
 	)");
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS original_trace (
-		id INTEGER PRIMARY KEY NOT NULL,
-		trace_file VARCHAR(255) NOT NULL,
-		execution INTEGER NOT NULL,
-		FOREIGN KEY (execution) REFERENCES execution(id) ON DELETE CASCADE
-	)");
-
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS generated_trace (
-		id INTEGER PRIMARY KEY NOT NULL,
-		run INTEGER NOT NULL,
-		FOREIGN KEY (run) REFERENCES run(id) ON DELETE CASCADE
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS trace (
+		id INTEGER NOT NULL,
+		generation_method VARCHAR(255),
+		trace_file VARCHAR(255),
+		reset_submit_times INT,
+		fix_submit_times INT,
+		remove_large_jobs INT,
+		PRIMARY KEY (id)
 	)");
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS job (
@@ -99,45 +99,37 @@ sub prepare_tables {
 		PRIMARY KEY (id),
 		FOREIGN KEY (trace) REFERENCES trace(id) ON DELETE CASCADE
 	)");
-	
-	$self->{dbh}->do("INSERT INTO algorithm (name) VALUES
-		('fcfs_not_contiguous'),
-		('fcfs_best_effort'),
-		('fcfs_contiguous'),
-		('backfilling_not_contiguous'),
-		('backfilling_best_effort'),
-		('backfilling_contiguous')
-	");
 }
 
 sub add_execution {
 	my ($self, $execution) = @_;
 
+	$execution->{add_time} = "SELECT datetime(\"now\")";
+
 	my $key_string = join (',', keys %{$execution});
 	my $value_string = join ('\',\'', values %{$execution});
-	$self->{dbh}->do("INSERT INTO executions ($key_string) values (\'$value_string\')");
+	$self->{dbh}->do("INSERT INTO execution ($key_string) values ('$value_string')");
 
-	my $sth = $self->{dbh}->prepare("SELECT LAST_INSERT_ID() AS id");
+	my $sth = $self->{dbh}->prepare("SELECT MAX(id) AS id FROM execution");
 	$sth->execute();
 	my $ref = $sth->fetchrow_hashref();
 	my $id = $ref->{id};
-
-	$self->{dbh}->do("UPDATE executions SET add_time = NOW() WHERE id = \'$id\'");
-
 	return $id;
 }
 
 sub update_execution_run_time {
 	my ($self, $execution_id, $run_time) = @_;
-	$self->{dbh}->do("UPDATE executions SET run_time = \'$run_time\' WHERE id = \'$execution_id\'");
+	$self->{dbh}->do("UPDATE execution SET run_time = '$run_time' WHERE id = '$execution_id'");
 }
 
 sub add_trace {
-	my ($self, $trace, $execution_id) = @_;
+	my ($self, $trace, $trace_info) = @_;
 
-	$self->{dbh}->do("INSERT INTO traces (execution) VALUES (\'$execution_id\')");
+	my $key_string = join (',', keys %{$trace_info});
+	my $value_string = join ('\',\'', values %{$trace_info});
+	$self->{dbh}->do("INSERT INTO trace ($key_string) values ('$value_string')");
 
-	my $sth = $self->{dbh}->prepare("SELECT LAST_INSERT_ID() AS id");
+	my $sth = $self->{dbh}->prepare('SELECT MAX(id) AS id from trace');
 	$sth->execute();
 	my $ref = $sth->fetchrow_hashref();
 	my $trace_id = $ref->{id};
@@ -146,7 +138,7 @@ sub add_trace {
 	for my $job (@{$trace->jobs()}) {
 		my $key_string = join (',', keys %{$job});
 		my $value_string = join ('\',\'', values %{$job});
-		$self->{dbh}->do("INSERT INTO jobs (trace, $key_string) values (\'$trace_id\', \'$value_string\')");
+		$self->{dbh}->do("INSERT INTO job (trace, $key_string) values ('$trace_id', '$value_string')");
 	}
 
 	return $trace_id;
