@@ -71,7 +71,53 @@ sub check_ok {
 }
 
 sub intersection {
-	set_operation(@_, 0);
+	my @ranges = @_;
+
+	my $inside_segments = 0;
+	my $starting_point;
+	my @result;
+
+	my @indices = (0, 0);
+	my @limits = map {$#{$_->{ranges}}} @ranges;
+
+	#loop on points from left to right
+	while ($indices[0] <= $limits[0] and $indices[1] <= $limits[1]) {
+		# find next event
+		my $advancing_range;
+		my $event_type;
+
+		my @x = map {$ranges[$_]->{ranges}->[$indices[$_]]} (0..1);
+		if ($x[0] < $x[1]) {
+			$advancing_range = 0;
+		} elsif($x[0] > $x[1]) {
+			$advancing_range = 1;
+		} elsif($indices[1] %2 == 0) {
+			$advancing_range = 1;
+		} else {
+			$advancing_range = 0;
+		}
+
+		$event_type = $indices[$advancing_range] % 2;
+		if ($event_type == 0) {
+			# start
+			if ($inside_segments == 1) {
+				$starting_point = $x[$advancing_range];
+			}
+			$inside_segments++;
+		} else {
+			# end of segment
+			if ($inside_segments == 2) {
+				push @result, $starting_point;
+				my $end_point = $x[$advancing_range];
+				push @result, $end_point;
+			}
+			$inside_segments--;
+		}
+		$indices[$advancing_range]++;
+	}
+
+	$ranges[0]->{ranges} = [@result];
+
 }
 
 sub remove {

@@ -7,13 +7,12 @@ use Data::Dumper qw(Dumper);
 use Trace;
 use Backfilling;
 
-my $trace = Trace->new_from_swf($ARGV[0]);
-$trace->remove_large_jobs(20);
-my $t2 = new_from_trace Trace($trace, 30);
-$t2->reset_submit_times();
-my $schedule = new Backfilling($t2, 20, 4, 3);
+my $t = Trace->new_from_swf($ARGV[0]);
+$t->remove_large_jobs(2000);
+$t->reset_submit_times();
+my $schedule = new Backfilling($t, 2000, 4, 3);
 
 $schedule->run();
-$schedule->tycat();
+#$schedule->tycat();
 
 print "Done\n";
