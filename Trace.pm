@@ -316,7 +316,6 @@ sub load {
 	my $t_end = max map {$_->submit_time() + $_->wait_time() + $_->run_time()} @valid_jobs;
 
 	my $load = sum map {$_->requested_cpus() * $_->run_time() / ($processors_number * ($t_end - $t_start))} @valid_jobs;
-
 	return $load;
 }
 

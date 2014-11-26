@@ -11,14 +11,13 @@ use Job;
 sub new {
 	my ($class) = @_;
 	my $self = {
-		driver => "mysql",
-		database => "parser",
-		userid => "root",
-		password => "q3w2e1",
-		host => "localhost",
+		driver => "SQLite",
+		database => "parser.db",
+		userid => "",
+		password => ""
 	};
 
-	$self->{dsn} = "DBI:$self->{driver}:database=$self->{database};host=$self->{host}";
+	$self->{dsn} = "DBI:$self->{driver}:dbname=$self->{database}";
 	$self->{dbh} = DBI->connect($self->{dsn}, $self->{userid}, $self->{password}) or die $DBI::errstr;
 	
 	bless $self, $class;
@@ -28,50 +27,58 @@ sub new {
 sub prepare_tables {
 	my ($self) = @_;
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS executions (
-		id INT NOT NULL AUTO_INCREMENT,
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS execution (
+		id INTEGER PRIMARY KEY NOT NULL,
 		trace_file VARCHAR(255),
 		jobs_number INT,
 		executions_number INT,
 		cpus_number INT,
 		threads_number INT,
+		cluster_size INT,
 		git_revision VARCHAR(255),
 		run_time INT,
 		comments VARCHAR(255),
 		add_time DATETIME,
-		PRIMARY KEY (id)
+		PRIMARY KEY (id),
 	)");
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS traces (
-		id INT NOT NULL AUTO_INCREMENT,
-		execution INT NOT NULL,
-		PRIMARY KEY(id),
-		FOREIGN KEY (execution) REFERENCES executions(id) ON DELETE CASCADE
-	)");
-
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS algorithms (
-		id INT NOT NULL AUTO_INCREMENT,
-		name VARCHAR(255),
-		PRIMARY KEY (id)
-	)");
-
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS runs (
-		id INT NOT NULL AUTO_INCREMENT,
-		trace INT NOT NULL,
-		algorithm INT NOT NULL,
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS instance (
+		id INTEGER NOT NULL,
+		execution INTEGER NOT NULL,
+		algorithm INTEGER NOT NULL,
 		cmax INT,
 		run_time INT,
 		PRIMARY KEY (id),
-		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE,
-		FOREIGN KEY (algorithm) REFERENCES algorithms(id) ON DELETE CASCADE
+		FOREIGN KEY (execution) REFERENCES execution(id) ON DELETE CASCADE,
+		FOREIGN KEY (algorithm) REFERENCES algorithm(id) ON DELETE CASCADE,
 	)");
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS jobs (
-		id INT NOT NULL AUTO_INCREMENT,
-		trace INT NOT NULL,
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS algorithm (
+		id INTEGER NOT NULL,
+		name VARCHAR(255) NOT NULL,
+		PRIMARY KEY (id),
+	)");
+
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS original_trace (
+		id INTEGER PRIMARY KEY NOT NULL,
+		trace_file VARCHAR(255) NOT NULL,
+		execution INTEGER NOT NULL,
+		FOREIGN KEY (execution) REFERENCES execution(id) ON DELETE CASCADE
+	)");
+
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS generated_trace (
+		id INTEGER PRIMARY KEY NOT NULL,
+		run INTEGER NOT NULL,
+		FOREIGN KEY (run) REFERENCES run(id) ON DELETE CASCADE
+	)");
+
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS job (
+		id INTEGER NOT NULL,
+		trace INTEGER NOT NULL,
 		job_number INT,
 		submit_time INT,
 		wait_time INT,
+		new_wait_time INT,
 		run_time INT,
 		allocated_cpus INT,
 		avg_cpu_time INT,
@@ -80,8 +87,8 @@ sub prepare_tables {
 		requested_time INT,
 		requested_mem INT,
 		status INT,
-		uid INT,
-		gid INT,
+		uid INTEGER,
+		gid INTEGER,
 		exec_number INT,
 		queue_number INT,
 		partition_number INT,
@@ -90,10 +97,10 @@ sub prepare_tables {
 		assigned_processors VARCHAR(255),
 		starting_time INT,
 		PRIMARY KEY (id),
-		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE
+		FOREIGN KEY (trace) REFERENCES trace(id) ON DELETE CASCADE
 	)");
 	
-	$self->{dbh}->do("INSERT INTO algorithms (name) VALUES 
+	$self->{dbh}->do("INSERT INTO algorithm (name) VALUES
 		('fcfs_not_contiguous'),
 		('fcfs_best_effort'),
 		('fcfs_contiguous'),
