@@ -108,6 +108,7 @@ sub find_first_profile_for {
 
 sub set_current_time {
 	my ($self, $current_time) = @_;
+	return if $self->{profiles}->[0]->starting_time() >= $current_time;
 	my @remaining_profiles;
 
 	for my $profile (@{$self->{profiles}}) {
