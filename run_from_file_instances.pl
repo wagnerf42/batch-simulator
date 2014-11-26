@@ -96,7 +96,7 @@ write_results_to_file($results);
 sub run_all_thread {
 	my ($id) = @_;
 
-	while (defined(my $instance = $q->dequeue())) {
+	while (defined(my $instance = $q->dequeue_nb())) {
 		my $results_instance = [];
 		share($results_instance);
 
