@@ -44,11 +44,13 @@ sub new {
 	}
 
 	bless $self, $class;
+	delete $self->{size};
 	$self->check_ok();
 	return $self;
 }
 
 sub check_ok {
+	return; #disabling check
 	my $self = shift;
 	my $last_end;
 	$self->ranges_loop(
@@ -69,6 +71,7 @@ sub check_ok {
 
 sub intersection {
 	my @ranges = @_;
+	$ranges[0]->{size} = 0;
 
 	my $inside_segments = 0;
 	my $starting_point;
@@ -107,6 +110,7 @@ sub intersection {
 				push @result, $starting_point;
 				my $end_point = $x[$advancing_range];
 				push @result, $end_point;
+				$ranges[0]->{size} += $end_point - $starting_point + 1;
 			}
 			$inside_segments--;
 		}
@@ -215,6 +219,7 @@ sub is_empty {
 
 sub size {
 	my $self = shift;
+	return $self->{size} if exists $self->{size}; #as usual, be careful with caches
 	my $size = 0;
 	$self->ranges_loop(
 		sub {
@@ -298,6 +303,7 @@ sub reduce_to_first {
 		},
 	);
 	$self->{ranges} = [@remaining_ranges];
+	delete $self->{size};
 	$self->check_ok();
 }
 
@@ -320,6 +326,7 @@ sub reduce_to_forced_contiguous {
 	);
 
 	$self->{ranges} = [@remaining_ranges];
+	delete $self->{size};
 	$self->check_ok();
 }
 
@@ -342,6 +349,7 @@ sub reduce_to_best_effort_contiguous {
 	}
 
 	$self->{ranges} = [map {($_->[0], $_->[1])} sort {$a->[0] <=> $b->[0]} @remaining_ranges];
+	delete $self->{size};
 	$self->check_ok();
 
 }
@@ -394,6 +402,7 @@ sub reduce_to_best_effort_local {
 	}
 
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+	delete $self->{size};
 	$self->check_ok();
 }
 
@@ -428,6 +437,7 @@ sub reduce_to_forced_local {
 	}
 
 	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+	delete $self->{size};
 	$self->check_ok();
 }
 

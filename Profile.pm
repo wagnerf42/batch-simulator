@@ -60,11 +60,11 @@ sub duration {
 }
 
 #returns two or one profile if it is split or not by job insertion
-sub add_job_if_needed {
+sub add_job {
 	my $self = shift;
 	my $job = shift;
-	return $self if $self->{starting_time} >= $job->ending_time();
-	return $self if defined $self->ending_time() and $self->ending_time() <= $job->starting_time();
+	die if $self->{starting_time} >= $job->ending_time();
+	die if defined $self->ending_time() and $self->ending_time() <= $job->starting_time();
 	if ($self->starting_time() < $job->starting_time()) {
 		my $new_end;
 		if (defined $self->{duration}) {
