@@ -14,7 +14,7 @@ sub new {
 		driver => "SQLite",
 		database => "parser.db",
 		userid => "",
-		password => ""
+		password => "",
 	};
 
 	$self->{dsn} = "DBI:$self->{driver}:dbname=$self->{database}";
@@ -27,9 +27,10 @@ sub new {
 sub prepare_tables {
 	my ($self) = @_;
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS execution (
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS executions (
 		id INTEGER NOT NULL,
 		trace_file VARCHAR(255),
+		script_name VARCHAR(255),
 		jobs_number INT,
 		executions_number INT,
 		cpus_number INT,
@@ -43,7 +44,15 @@ sub prepare_tables {
 		PRIMARY KEY (id)
 	)");
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS instance (
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS results (
+		id INTEGER NOT NULL,
+		instance INTEGER NOT NULL,
+		data BLOB,
+		PRIMARY KEY (id),
+		FOREIGN KEY (instance) REFERENCES instances (id) ON DELETE CASCADE
+	)");
+
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS instances (
 		id INTEGER NOT NULL,
 		trace INTEGER NOT NULL,
 		execution INTEGER NOT NULL,
@@ -51,18 +60,11 @@ sub prepare_tables {
 		cmax INT,
 		run_time INT,
 		PRIMARY KEY (id),
-		FOREIGN KEY (execution) REFERENCES execution(id) ON DELETE CASCADE,
-		FOREIGN KEY (algorithm) REFERENCES algorithm(id) ON DELETE CASCADE,
-		FOREIGN KEY (trace) REFERENCES trace(id) ON DELETE CASCADE
+		FOREIGN KEY (execution) REFERENCES executions(id) ON DELETE CASCADE,
+		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE
 	)");
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS algorithm (
-		id INTEGER NOT NULL,
-		name VARCHAR(255) NOT NULL,
-		PRIMARY KEY (id)
-	)");
-
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS trace (
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS traces (
 		id INTEGER NOT NULL,
 		generation_method VARCHAR(255),
 		trace_file VARCHAR(255),
@@ -72,7 +74,7 @@ sub prepare_tables {
 		PRIMARY KEY (id)
 	)");
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS job (
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS jobs (
 		id INTEGER NOT NULL,
 		trace INTEGER NOT NULL,
 		job_number INT,
@@ -97,48 +99,75 @@ sub prepare_tables {
 		assigned_processors VARCHAR(255),
 		starting_time INT,
 		PRIMARY KEY (id),
-		FOREIGN KEY (trace) REFERENCES trace(id) ON DELETE CASCADE
+		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE
 	)");
 }
 
-sub add_execution {
-	my ($self, $execution) = @_;
-
-	$execution->{add_time} = "SELECT datetime(\"now\")";
-
-	my $key_string = join (',', keys %{$execution});
-	my $value_string = join ('\',\'', values %{$execution});
-	$self->{dbh}->do("INSERT INTO execution ($key_string) values ('$value_string')");
-
-	my $sth = $self->{dbh}->prepare("SELECT MAX(id) AS id FROM execution");
+sub get_max_id {
+	my ($self, $table_name) = @_;
+	my $sth = $self->{dbh}->prepare("SELECT MAX(id) AS id FROM $table_name");
 	$sth->execute();
+
 	my $ref = $sth->fetchrow_hashref();
 	my $id = $ref->{id};
 	return $id;
 }
 
+sub get_keysvalues {
+	my ($self, $hash) = @_;
+	my $key_string = join (", ", keys %{$hash});
+	my $value_string = join ("', '", values %{$hash});
+	return ($key_string, $value_string);
+}
+
+sub add_execution {
+	my ($self, $execution) = @_;
+	my ($key_string, $value_string) = $self->get_keysvalues($execution);
+	my $add_time_string = "(SELECT datetime(" . time() . ", 'unixepoch', 'localtime'))";
+
+	my $statement = "INSERT INTO executions (add_time, $key_string) VALUES ($add_time_string, '$value_string')";
+	$self->{dbh}->do($statement);
+	return $self->get_max_id("executions");
+}
+
+sub add_instance {
+	my ($self, $execution_id, $trace_id, $instance_info) = @_;
+	my ($key_string, $value_string) = $self->get_keysvalues($instance_info);
+
+	my $statement = "INSERT INTO instances (execution, trace, $key_string) VALUES ($execution_id, '$trace_id', '$value_string')";
+	$self->{dbh}->do($statement);
+	return $self->get_max_id("instances");
+}
+
+sub add_results {
+	my ($self, $instance_id, $results) = @_;
+	die unless defined $results;
+
+	for my $results_item (@{$results}) {
+		my $statement = "INSERT INTO results (instance, data) VALUES ('$instance_id', '" . join(' ', @{$results_item}) . "')";
+		$self->{dbh}->do($statement);
+	}
+}
+
 sub update_execution_run_time {
 	my ($self, $execution_id, $run_time) = @_;
-	$self->{dbh}->do("UPDATE execution SET run_time = '$run_time' WHERE id = '$execution_id'");
+
+	$self->{dbh}->do("UPDATE executions SET run_time = '$run_time' WHERE id = '$execution_id'");
 }
 
 sub add_trace {
 	my ($self, $trace, $trace_info) = @_;
+	my ($key_string, $value_string) = $self->get_keysvalues($trace_info);
 
-	my $key_string = join (',', keys %{$trace_info});
-	my $value_string = join ('\',\'', values %{$trace_info});
-	$self->{dbh}->do("INSERT INTO trace ($key_string) values ('$value_string')");
-
-	my $sth = $self->{dbh}->prepare('SELECT MAX(id) AS id from trace');
-	$sth->execute();
-	my $ref = $sth->fetchrow_hashref();
-	my $trace_id = $ref->{id};
+	my $statement = "INSERT INTO traces ($key_string) VALUES ('$value_string')";
+	$self->{dbh}->do($statement);
+	my $trace_id = $self->get_max_id("traces");
 
 	# Add the jobs
 	for my $job (@{$trace->jobs()}) {
-		my $key_string = join (',', keys %{$job});
-		my $value_string = join ('\',\'', values %{$job});
-		$self->{dbh}->do("INSERT INTO job (trace, $key_string) values ('$trace_id', '$value_string')");
+		my ($key_string, $value_string) = $self->get_keysvalues($job);
+		my $statement = "INSERT INTO jobs (trace, $key_string) VALUES ('$trace_id', '$value_string')";
+		$self->{dbh}->do($statement);
 	}
 
 	return $trace_id;
@@ -147,12 +176,12 @@ sub add_trace {
 sub get_trace_ref {
 	my ($self, $trace_id) = @_;
 
-	my $sth = $self->{dbh}->prepare("SELECT * FROM traces WHERE id=\'$trace_id\'");
+	my $sth = $self->{dbh}->prepare("SELECT * FROM traces WHERE id='$trace_id'");
 	$sth->execute();
 	return $sth->fetchrow_hashref();
 }
 
-sub get_job_refs {
+sub get_jobs_refs {
 	my ($self, $trace_id) = @_;
 
 	my $sth = $self->{dbh}->prepare("SELECT * FROM jobs WHERE trace=\'$trace_id\'");
@@ -164,20 +193,5 @@ sub get_job_refs {
 	}
 	return @job_refs;
 }
-
-sub add_run {
-	my ($self, $trace_id, $algorithm_name, $cmax, $run_time) = @_;
-
-	my $sth = $self->{dbh}->prepare("SELECT id FROM algorithms WHERE name=\'$algorithm_name\'");
-	$sth->execute();
-
-	my $algorithm_ref = $sth->fetchrow_hashref();
-	die 'unknown algorithm name' unless defined $algorithm_ref;
-
-	my $algorithm_id = $algorithm_ref->{id};
-
-	$self->{dbh}->do("INSERT INTO runs (trace, algorithm, cmax, run_time) VALUES ($trace_id, $algorithm_id, $cmax, $run_time)");
-}
-
 
 1;

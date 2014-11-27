@@ -217,6 +217,7 @@ sub number_of_jobs {
 
 sub remove_large_jobs {
 	my ($self, $limit) = @_;
+	die unless defined $limit;
 	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
 	$self->{jobs} = [@left_jobs];
 }
