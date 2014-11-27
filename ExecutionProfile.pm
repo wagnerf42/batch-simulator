@@ -42,7 +42,6 @@ sub new {
 
 sub get_free_processors_for {
 	my ($self, $job, $profile_index) = @_;
-	return if $self->{profiles}->[$profile_index]->processors_ids()->size() < $job->requested_cpus(); #abort if not enough
 	my $left_duration = $job->run_time();
 	my $candidate_processors = $self->{profiles}->[$profile_index]->processors_ids();
 	my $left_processors = new ProcessorRange($candidate_processors);
@@ -85,10 +84,9 @@ sub get_free_processors_for {
 #returns the number of profiles impacted by job
 sub compute_profiles_impacted_by_job {
 	my $self = shift;
-	my $start = shift;
 	my $job = shift;
 	my $in_count = 0;
-	for my $profile(@{$self->{profiles}}[$start..$#{$self->{profiles}}]) {
+	for my $profile (@{$self->{profiles}}) {
 		last if ($profile->starting_time() >= $job->ending_time());
 		$in_count++;
 	}
@@ -99,8 +97,9 @@ sub compute_profiles_impacted_by_job {
 sub add_job_at {
 	my ($self, $start_profile, $job) = @_;
 	my $before = $start_profile; #all these are not impacted by job (starting at 0)
-	my $in = $self->compute_profiles_impacted_by_job($start_profile, $job);
 	my @new_profiles = splice @{$self->{profiles}}, 0, $before;
+
+	my $in = $self->compute_profiles_impacted_by_job($job);
 	my @impacted_profiles = splice @{$self->{profiles}}, 0, $in;
 	for my $profile (@impacted_profiles) {
 		push @new_profiles, $profile->add_job($job);
@@ -116,9 +115,16 @@ sub starting_time {
 
 sub find_first_profile_for {
 	my ($self, $job) = @_;
-	for my $profile_id (0..$#{$self->{profiles}}) {
-		my $processors = $self->get_free_processors_for($job, $profile_id);
-		return ($profile_id, $processors) if $processors;
+	$starting_index = 0;
+	my $min_valid_index;
+	for my $profile_id ($starting_index..$#{$self->{profiles}}) {
+		if ($self->{profiles}->[$profile_id]->processors_ids()->size() >= $job->requested_cpus()) {
+			unless (defined $min_valid_index) {
+				$min_valid_index = $profile_id;
+			}
+			my $processors = $self->get_free_processors_for($job, $profile_id);
+			return ($profile_id, $processors) if $processors;
+		}
 	}
 
 	die "at least last profile should be ok for job";
