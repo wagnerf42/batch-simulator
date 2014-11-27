@@ -8,24 +8,23 @@ use Carp;
 use Data::Dumper;
 use POSIX qw(floor ceil);
 use List::Util qw(max min sum);
-#use Class::XSAccessor::Array;
 
 sub new {
 	my $class = shift;
-	my $self = [];
+	my $self = {};
 
 	if (@_ == 2) {
-		$self = [@_];
+		$self->{ranges} = [@_];
 	} else {
 		my $processors = shift; #processors might come in different formats
 
 		if (defined $processors) {
 			if (ref $processors eq $class) {
 				#copy constructor
-				$self = [@{$processors}];
+				$self->{ranges} = [@{$processors->{ranges}}];
 			} else {
 				#take a list of ids
-				$self = [];
+				$self->{ranges} = [];
 				if (@{$processors}) {
 					my @processors_ids = sort {$a <=> $b} @{$processors};
 
@@ -33,12 +32,12 @@ sub new {
 
 					for my $id (@processors_ids) {
 						if ((not defined $previous_id) or ($previous_id != $id -1)) {
-							push @{$self}, $previous_id if defined $previous_id;
-							push @{$self}, $id;
+							push @{$self->{ranges}}, $previous_id if defined $previous_id;
+							push @{$self->{ranges}}, $id;
 						}
 						$previous_id = $id;
 					}
-					push @{$self}, $previous_id;
+					push @{$self->{ranges}}, $previous_id;
 				}
 			}
 		}
@@ -76,7 +75,7 @@ sub intersection {
 	my @result;
 
 	my @indices = (0, 0);
-	my @limits = map {$#{$_}} @ranges;
+	my @limits = map {$#{$_->{ranges}}} @ranges;
 
 	#loop on points from left to right
 	while ($indices[0] <= $limits[0] and $indices[1] <= $limits[1]) {
@@ -84,7 +83,7 @@ sub intersection {
 		my $advancing_range;
 		my $event_type;
 
-		my @x = map {$ranges[$_]->[$indices[$_]]} (0..1);
+		my @x = map {$ranges[$_]->{ranges}->[$indices[$_]]} (0..1);
 		if ($x[0] < $x[1]) {
 			$advancing_range = 0;
 		} elsif($x[0] > $x[1]) {
@@ -114,7 +113,7 @@ sub intersection {
 		$indices[$advancing_range]++;
 	}
 
-	@{$ranges[0]} = @result;
+	$ranges[0]->{ranges} = [@result];
 
 }
 
@@ -130,9 +129,9 @@ sub set_operation {
 	my @result;
 
 	my @lines;
-	push @lines, new EventLine($self, 0);
+	push @lines, new EventLine($self->{ranges}, 0);
 	my $limit = $lines[0]->get_last_limit();
-	push @lines, new EventLine($other, $invert);
+	push @lines, new EventLine($other->{ranges}, $invert);
 
 	#loop on points from left to right
 	while ($lines[0]->is_not_completed() and $lines[1]->is_not_completed($limit)) {
@@ -170,20 +169,20 @@ sub set_operation {
 		$lines[$advancing_range]->advance;
 	}
 
-	@{$self} = @result;
+	$self->{ranges} = [@result];
 }
 
 #compute a list of paired (start,end) ranges
 sub compute_pairs {
 	my $self = shift;
-	return unless @{$self};
-	return map { [$self->[2*$_], $self->[2*$_+1]] } (0..($#{$self}/2));
+	return unless @{$self->{ranges}};
+	return map { [$self->{ranges}->[2*$_], $self->{ranges}->[2*$_+1]] } (0..($#{$self->{ranges}}/2));
 }
 
 sub compute_ranges_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
-	return unless @{$self};
+	return unless @{$self->{ranges}};
 
 	my $clusters;
 	my $current_cluster = -1;
@@ -211,7 +210,7 @@ sub compute_ranges_in_clusters {
 
 sub is_empty {
 	my $self = shift;
-	return not (scalar @{$self});
+	return not (scalar @{$self->{ranges}});
 }
 
 sub size {
@@ -257,9 +256,9 @@ sub stringification {
 sub ranges_loop {
 	my $self = shift;
 	my $callback = shift;
-	return unless @{$self};
-	for my $i (0..($#{$self}/2)) {
-		return unless $callback->($self->[2*$i], $self->[2*$i+1], @_);
+	return unless @{$self->{ranges}};
+	for my $i (0..($#{$self->{ranges}}/2)) {
+		return unless $callback->($self->{ranges}->[2*$i], $self->{ranges}->[2*$i+1], @_);
 	}
 }
 
@@ -298,7 +297,7 @@ sub reduce_to_first {
 			return ($target_number != 0);
 		},
 	);
-	@{$self} = @remaining_ranges;
+	$self->{ranges} = [@remaining_ranges];
 	$self->check_ok();
 }
 
@@ -320,7 +319,7 @@ sub reduce_to_forced_contiguous {
 		},
 	);
 
-	@{$self} = @remaining_ranges;
+	$self->{ranges} = [@remaining_ranges];
 	$self->check_ok();
 }
 
@@ -342,7 +341,7 @@ sub reduce_to_best_effort_contiguous {
 		last if $target_number == 0;
 	}
 
-	@{$self} = map {($_->[0], $_->[1])} sort {$a->[0] <=> $b->[0]} @remaining_ranges;
+	$self->{ranges} = [map {($_->[0], $_->[1])} sort {$a->[0] <=> $b->[0]} @remaining_ranges];
 	$self->check_ok();
 
 }
@@ -367,9 +366,9 @@ sub sort_and_fuse_contiguous_ranges {
 		}
 	}
 
-	my @result;
-	push @result, ($_->[0], $_->[1]) for @remaining_ranges;
-	return @result;
+	my $result = [];
+	push @{$result}, ($_->[0], $_->[1]) for @remaining_ranges;
+	return $result;
 }
 
 sub reduce_to_best_effort_local {
@@ -394,7 +393,7 @@ sub reduce_to_best_effort_local {
 		last if $target_number == 0;
 	}
 
-	@{$self} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
 	$self->check_ok();
 }
 
@@ -421,14 +420,14 @@ sub reduce_to_forced_local {
 		$used_clusters_number++;
 
 		if (($used_clusters_number == $target_clusters_number) and ($target_number > 0)) {
-			@{$self} = ();
+			$self->{ranges} = [];
 			return;
 		}
 
 		last if $target_number == 0;
 	}
 
-	@{$self} = sort_and_fuse_contiguous_ranges($remaining_ranges);
+	$self->{ranges} = sort_and_fuse_contiguous_ranges($remaining_ranges);
 	$self->check_ok();
 }
 
@@ -438,10 +437,10 @@ sub contiguous {
 	my $self = shift;
 	my $processors_number = shift;
 	die "are 0 processors contiguous ?" if $self->is_empty();
-	return 1 if @{$self} == 2;
-	if (@{$self} == 4) {
+	return 1 if @{$self->{ranges}} == 2;
+	if (@{$self->{ranges}} == 4) {
 		#complex case
-		return (($self->[0] == 0) and ($self->[4] == $processors_number - 1));
+		return (($self->{ranges}->[0] == 0) and ($self->{ranges}->[4] == $processors_number - 1));
 	} else {
 		return 0;
 	}
