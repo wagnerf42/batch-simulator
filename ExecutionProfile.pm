@@ -42,6 +42,7 @@ sub new {
 
 sub get_free_processors_for {
 	my ($self, $job, $profile_index) = @_;
+	return if $self->{profiles}->[$profile_index]->processors_ids()->size() < $job->requested_cpus(); #abort if not enough
 	my $left_duration = $job->run_time();
 	my $candidate_processors = $self->{profiles}->[$profile_index]->processors_ids();
 	my $left_processors = new ProcessorRange($candidate_processors);
@@ -53,7 +54,7 @@ sub get_free_processors_for {
 		my $duration = $current_profile->duration();
 		$starting_time += $duration if defined $duration;
 		$left_processors->intersection($current_profile->processor_range());
-		return if $left_processors->size() < $job->requested_cpus(); #abort if nothing left
+		return if $left_processors->size() < $job->requested_cpus(); #abort if not enough
 		if (defined $current_profile->duration()) {
 			$left_duration -= $current_profile->duration();
 			$profile_index++;

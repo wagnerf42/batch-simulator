@@ -22,6 +22,7 @@ sub new {
 			if (ref $processors eq $class) {
 				#copy constructor
 				$self->{ranges} = [@{$processors->{ranges}}];
+				$self->{size} = $processors->{size} if exists $processors->{size};
 			} else {
 				#take a list of ids
 				$self->{ranges} = [];
@@ -174,6 +175,7 @@ sub set_operation {
 	}
 
 	$self->{ranges} = [@result];
+	delete $self->{size};
 }
 
 #compute a list of paired (start,end) ranges
@@ -228,6 +230,7 @@ sub size {
 			return 1;
 		}
 	);
+	$self->{size} = $size;
 	return $size;
 }
 
