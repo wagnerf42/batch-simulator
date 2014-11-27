@@ -13,6 +13,6 @@ $t->reset_submit_times();
 my $schedule = new Backfilling($t, 2000, 4, 3);
 
 $schedule->run();
-$schedule->tycat();
+#$schedule->tycat();
 
 print "Done\n";

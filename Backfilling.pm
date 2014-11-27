@@ -39,7 +39,7 @@ sub assign_job {
 	$job->{schedule_cmax} = $self->{cmax};
 
 	#update profiles
-	$self->{execution_profile}->add_job_at($job);
+	$self->{execution_profile}->add_job_at($chosen_profile, $job);
 }
 
 1;
