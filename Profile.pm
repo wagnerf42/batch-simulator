@@ -94,7 +94,7 @@ sub split {
 	my $middle_duration = $middle_end - $middle_start if defined $middle_end;
 	my $middle_profile = new Profile($middle_start, new ProcessorRange($self->{processors}), $middle_duration);
 	$middle_profile->remove_used_processors($job);
-	push @profiles, $middle_profile if @{$middle_profile->{processors}};
+	push @profiles, $middle_profile unless $middle_profile->is_fully_loaded();
 
 	if ((not defined $self->ending_time()) or ($job->ending_time() < $self->ending_time())) {
 		my $end_duration;
