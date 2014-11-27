@@ -17,15 +17,23 @@ use ExecutionProfile ':stooges';
 
 local $| = 1;
 
-my ($trace_file_name, $instances_number, $jobs_number, $cpus_number, $cluster_size, $threads_number) = @ARGV;
-die unless defined $threads_number;
+my ($trace_file_name, $instances_number, $jobs_number, $cpus_number, $cluster_size, $threads_number, $execution_id) = @ARGV;
+die 'wrong parameters' unless defined $threads_number;
 
 my @variants = (
 	EP_FIRST,
-	EP_BEST_EFFORT,
+#	EP_BEST_EFFORT,
 	EP_CONTIGUOUS,
-	EP_BEST_EFFORT_LOCALITY,
-	EP_CLUSTER
+#	EP_BEST_EFFORT_LOCALITY,
+#	EP_CLUSTER
+);
+
+my @variants_names = (
+	"first",
+#	"becont",
+	"cont",
+#	"beloc",
+#	"loc"
 );
 
 # Create new execution in the database
@@ -40,10 +48,11 @@ my %execution = (
 	cluster_size => $cluster_size
 );
 
-my $database = Database->new();
+#my $database = Database->new();
 #$database->prepare_tables();
 #die 'created tables';
-my $execution_id = $database->add_execution(\%execution);
+
+#my $execution_id = $database->add_execution(\%execution);
 print STDERR "Started execution $execution_id\n";
 
 # Create a directory to store the output
@@ -64,7 +73,7 @@ my $q = Thread::Queue->new();
 
 print STDERR "Populating queue\n";
 $q->enqueue($_) for (0..($instances_number - 1));
-$q->end();
+#$q->end();
 
 print STDERR "Creating threads\n";
 my $start_time = time();
@@ -78,7 +87,7 @@ for my $i (0..($threads_number - 1)) {
 $_->join() for (@threads);
 
 # Update run time in the database
-$database->update_execution_run_time($execution_id, time() - $start_time);
+#$database->update_execution_run_time($execution_id, time() - $start_time);
 
 # save results on a file
 print STDERR "Writing results to folder $basic_dir\n";
@@ -87,13 +96,13 @@ write_results_to_file($results);
 sub run_all_thread {
 	my ($id) = @_;
 
-	while (defined(my $instance = $q->dequeue())) {
+	while (defined(my $instance = $q->dequeue_nb())) {
 		my $results_instance = [];
 		share($results_instance);
 
 		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 
-		print STDERR "Running $instance:" . ($q->pending() ? $q->pending() : 0) . "\n";
+		print STDERR "Running $instance\n";
 
 		for my $variant (0..$#variants) {
 			my $schedule = Backfilling->new($trace_random, $cpus_number, $cluster_size, $variants[$variant]);
@@ -113,7 +122,7 @@ sub write_results_to_file {
 	my ($results, $variant_number) = @_;
 
 	for my $variant (0..$#variants) {
-		open(my $filehandle, "> $basic_dir/$basic_file_name-$variant.csv") or die;
+		open(my $filehandle, "> $basic_dir/$basic_file_name-$variants_names[$variant].csv") or die;
 		print $filehandle join (' ', @{$results->[$variant * $instances_number + $_]}) . "\n" for (0..($instances_number - 1));
 		close $filehandle;
 	}

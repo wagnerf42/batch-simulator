@@ -5,7 +5,6 @@ use strict;
 use warnings;
 
 use List::Util qw(max);
-use Algorithm::Permute;
 use ProcessorsSet;
 use Data::Dumper qw(Dumper);
 
