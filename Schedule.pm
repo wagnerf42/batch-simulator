@@ -38,17 +38,16 @@ sub new {
 
 sub run {
 	my $self = shift;
-	my $start = time();
+	my $start_time = time();
 
 	die "not enough processors (we need " . $self->{trace}->needed_cpus() . ", we have " . $self->{num_processors} . ")" if $self->{trace}->needed_cpus() > $self->{num_processors};
 
 	for my $job (@{$self->{jobs}}) {
 		$self->assign_job($job);
-
-		$job->schedule_time(time() - $start);
+		$job->schedule_time(time() - $start_time);
 	}
 
-	$self->{run_time} = time() - $start;
+	$self->{run_time} = time() - $start_time;
 }
 
 sub run_time {

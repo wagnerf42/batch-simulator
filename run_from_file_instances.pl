@@ -14,10 +14,11 @@ use Backfilling;
 use Database;
 use Random;
 use ExecutionProfile ':stooges';
+use Util;
 
 local $| = 1;
 
-my ($trace_file_name, $instances_number, $jobs_number, $cpus_number, $cluster_size, $threads_number, $execution_id) = @ARGV;
+my ($trace_file_name, $instances_number, $jobs_number, $cpus_number, $cluster_size, $threads_number) = @ARGV;
 die 'wrong parameters' unless defined $threads_number;
 
 my @variants = (
@@ -37,22 +38,23 @@ my @variants_names = (
 );
 
 # Create new execution in the database
-my %execution = (
+my %execution_info = (
 	trace_file => $trace_file_name,
+	script_name => "run_from_file_instances.pl",
 	jobs_number => $jobs_number,
 	executions_number => $instances_number,
 	cpus_number => $cpus_number,
 	threads_number => $threads_number,
 	git_revision => `git rev-parse HEAD`,
-	comments => "run_from_file_instances script, all variants",
+	git_tree_dirty => Util->git_tree_dirty(),
+	comments => "test run for the new database code",
 	cluster_size => $cluster_size
 );
 
-#my $database = Database->new();
-#$database->prepare_tables();
-#die 'created tables';
+my $database = Database->new();
+$database->prepare_tables();
 
-#my $execution_id = $database->add_execution(\%execution);
+my $execution_id = $database->add_execution(\%execution_info);
 print STDERR "Started execution $execution_id\n";
 
 # Create a directory to store the output
@@ -64,14 +66,13 @@ mkdir "$basic_dir";
 my $results = [];
 share($results);
 
-# Read the trace and write it to a file
+# Read the trace
 my $trace = Trace->new_from_swf($trace_file_name);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 
-my $q = Thread::Queue->new();
-
 print STDERR "Populating queue\n";
+my $q = Thread::Queue->new();
 $q->enqueue($_) for (0..($instances_number - 1));
 #$q->end();
 
@@ -96,11 +97,21 @@ write_results_to_file($results);
 sub run_all_thread {
 	my ($id) = @_;
 
+	my $database_thread = Database->new();
+
 	while (defined(my $instance = $q->dequeue_nb())) {
 		my $results_instance = [];
 		share($results_instance);
 
 		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
+		my %trace_info = (
+			trace_file => $trace_file_name,
+			generation_method => "random_jobs",
+			reset_submit_times => 1,
+			fix_submit_times => 0,
+			remove_large_jobs => 1
+		);
+		my $trace_id = $database_thread->add_trace($trace_random, \%trace_info);
 
 		print STDERR "Running $instance\n";
 
@@ -108,9 +119,17 @@ sub run_all_thread {
 			my $schedule = Backfilling->new($trace_random, $cpus_number, $cluster_size, $variants[$variant]);
 			$schedule->run();
 
+			my %instance_info = (
+				algorithm => $variants_names[$variant],
+				run_time => $schedule->run_time(),
+				cmax => $schedule->cmax()
+			);
+			my $instance_id = $database_thread->add_instance($execution_id, $trace_id, \%instance_info);
+
 			my $results_instance = [];
 			share($results_instance);
 			push @{$results_instance}, map { $schedule->{jobs}->[$_]->{schedule_cmax} } (0..($jobs_number - 1));
+			$database_thread->add_results($instance_id, [$results_instance]);
 			$results->[$variant * $instances_number + $instance] = $results_instance;
 		}
 	}

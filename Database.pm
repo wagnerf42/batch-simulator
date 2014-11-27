@@ -98,6 +98,7 @@ sub prepare_tables {
 		think_time_prec_job INT,
 		assigned_processors VARCHAR(255),
 		starting_time INT,
+		schedule_time INT,
 		PRIMARY KEY (id),
 		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE
 	)");
