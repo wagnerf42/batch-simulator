@@ -113,15 +113,43 @@ sub starting_time {
 	return $self->{profiles}->[$profile_index]->starting_time();
 }
 
+#quickly check if we have enough processors for a job
+#does not check if it is the same processors for the whole
+#job duration
+#TODO: there is code duplication with get_free_processors_for
+sub could_start_job_at {
+	my $self = shift;
+	my $job = shift;
+	my $profile_index = shift;
+	my $min_processors = $self->{profiles}->[$profile_index]->processor_range()->size();
+	return 0 unless $min_processors >= $job->requested_cpus();
+	my $left_duration = $job->run_time();
+	my $starting_time = $self->{profiles}->[$profile_index]->starting_time();
+
+	while ($left_duration > 0) {
+		my $current_profile = $self->{profiles}->[$profile_index];
+		return 0 unless $starting_time == $current_profile->starting_time(); #profiles must all be contiguous
+		my $duration = $current_profile->duration();
+		$starting_time += $duration if defined $duration;
+		my $current_processors = $current_profile->processor_range()->size();
+		$min_processors = $current_processors if $current_processors < $min_processors;
+		return 0 unless $min_processors >= $job->requested_cpus();
+		if (defined $current_profile->duration()) {
+			$left_duration -= $current_profile->duration();
+			$profile_index++;
+		} else {
+			last;
+		}
+	}
+	return 1;
+
+}
+
 sub find_first_profile_for {
 	my ($self, $job) = @_;
-	$starting_index = 0;
-	my $min_valid_index;
+	my $starting_index = 0;
 	for my $profile_id ($starting_index..$#{$self->{profiles}}) {
-		if ($self->{profiles}->[$profile_id]->processors_ids()->size() >= $job->requested_cpus()) {
-			unless (defined $min_valid_index) {
-				$min_valid_index = $profile_id;
-			}
+		if ($self->could_start_job_at($job, $profile_id)) {
 			my $processors = $self->get_free_processors_for($job, $profile_id);
 			return ($profile_id, $processors) if $processors;
 		}
