@@ -119,17 +119,17 @@ sub run_all_thread {
 			my $schedule = Backfilling->new($trace_random, $cpus_number, $cluster_size, $variants[$variant]);
 			$schedule->run();
 
+			my $results_instance = [];
+			share($results_instance);
+			push @{$results_instance}, map { $schedule->{jobs}->[$_]->{schedule_cmax} } (0..($jobs_number - 1));
+
 			my %instance_info = (
 				algorithm => $variants_names[$variant],
 				run_time => $schedule->run_time(),
 				cmax => $schedule->cmax()
 			);
-			my $instance_id = $database_thread->add_instance($execution_id, $trace_id, \%instance_info);
+			my $instance_id = $database_thread->add_instance($execution_id, $trace_id, $results_instance, \%instance_info);
 
-			my $results_instance = [];
-			share($results_instance);
-			push @{$results_instance}, map { $schedule->{jobs}->[$_]->{schedule_cmax} } (0..($jobs_number - 1));
-			$database_thread->add_results($instance_id, [$results_instance]);
 			$results->[$variant * $instances_number + $instance] = $results_instance;
 		}
 	}

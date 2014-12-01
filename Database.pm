@@ -44,14 +44,6 @@ sub prepare_tables {
 		PRIMARY KEY (id)
 	)");
 
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS results (
-		id INTEGER NOT NULL,
-		instance INTEGER NOT NULL,
-		data BLOB,
-		PRIMARY KEY (id),
-		FOREIGN KEY (instance) REFERENCES instances (id) ON DELETE CASCADE
-	)");
-
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS instances (
 		id INTEGER NOT NULL,
 		trace INTEGER NOT NULL,
@@ -59,6 +51,7 @@ sub prepare_tables {
 		algorithm VARCHAR(255),
 		cmax INT,
 		run_time INT,
+		results BLOB,
 		PRIMARY KEY (id),
 		FOREIGN KEY (execution) REFERENCES executions(id) ON DELETE CASCADE,
 		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE
@@ -132,22 +125,12 @@ sub add_execution {
 }
 
 sub add_instance {
-	my ($self, $execution_id, $trace_id, $instance_info) = @_;
+	my ($self, $execution_id, $trace_id, $results, $instance_info) = @_;
 	my ($key_string, $value_string) = $self->get_keysvalues($instance_info);
 
-	my $statement = "INSERT INTO instances (execution, trace, $key_string) VALUES ($execution_id, '$trace_id', '$value_string')";
+	my $statement = "INSERT INTO instances (execution, trace, results, $key_string) VALUES ($execution_id, '$trace_id', '" . join(' ', @{$results}) . "', '$value_string')";
 	$self->{dbh}->do($statement);
 	return $self->get_max_id("instances");
-}
-
-sub add_results {
-	my ($self, $instance_id, $results) = @_;
-	die unless defined $results;
-
-	for my $results_item (@{$results}) {
-		my $statement = "INSERT INTO results (instance, data) VALUES ('$instance_id', '" . join(' ', @{$results_item}) . "')";
-		$self->{dbh}->do($statement);
-	}
 }
 
 sub update_execution_run_time {
