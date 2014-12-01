@@ -140,23 +140,24 @@ sub update_execution_run_time {
 }
 
 sub add_trace {
-	my ($self, $trace, $trace_info) = @_;
+	my ($self, $trace, $trace_info, $add_jobs) = @_;
 	my ($key_string, $value_string) = $self->get_keysvalues($trace_info);
 
 	my $statement = "INSERT INTO traces ($key_string) VALUES ('$value_string')";
 	$self->{dbh}->do($statement);
 	my $trace_id = $self->get_max_id("traces");
 
-	# Add the jobs
-	for my $job (@{$trace->jobs()}) {
-		# Have to delete some extra keys
-		delete $job->{assigned_processors_ids};
-		delete $job->{schedule_cmax};
+	if ($add_jobs) {
+		for my $job (@{$trace->jobs()}) {
+			# Have to delete some extra keys
+			delete $job->{assigned_processors_ids};
+			delete $job->{schedule_cmax};
 
-		my ($key_string, $value_string) = $self->get_keysvalues($job);
+			my ($key_string, $value_string) = $self->get_keysvalues($job);
 
-		my $statement = "INSERT INTO jobs (trace, $key_string) VALUES ('$trace_id', '$value_string')";
-		$self->{dbh}->do($statement);
+			my $statement = "INSERT INTO jobs (trace, $key_string) VALUES ('$trace_id', '$value_string')";
+			$self->{dbh}->do($statement);
+		}
 	}
 
 	return $trace_id;

@@ -93,7 +93,7 @@ sub run_all_thread {
 		fix_submit_times => 0,
 		remove_large_jobs => 0
 	);
-	my $trace_id = $database_thread->add_trace($trace, \%trace_info);
+	my $trace_id = $database_thread->add_trace($trace, \%trace_info, 0);
 
 	print STDERR "Running $id\n";
 
