@@ -100,9 +100,6 @@ sub run_all_thread {
 	my $database_thread = Database->new();
 
 	while (defined(my $instance = $q->dequeue_nb())) {
-		my $results_instance = [];
-		share($results_instance);
-
 		my $trace_random = Trace->new_from_trace($trace, $jobs_number);
 		my %trace_info = (
 			trace_file => $trace_file_name,

@@ -149,7 +149,12 @@ sub add_trace {
 
 	# Add the jobs
 	for my $job (@{$trace->jobs()}) {
+		# Have to delete some extra keys
+		delete $job->{assigned_processors_ids};
+		delete $job->{schedule_cmax};
+
 		my ($key_string, $value_string) = $self->get_keysvalues($job);
+
 		my $statement = "INSERT INTO jobs (trace, $key_string) VALUES ('$trace_id', '$value_string')";
 		$self->{dbh}->do($statement);
 	}
