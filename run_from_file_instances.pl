@@ -88,7 +88,7 @@ for my $i (0..($threads_number - 1)) {
 $_->join() for (@threads);
 
 # Update run time in the database
-#$database->update_execution_run_time($execution_id, time() - $start_time);
+$database->update_execution_run_time($execution_id, time() - $start_time);
 
 # save results on a file
 print STDERR "Writing results to folder $basic_dir\n";
