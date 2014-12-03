@@ -6,6 +6,8 @@ use threads;
 use threads::shared;
 use Thread::Queue;
 use Data::Dumper qw(Dumper);
+use File::Basename;
+use List::Util qw(max sum);
 
 use Trace;
 use FCFS;
@@ -18,23 +20,23 @@ use Util;
 
 local $| = 1;
 
-my ($trace_file_name, $cpus_number, $cluster_size) = @ARGV;
-die 'wrong parameters' unless defined $cluster_size;
+my ($trace_file_name, $cluster_size) = @ARGV;
+die 'parameters' unless defined $cluster_size;
 
 my @variants = (
 	EP_FIRST,
-#	EP_BEST_EFFORT,
+	EP_BEST_EFFORT,
 	EP_CONTIGUOUS,
-#	EP_BEST_EFFORT_LOCALITY,
-#	EP_CLUSTER
+	EP_BEST_EFFORT_LOCALITY,
+	EP_CLUSTER
 );
 
 my @variants_names = (
 	"first",
-#	"becont",
+	"becont",
 	"cont",
-#	"beloc",
-#	"loc"
+	"beloc",
+	"loc"
 );
 
 # Create new execution in the database
@@ -42,7 +44,6 @@ my %execution_info = (
 	trace_file => $trace_file_name,
 	script_name => "run_from_file_stretch.pl",
 	executions_number => 1,
-	cpus_number => $cpus_number,
 	threads_number => scalar @variants,
 	git_revision => `git rev-parse HEAD`,
 	git_tree_dirty => Util->git_tree_dirty(),
@@ -57,7 +58,8 @@ my $execution_id = $database->add_execution(\%execution_info);
 print STDERR "Started execution $execution_id\n";
 
 # Create a directory to store the output
-my $basic_file_name = "run_from_file_stretch-$cpus_number-$cluster_size-$execution_id";
+my $trace_base_name = get_trace_base_name($trace_file_name);
+my $basic_file_name = "run_from_file_stretch-$trace_base_name-$cluster_size-$execution_id";
 my $basic_dir = "experiment/run_from_file_stretch/$basic_file_name";
 mkdir "$basic_dir";
 
@@ -84,8 +86,7 @@ sub run_all_thread {
 
 	my $database_thread = Database->new();
 
-	my $trace= Trace->new_from_swf($trace_file_name);
-	$trace->remove_large_jobs($cpus_number);
+	my $trace = Trace->new_from_swf($trace_file_name);
 	my %trace_info = (
 		trace_file => $trace_file_name,
 		generation_method => "file",
@@ -94,6 +95,8 @@ sub run_all_thread {
 		remove_large_jobs => 0
 	);
 	my $trace_id = $database_thread->add_trace($trace, \%trace_info, 0);
+
+	my $cpus_number = max map { $_->requested_cpus() } @{$trace->{jobs}};
 
 	print STDERR "Running $id\n";
 
@@ -124,4 +127,10 @@ sub write_results_to_file {
 		print $filehandle join (' ', @{$results->[$variant]}) . "\n";
 		close $filehandle;
 	}
+}
+
+sub get_trace_base_name {
+	my ($trace_file_name) = @_;
+	my @trace_file_parts = split('-', fileparse($trace_file_name, qr/\.[^.]*/));
+	return $trace_file_parts[0];
 }
