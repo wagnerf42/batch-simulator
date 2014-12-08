@@ -11,6 +11,7 @@ use ProcessorsSet;
 use ProcessorRange;
 use overload '""' => \&stringification;
 
+#TODO Fix the constant names!
 use constant EP_BEST_EFFORT => 0;
 use constant EP_CLUSTER_CONTIGUOUS => 1;
 use constant EP_CONTIGUOUS => 2;
@@ -134,8 +135,8 @@ sub could_start_job_at {
 		my $current_processors = $current_profile->processor_range()->size();
 		$min_processors = $current_processors if $current_processors < $min_processors;
 		return 0 unless $min_processors >= $job->requested_cpus();
-		if (defined $current_profile->duration()) {
-			$left_duration -= $current_profile->duration();
+		if (defined $duration) {
+			$left_duration -= $duration;
 			$profile_index++;
 		} else {
 			last;
