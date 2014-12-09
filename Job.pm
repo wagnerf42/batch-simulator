@@ -96,8 +96,15 @@ sub starting_time {
 	return $self->{starting_time};
 }
 
+sub starts_after {
+	my $self = shift;
+	my $time = shift;
+	return ($self->{starting_time} > $time);
+}
+
 sub ending_time {
-	my ($self) = @_;
+	my $self = shift;
+	return unless defined $self->{starting_time};
 	return $self->{starting_time} + $self->{run_time};
 }
 

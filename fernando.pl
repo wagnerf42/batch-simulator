@@ -16,7 +16,9 @@ my ($trace_file_name, $cluster_size) = @ARGV;
 
 my $trace = Trace->new_from_swf($trace_file_name);
 $trace->fix_submit_times();
-my $cpus_number = $trace->needed_cpus();
+my $cpus_number = 16;
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, EP_FIRST);
 $schedule->run();
+
+print STDERR "Done\n";
 
