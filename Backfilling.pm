@@ -45,23 +45,30 @@ sub run {
 		$self->{execution_profile}->set_current_time($self->{current_time});
 
 		if ($event->type() == SUBMISSION_EVENT) {
+			print "submit event t=$self->{current_time}\n";
 			$self->assign_job($job);
+			if ($job->starts_after($self->{current_time})) {
+				push @{$self->{reserved_jobs}}, $job;
+			}
 		} else {
+			print "finish event t=$self->{current_time}\n";
 			# Finishing event
 			delete $self->{started_jobs}->{$job->job_number()};
 
-			#scrap execution profile
-			$self->build_started_jobs_profile();
+			if ($job->requested_time() != $job->run_time()) {
+				#scrap execution profile
+				$self->build_started_jobs_profile();
 
-			#loop through all not yet started jobs and re-schedule them
-			my $remaining_reserved_jobs = [];
-			for my $job (@{$self->{reserved_jobs}}) {
-				$self->assign_job($job);
-				if ($job->starts_after($self->{current_time})) {
-					push @$remaining_reserved_jobs, $job;
+				#loop through all not yet started jobs and re-schedule them
+				my $remaining_reserved_jobs = [];
+				for my $job (@{$self->{reserved_jobs}}) {
+					$self->assign_job($job);
+					if ($job->starts_after($self->{current_time})) {
+						push @$remaining_reserved_jobs, $job;
+					}
 				}
+				$self->{reserved_jobs} = $remaining_reserved_jobs;
 			}
-			$self->{reserved_jobs} = $remaining_reserved_jobs;
 		}
 	}
 }
@@ -69,7 +76,7 @@ sub run {
 sub build_started_jobs_profile {
 	my $self = shift;
 	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{version}, $self->{current_time});
-	$self->{execution_profile}->add_job_at(0, $_) for values %{$self->{started_jobs}};
+	$self->{execution_profile}->add_job_at(0, $_, $self->{current_time}) for values %{$self->{started_jobs}};
 }
 
 sub start_job {
@@ -81,7 +88,7 @@ sub start_job {
 
 sub assign_job {
 	my ($self, $job) = @_;
-	print STDERR "assigning job ".$job->job_number()." to exec-profile $self->{execution_profile}\n";
+	#print STDERR "assigning job ".$job->job_number()." to exec-profile $self->{execution_profile}\n";
 	#print "assigning job " . $job->job_number() . "\n";
 
 	#get the first valid profile_id for our job
@@ -92,8 +99,8 @@ sub assign_job {
 	$job->assign_to($starting_time, $chosen_processors);
 
 	#update profiles
-	$self->{execution_profile}->add_job_at($chosen_profile, $job);
-	$self->tycat();
+	$self->{execution_profile}->add_job_at($chosen_profile, $job, $self->{current_time});
+	$self->tycat($self->{current_time});
 
 	if ($job->starting_time() == $self->{current_time}) {
 		$self->start_job($job);

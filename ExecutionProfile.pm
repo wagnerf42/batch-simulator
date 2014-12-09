@@ -43,7 +43,7 @@ sub new {
 
 sub get_free_processors_for {
 	my ($self, $job, $profile_index) = @_;
-	my $left_duration = $job->run_time();
+	my $left_duration = $job->requested_time();
 	my $candidate_processors = $self->{profiles}->[$profile_index]->processors_ids();
 	my $left_processors = new ProcessorRange($candidate_processors);
 	my $starting_time = $self->{profiles}->[$profile_index]->starting_time();
@@ -86,9 +86,10 @@ sub get_free_processors_for {
 sub compute_profiles_impacted_by_job {
 	my $self = shift;
 	my $job = shift;
+	my $current_time = shift;
 	my $in_count = 0;
 	for my $profile (@{$self->{profiles}}) {
-		last if ($profile->starting_time() >= $job->ending_time());
+		last if ($profile->starting_time() >= $job->ending_time_estimation($current_time));
 		$in_count++;
 	}
 	return $in_count;
@@ -96,14 +97,14 @@ sub compute_profiles_impacted_by_job {
 
 #precondition : job should be assigned first
 sub add_job_at {
-	my ($self, $start_profile, $job) = @_;
+	my ($self, $start_profile, $job, $current_time) = @_;
 	my $before = $start_profile; #all these are not impacted by job (starting at 0)
 	my @new_profiles = splice @{$self->{profiles}}, 0, $before;
 
-	my $in = $self->compute_profiles_impacted_by_job($job);
+	my $in = $self->compute_profiles_impacted_by_job($job, $current_time);
 	my @impacted_profiles = splice @{$self->{profiles}}, 0, $in;
 	for my $profile (@impacted_profiles) {
-		push @new_profiles, $profile->add_job($job);
+		push @new_profiles, $profile->add_job($job, $current_time);
 	}
 	push @new_profiles, @{$self->{profiles}};
 	$self->{profiles} = [@new_profiles];

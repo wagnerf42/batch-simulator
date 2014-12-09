@@ -102,6 +102,16 @@ sub starts_after {
 	return ($self->{starting_time} > $time);
 }
 
+#at this time, when did we think the job would end
+sub ending_time_estimation {
+	my $self = shift;
+	my $time = shift;
+	return unless defined $self->{starting_time};
+	my $real_end_time = $self->{starting_time} + $self->{run_time};
+	return $real_end_time if $real_end_time <= $time;
+	return $self->{starting_time} + $self->{requested_time};
+}
+
 sub ending_time {
 	my $self = shift;
 	return unless defined $self->{starting_time};
@@ -161,7 +171,7 @@ sub first_processor {
 }
 
 sub svg {
-	my ($self, $fh, $w_ratio, $h_ratio) = @_;
+	my ($self, $fh, $w_ratio, $h_ratio, $current_time) = @_;
 
 	$self->{assigned_processors_ids}->ranges_loop(
 		sub {
@@ -169,15 +179,25 @@ sub svg {
 			die "$start is after $end" if $end < $start;
 			#rectangle
 			my $x = $self->{starting_time} * $w_ratio;
-			my $w = $self->{run_time} * $w_ratio;
+			my $w;
+			if ($self->ending_time() <= $current_time) {
+				$w = $self->{run_time} * $w_ratio;
+			} else {
+				$w = $self->{requested_time} * $w_ratio;
+			}
 
 			my $y = $start * $h_ratio;
 			my $h = $h_ratio * ($end - $start + 1);
 			my $color = $svg_colors[$self->{job_number} % @svg_colors];
 			my $sw = min($w_ratio, $h_ratio) / 10;
+			if ($self->ending_time() > $current_time) {
+				my $x = ($self->{starting_time}+$self->{run_time}) * $w_ratio;
+				my $w = ($self->{requested_time}-$self->{run_time}) * $w_ratio;
+				print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:black;fill-opacity:1.0\"/>\n";
+			}
 			print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:$color;fill-opacity:0.2;stroke:black;stroke-width:$sw\"/>\n";
 			#label
-			$x = ($self->{starting_time}+$self->{run_time}/2) * $w_ratio;
+			$x = $w/2 + $self->{starting_time} * $w_ratio;
 			$y = (($start+$end+1)/2) * $h_ratio;
 			my $fs = min($h_ratio*($end-$start+1), $w/5);
 			die "negative font size :$fs ; $end ; $start" if $fs <= 0;
@@ -193,15 +213,6 @@ sub reset {
 	delete $self->{first_processor};
 	delete $self->{assigned_processors_ids};
 	delete $self->{wait_time};
-}
-
-sub save_svg {
-	my ($self, $fh, $processor_id) = @_;
-	my $default_time_ratio = 5;
-	my $default_processor_ratio = 20;
-
-	print $fh "\t<rect x=\"" . $self->{starting_time} * $default_time_ratio . "\" y=\"" . $processor_id * $default_processor_ratio . "\" width=\"" . $self->{run_time} * $default_time_ratio . "\" height=\"20\" style=\"fill:blue;stroke:black;stroke-width:1;fill-opacity:0.2;stroke-opacity:0.8\" />\n";
-	print $fh "\t<text x=\"" . ($self->{starting_time} * $default_time_ratio + 4) . "\" y=\"" . ($processor_id * $default_processor_ratio + 15) . "\" fill=\"black\">" . $self->{job_number} . "</text>\n";
 }
 
 sub used_clusters {

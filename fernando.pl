@@ -6,7 +6,6 @@ use Data::Dumper qw(Dumper);
 use List::Util qw(max);
 
 use Trace;
-use Job;
 use Backfilling;
 use ExecutionProfile ':stooges';
 use Database;
@@ -16,7 +15,7 @@ my ($trace_file_name, $cluster_size) = @ARGV;
 
 my $trace = Trace->new_from_swf($trace_file_name);
 $trace->fix_submit_times();
-my $cpus_number = 16;
+my $cpus_number = $trace->needed_cpus();
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, EP_FIRST);
 $schedule->run();
 

@@ -63,32 +63,26 @@ sub duration {
 sub add_job {
 	my $self = shift;
 	my $job = shift;
-	die if $self->{starting_time} >= $job->ending_time();
+	my $current_time = shift;
+	die unless defined $current_time;
+	die if $self->{starting_time} >= $job->ending_time_estimation($current_time);
 	die if defined $self->ending_time() and $self->ending_time() <= $job->starting_time();
-	if ($self->starting_time() < $job->starting_time()) {
-		my $new_end;
-		if (defined $self->{duration}) {
-			$new_end = min($self->ending_time(), $job->starting_time());
-		} else {
-			$new_end = $job->starting_time();
-		}
-		$self->{duration} = $new_end - $self->{starting_time};
-	}
-	return $self->split($job);
+	return $self->split($job, $current_time);
 }
 
 sub split {
 	my $self = shift;
 	my $job = shift;
+	my $current_time = shift;
 
 	my @profiles;
 	my $middle_start = $self->{starting_time};
 	my $middle_end;
 
 	if (defined $self->{duration}) {
-		$middle_end = min($self->ending_time(), $job->ending_time());
+		$middle_end = min($self->ending_time(), $job->ending_time_estimation($current_time));
 	} else {
-		$middle_end = $job->ending_time();
+		$middle_end = $job->ending_time_estimation($current_time);
 	}
 
 	my $middle_duration = $middle_end - $middle_start if defined $middle_end;
@@ -96,12 +90,12 @@ sub split {
 	$middle_profile->remove_used_processors($job);
 	push @profiles, $middle_profile unless $middle_profile->is_fully_loaded();
 
-	if ((not defined $self->ending_time()) or ($job->ending_time() < $self->ending_time())) {
+	if ((not defined $self->ending_time()) or ($job->ending_time_estimation($current_time) < $self->ending_time())) {
 		my $end_duration;
 		if (defined $self->{duration}) {
-			$end_duration = $self->ending_time() - $job->ending_time();
+			$end_duration = $self->ending_time() - $job->ending_time_estimation($current_time);
 		}
-		my $end_profile = new Profile($job->ending_time(), new ProcessorRange($self->{processors}), $end_duration);
+		my $end_profile = new Profile($job->ending_time_estimation($current_time), new ProcessorRange($self->{processors}), $end_duration);
 		push @profiles, $end_profile;
 	}
 	return @profiles;
@@ -120,14 +114,12 @@ sub remove_used_processors {
 
 sub starting_time {
 	my $self = shift;
-
 	$self->{starting_time} = shift if @_;
 	return $self->{starting_time};
 }
 
 sub ending_time {
 	my $self = shift;
-
 	return unless defined $self->{duration};
 	return $self->{starting_time} + $self->{duration};
 }

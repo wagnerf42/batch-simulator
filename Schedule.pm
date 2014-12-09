@@ -85,6 +85,12 @@ sub compute_cmax {
 	return max map {$_->ending_time()} @{$self->{jobs}};
 }
 
+sub compute_cmax_estimation {
+	my $self = shift;
+	my $time = shift;
+	return max map {$_->ending_time_estimation($time)} @{$self->{jobs}};
+}
+
 sub contiguous_jobs_number {
 	my $self = shift;
 	return scalar grep {$_->get_processor_range()->contiguous($self->{num_processors})} @{$self->{jobs}};
@@ -118,16 +124,19 @@ sub locality_factor_2 {
 }
 
 sub save_svg {
-	my ($self, $svg_filename) = @_;
+	my ($self, $svg_filename, $time) = @_;
 
 	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
 
-	my $cmax = $self->compute_cmax();
+	my $cmax = $self->compute_cmax_estimation($time);
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
 	my $w_ratio = 800/$cmax;
 	my $h_ratio = 600/$self->{num_processors};
 
-	$_->svg($filehandle, $w_ratio, $h_ratio) for grep {defined $_->starting_time()} (@{$self->{jobs}});
+	my $current_x = $w_ratio * $time;
+	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
+
+	$_->svg($filehandle, $w_ratio, $h_ratio, $time) for grep {defined $_->starting_time()} (@{$self->{jobs}});
 
 	print $filehandle "</svg>\n";
 	close $filehandle;
@@ -135,12 +144,14 @@ sub save_svg {
 
 my $file_count = 0;
 sub tycat {
-	my ($self) = @_;
+	my ($self, $time) = @_;
+	print STDERR "tycat $file_count\n";
+	$time = 0 unless defined $time;
 
 	my $user = $ENV{"USER"};
 	my $dir = "/tmp/$user";
 	mkdir $dir unless -f $dir;
-	$self->save_svg("$dir/$file_count.svg");
+	$self->save_svg("$dir/$file_count.svg", $time);
 	`tycat $dir/$file_count.svg`;
 	$file_count++;
 }
