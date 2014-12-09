@@ -27,7 +27,7 @@ sub new {
 	$self->{version} = 0 unless defined $self->{version};
 
 	# Make sure the trace is clean
-	$self->{trace}->reset();
+	#$self->{trace}->reset();
 
 	#shortcut for access to jobs list (which is also in trace)
 	$self->{jobs} = $self->{trace}->jobs();

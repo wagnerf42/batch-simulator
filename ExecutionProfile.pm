@@ -27,7 +27,7 @@ our %EXPORT_TAGS = (
 #an execution profile object encodes the set of all profiles of a schedule
 
 sub new {
-	my ($class, $processors_number, $cluster_size, $version) = @_;
+	my ($class, $processors_number, $cluster_size, $version, $starting_time) = @_;
 
 	my $self = {
 		processors_number => $processors_number,
@@ -35,7 +35,7 @@ sub new {
 		version => $version
 	};
 
-	$self->{profiles} = [initial Profile(0, 0, $self->{processors_number}-1)];
+	$self->{profiles} = [initial Profile((defined($starting_time) ? $starting_time : 0), 0, $self->{processors_number}-1)];
 
 	bless $self, $class;
 	return $self;

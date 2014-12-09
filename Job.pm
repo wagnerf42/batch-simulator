@@ -35,9 +35,7 @@ sub new {
 		think_time_prec_job => shift, #18
 	};
 
-
 	bless $self, $class;
-	die "invalid job $self" if $self->{allocated_cpus} <= 0;
 	return $self;
 }
 
@@ -50,19 +48,8 @@ sub stringification {
 		$self->{wait_time}, #update
 		$self->{run_time},
 		$self->{allocated_cpus},
-		$self->{avg_cpu_time},
-		$self->{used_mem},
 		$self->{requested_cpus},
-		$self->{requested_time},
-		$self->{requested_mem},
-		$self->{status},
-		$self->{uid},
-		$self->{gid},
-		$self->{exec_number},
-		$self->{queue_number},
-		$self->{partition_number},
-		$self->{prec_job_number},
-		$self->{think_time_prec_job}
+		$self->{requested_time}
 	);
 }
 
@@ -80,6 +67,12 @@ sub schedule_time {
 	return $self->{schedule_time};
 }
 
+sub allocated_cpus {
+	my ($self) = @_;
+	return $self->{allocated_cpus};
+}
+
+# NOTE For now we are using allocated cpus as requested CPUs, to avoid dealing with the difference between them
 sub requested_cpus {
 	my ($self) = @_;
 	return $self->{allocated_cpus};
