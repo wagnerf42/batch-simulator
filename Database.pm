@@ -18,7 +18,7 @@ sub new {
 	};
 
 	$self->{dsn} = "DBI:$self->{driver}:dbname=$self->{database}";
-	$self->{dbh} = DBI->connect($self->{dsn}, $self->{userid}, $self->{password}) or die $DBI::errstr;
+	$self->{dbh} = DBI->connect($self->{dsn}, $self->{userid}, $self->{password}) or die;
 	
 	bless $self, $class;
 	return $self;

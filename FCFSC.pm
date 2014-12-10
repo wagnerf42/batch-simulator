@@ -25,7 +25,7 @@ sub compute_block {
 sub assign_job {
 	my ($self, $job) = @_;
 	my $requested_cpus = $job->requested_cpus;
-	die "not enough processors (we need $requested_cpus, we have $self->{num_processors})" if $requested_cpus > $self->{num_processors};
+	die 'not enough processors' if $requested_cpus > $self->{num_processors};
 
 	my @available_blocks = map {$self->compute_block($_, $requested_cpus)} (0..$self->{num_processors});
 	my $best_block;

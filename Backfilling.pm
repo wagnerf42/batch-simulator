@@ -5,6 +5,7 @@ use warnings;
 
 use Data::Dumper qw(Dumper);
 use List::Util qw(max sum);
+use Exporter qw(import);
 
 use Trace;
 use Job;
@@ -16,6 +17,16 @@ use constant {
 	SUBMISSION_EVENT => 0,
 	JOB_COMPLETED_EVENT => 1
 };
+
+use constant {
+	BASIC => 0,
+	BEST_EFFORT_CONTIGUOUS => 1,
+	CONTIGUOUS => 2,
+	BEST_EFFORT_LOCAL => 3,
+	LOCAL => 4
+};
+
+our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL );
 
 sub new {
 	my $class = shift;
@@ -29,10 +40,13 @@ sub new {
 sub run {
 	my $self = shift;
 
-	die "not enough processors (we need " . $self->{trace}->needed_cpus() . ", we have " . $self->{num_processors} . ")" if $self->{trace}->needed_cpus() > $self->{num_processors};
+	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
 
-	$self->{reserved_jobs} = []; #jobs not started yet
-	$self->{started_jobs} = {}; #jobs which started before current time
+	# Jobs not started yet
+	$self->{reserved_jobs} = [];
+
+	# Jobs which started before current time
+	$self->{started_jobs} = {};
 	$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
 
 	# Add all jobs to the queue
@@ -45,21 +59,18 @@ sub run {
 		$self->{execution_profile}->set_current_time($self->{current_time});
 
 		if ($event->type() == SUBMISSION_EVENT) {
-			print "submit event t=$self->{current_time}\n";
 			$self->assign_job($job);
 			if ($job->starts_after($self->{current_time})) {
 				push @{$self->{reserved_jobs}}, $job;
 			}
 		} else {
-			print "finish event t=$self->{current_time}\n";
-			# Finishing event
 			delete $self->{started_jobs}->{$job->job_number()};
 
 			if ($job->requested_time() != $job->run_time()) {
-				#scrap execution profile
+				# Build a new execution profile
 				$self->build_started_jobs_profile();
 
-				#loop through all not yet started jobs and re-schedule them
+				# Loop through all not yet started jobs and re-schedule them
 				my $remaining_reserved_jobs = [];
 				for my $job (@{$self->{reserved_jobs}}) {
 					$self->assign_job($job);
@@ -80,27 +91,22 @@ sub build_started_jobs_profile {
 }
 
 sub start_job {
-	my $self = shift;
-	my $job = shift;
-	$self->{events}->add(Event->new(1, $job->ending_time(), $job));
+	my ($self, $job) = @_;
+	$self->{events}->add(Event->new(1, $job->real_ending_time(), $job));
 	$self->{started_jobs}->{$job->job_number()} = $job;
 }
 
 sub assign_job {
 	my ($self, $job) = @_;
-	#print STDERR "assigning job ".$job->job_number()." to exec-profile $self->{execution_profile}\n";
-	#print "assigning job " . $job->job_number() . "\n";
 
-	#get the first valid profile_id for our job
+	# Get the first valid profile_id for our job
 	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 	my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
-	#assign job
 	$job->assign_to($starting_time, $chosen_processors);
 
-	#update profiles
+	# Update profiles
 	$self->{execution_profile}->add_job_at($chosen_profile, $job, $self->{current_time});
-	$self->tycat($self->{current_time});
 
 	if ($job->starting_time() == $self->{current_time}) {
 		$self->start_job($job);

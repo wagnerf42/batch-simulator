@@ -12,9 +12,10 @@ use Job;
 use Database;
 
 sub new_from_swf {
-	my $class = shift;
+	my ($class, $file) = @_;
+
 	my $self = {
-		file => shift,
+		file => $file,
 		jobs => [],
 		status => [],
 		needed_cpus => 0
@@ -45,7 +46,7 @@ sub new_from_swf {
 }
 
 sub fix_submit_times {
-	my $self = shift;
+	my ($self) = @_;
 
 	return if (!$self->{jobs}[0]->submit_time());
 
@@ -55,16 +56,13 @@ sub fix_submit_times {
 
 sub new_block_from_trace {
 	my ($class, $trace, $size) = @_;
-
-	my $self = {
-		needed_cpus => 0
-	};
-
 	my $start_point = int(rand(scalar @{$trace->jobs()} - $size + 1));
 	my @selected_jobs = @{$trace->jobs()}[$start_point..($start_point + $size - 1)];
 
-	$self->{jobs} = [@selected_jobs];
-	$self->{needed_cpus} = max map {$_->requested_cpus} @{$self->{jobs}};
+	my $self = {
+		jobs => [@selected_jobs],
+		needed_cpus => max map {$_->requested_cpus} @selected_jobs,
+	};
 
 	bless $self, $class;
 	return $self;
@@ -73,12 +71,12 @@ sub new_block_from_trace {
 sub new_from_trace {
 	my ($class, $trace, $size) = @_;
 
+	die 'creating empty trace' unless defined $trace->{jobs}->[0];
+
 	my $self = {
 		jobs => [],
 		needed_cpus => 0
 	};
-
-	die "creating from empty trace" unless defined $trace->{jobs}->[0];
 
 	for my $job_number (1..$size) {
 		my $job_id = int(rand(@{$trace->{jobs}}));
@@ -153,8 +151,7 @@ sub new_from_database {
 }
 
 sub copy {
-	my $class = shift;
-	my $original = shift;
+	my ($class, $original) = @_;
 	my $self = {
 		jobs => []
 	};
@@ -194,11 +191,6 @@ sub needed_cpus {
 	return $self->{needed_cpus};
 }
 
-sub print_jobs {
-	my ($self) = @_;
-	print join("\n", @{$self->{jobs}});
-}
-
 sub jobs {
 	my ($self, $jobs) = @_;
 	$self->{jobs} = $jobs if defined $jobs;
@@ -210,15 +202,12 @@ sub job {
 	return $self->{jobs}[$job_number];
 }
 
-sub number_of_jobs {
-	my ($self) = @_;
-	return scalar @{$self->{jobs}};
-}
-
 sub remove_large_jobs {
 	my ($self, $limit) = @_;
-	die unless defined $limit;
 	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
+
+	die unless defined $limit;
+
 	$self->{jobs} = [@left_jobs];
 }
 
@@ -226,80 +215,6 @@ sub reset {
 	my ($self) = @_;
 	$_->reset() for @{$self->{jobs}};
 	$self->{needed_cpus} = 0;
-}
-
-sub file {
-	my ($self) = @_;
-	return $self->{file};
-}
-
-sub characteristic {
-	my ($self, $characteristic_id, $cpus_number) = @_;
-
-	if ($characteristic_id == 0) {
-		return scalar grep {$_->requested_cpus() > $cpus_number/2} @{$self->{jobs}};
-	}
-
-	elsif ($characteristic_id == 1) {
-		my $piece_size = shift;
-		my $pieces_with_large_jobs = 0;
-
-		my $it = natatime $piece_size, @{$self->{jobs}};
-		while (my @piece = $it->()) {
-			my $large_jobs_number = scalar grep {$_->requested_cpus() > $cpus_number/2} @piece;
-			$pieces_with_large_jobs++ if $large_jobs_number > 0;
-		}
-
-		return $pieces_with_large_jobs;
-	}
-
-	# Find the ammount of wasted work in the trace based on the largest job and the bumber of required CPUs
-	elsif ($characteristic_id == 2) {
-		my $longest_duration = 0;
-		my $work = 0;
-		my $worst_wasted_work = 0;
-		for my $job (@{$self->{jobs}}) {
-			my $wasted_work = ($cpus_number-$job->requested_cpus()) * $longest_duration - $work;
-			$worst_wasted_work = $wasted_work if $wasted_work > $worst_wasted_work;
-			$longest_duration = $job->run_time() if $job->run_time() > $longest_duration;
-			$work += $job->requested_cpus() * $job->run_time();
-		}
-		my $backfilling_waste = $cpus_number * $longest_duration - $work;
-		my $difference = $worst_wasted_work - $backfilling_waste;
-		return 0 if $difference < 0;
-		return ($difference / $work);
-	}
-
-	# Find the ammount of wasted work in the trace between large jobs
-	# The distance between large jobs is based on the size of the longest job between them
-	elsif ($characteristic_id == 3) {
-		my $longest_duration = 0;
-		my $work = 0;
-		my $total_work = 0;
-		my $total_wasted_work = 0;
-		my $total_maximum_work = 0;
-		my $total_length = 0;
-
-		for my $job (@{$self->{jobs}}) {
-			$work += $job->requested_cpus() * $job->run_time();
-			$longest_duration = $job->run_time() if $job->run_time() > $longest_duration;
-
-			if ($job->requested_cpus() >= $cpus_number/2) {
-				$total_work += $work;
-				$total_maximum_work += $longest_duration * $cpus_number;
-
-				$longest_duration = 0;
-				$work = 0;
-			}
-		}
-
-		if ($work) {
-			$total_work += $work;
-			$total_maximum_work += $longest_duration * $cpus_number;
-		}
-
-		return $total_work/$total_maximum_work;
-	}
 }
 
 sub load {

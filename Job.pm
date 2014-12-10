@@ -11,6 +11,20 @@ use overload
 
 my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen darkred dimgray mediumpurple midnightblue olive chartreuse darkorchid hotpink lightskyblue peru goldenrod mediumslateblue orangered darkmagenta darkgoldenrod mediumslateblue);
 
+sub stringification {
+	my $self = shift;
+
+	return join(' ',
+		$self->{job_number},
+		$self->{submit_time},
+		$self->{wait_time}, #update
+		$self->{run_time},
+		$self->{allocated_cpus},
+		$self->{requested_cpus},
+		$self->{requested_time}
+	);
+}
+
 sub new {
 	my $class = shift;
 
@@ -39,23 +53,8 @@ sub new {
 	return $self;
 }
 
-sub stringification {
-	my $self = shift;
-
-	return join(' ',
-		$self->{job_number},
-		$self->{submit_time},
-		$self->{wait_time}, #update
-		$self->{run_time},
-		$self->{allocated_cpus},
-		$self->{requested_cpus},
-		$self->{requested_time}
-	);
-}
-
 sub copy {
-	my $class = shift;
-	my $original = shift;
+	my ($class, $original) = @_;
 	my $self = {};
 	$self->{$_} = $original->{$_} for (keys %{$original});
 	bless $self, $class;
@@ -72,7 +71,6 @@ sub allocated_cpus {
 	return $self->{allocated_cpus};
 }
 
-# NOTE For now we are using allocated cpus as requested CPUs, to avoid dealing with the difference between them
 sub requested_cpus {
 	my ($self) = @_;
 	return $self->{allocated_cpus};
@@ -97,29 +95,33 @@ sub starting_time {
 }
 
 sub starts_after {
-	my $self = shift;
-	my $time = shift;
+	my ($self, $time) = @_;
 	return ($self->{starting_time} > $time);
 }
 
-#at this time, when did we think the job would end
 sub ending_time_estimation {
-	my $self = shift;
-	my $time = shift;
-	return unless defined $self->{starting_time};
+	my ($self, $time) = @_;
 	my $real_end_time = $self->{starting_time} + $self->{run_time};
+	die unless defined $self->{starting_time};
 	return $real_end_time if $real_end_time <= $time;
 	return $self->{starting_time} + $self->{requested_time};
 }
 
-sub ending_time {
+sub real_ending_time {
 	my $self = shift;
-	return unless defined $self->{starting_time};
+	die unless defined $self->{starting_time};
 	return $self->{starting_time} + $self->{run_time};
+}
+
+sub submitted_ending_time {
+	my ($self) = shift;
+	die  unless defined $self->{starting_time};
+	return $self->{starting_time} + $self->{requested_time};
 }
 
 sub flow_time {
 	my ($self) = @_;
+	die unless defined $self->{starting_time};
 	return $self->{starting_time} + $self->{run_time} - $self->{submit_time};
 }
 
@@ -128,12 +130,6 @@ sub stretch {
 	return $self->{wait_time}/$self->{run_time};
 }
 
-sub cmax {
-	my ($self) = @_;
-	return $self->{submit_time} + $self->{wait_time} + $self->{run_time};
-}
-
-
 sub submit_time {
 	my ($self, $submit_time) = @_;
 	$self->{submit_time} = $submit_time if defined $submit_time;
@@ -141,9 +137,9 @@ sub submit_time {
 }
 
 sub wait_time {
-	my ($self, $wait_time) = @_;
-	$self->{wait_time} = $wait_time if defined $wait_time;
-	return $self->{wait_time};
+	my ($self) = @_;
+	die unless defined $self->{starting_time};
+	return $self->{starting_time} - $self->{submit_time};
 }
 
 sub job_number {
@@ -156,18 +152,11 @@ sub assign_to {
 	my ($self, $starting_time, $assigned_processors) = @_;
 	$self->{starting_time} = $starting_time;
 	$self->{assigned_processors_ids} = $assigned_processors;
-	$self->{wait_time} = $self->{starting_time} - $self->{submit_time};
 }
 
-sub get_processor_range {
-	my $self = shift;
+sub assigned_processors_ids {
+	my ($self) = @_;
 	return $self->{assigned_processors_ids};
-}
-
-sub first_processor {
-	my ($self, $first_processor) = @_;
-	$self->{first_processor} = $first_processor if defined $first_processor;
-	return $self->{first_processor};
 }
 
 sub svg {

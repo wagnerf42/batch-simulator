@@ -2,12 +2,26 @@ package ProcessorRange;
 
 use strict;
 use warnings;
-use overload '""' => \&stringification;
-use EventLine;
+
 use Carp;
 use Data::Dumper;
 use POSIX qw(floor ceil);
 use List::Util qw(max min sum);
+use Exporter qw(import);
+
+use EventLine;
+
+use overload '""' => \&stringification;
+
+our @REDUCTION_FUNCTIONS = (
+	\&reduce_to_best_effort_contiguous,
+	\&reduce_to_forced_contiguous,
+	\&reduce_to_basic,
+	\&reduce_to_forced_local,
+	\&reduce_to_best_effort_local
+);
+
+our @EXPORT = qw(@REDUCTION_FUNCTIONS);
 
 sub new {
 	my $class = shift;
@@ -20,11 +34,9 @@ sub new {
 
 		if (defined $processors) {
 			if (ref $processors eq $class) {
-				#copy constructor
 				$self->{ranges} = [@{$processors->{ranges}}];
 				$self->{size} = $processors->{size} if exists $processors->{size};
 			} else {
-				#take a list of ids
 				$self->{ranges} = [];
 				if (@{$processors}) {
 					my @processors_ids = sort {$a <=> $b} @{$processors};
@@ -44,8 +56,9 @@ sub new {
 		}
 	}
 
-	bless $self, $class;
 	delete $self->{size};
+
+	bless $self, $class;
 	$self->check_ok();
 	return $self;
 }
@@ -123,12 +136,9 @@ sub intersection {
 }
 
 sub remove {
-	set_operation(@_, 1);
-}
+	my ($self, $other) = @_;
 
-sub set_operation {
-	my ($self, $other, $invert) = @_;
-
+	my $invert = 1;
 	my $inside_segments = $invert;
 	my $starting_point;
 	my @result;
@@ -178,20 +188,18 @@ sub set_operation {
 	delete $self->{size};
 }
 
-#compute a list of paired (start,end) ranges
 sub compute_pairs {
-	my $self = shift;
+	my ($self) = @_;
 	return unless @{$self->{ranges}};
 	return map { [$self->{ranges}->[2*$_], $self->{ranges}->[2*$_+1]] } (0..($#{$self->{ranges}}/2));
 }
 
 sub compute_ranges_in_clusters {
-	my $self = shift;
-	my $cluster_size = shift;
-	return unless @{$self->{ranges}};
-
+	my ($self, $cluster_size) = @_;
 	my $clusters;
 	my $current_cluster = -1;
+
+	return unless @{$self->{ranges}};
 
 	$self->ranges_loop(
 		sub {
@@ -207,22 +215,24 @@ sub compute_ranges_in_clusters {
 				$current_cluster = $cluster;
 				push @{$clusters->[$#{$clusters}]}, [$start_point_in_cluster, $end_point_in_cluster];
 			}
-			return 1;
 
+			return 1;
 		}
 	);
+
 	return $clusters;
 }
 
 sub is_empty {
-	my $self = shift;
+	my ($self) = @_;
 	return not (scalar @{$self->{ranges}});
 }
 
 sub size {
-	my $self = shift;
-	return $self->{size} if exists $self->{size}; #as usual, be careful with caches
+	my ($self) = @_;
 	my $size = 0;
+
+	return $self->{size} if exists $self->{size};
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -236,8 +246,8 @@ sub size {
 
 sub processors_ids {
 	my ($self, $processors_ids) = @_;
-
 	my @ids;
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -245,12 +255,14 @@ sub processors_ids {
 			return 1;
 		}
 	);
+
 	return @ids;
 }
 
 sub stringification {
-	my $self = shift;
+	my ($self) = @_;
 	my @strings;
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -258,22 +270,24 @@ sub stringification {
 			return 1;
 		}
 	);
+
 	return join(' ', @strings);
 }
 
 sub ranges_loop {
-	my $self = shift;
-	my $callback = shift;
+	my ($self, $callback) = @_;
+
 	return unless @{$self->{ranges}};
+
 	for my $i (0..($#{$self->{ranges}}/2)) {
 		return unless $callback->($self->{ranges}->[2*$i], $self->{ranges}->[2*$i+1], @_);
 	}
 }
 
 sub contains_at_least {
-	my $self = shift;
-	my $limit = shift;
+	my ($self, $limit) = @_;
 	my $count = 0;
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -281,39 +295,43 @@ sub contains_at_least {
 			return 1;
 		}
 	);
+
 	return ($count >= $limit);
 }
 
-sub reduce_to_first {
-	my $self = shift;
-	my $target_number = shift;
-	confess "invalid argument $target_number" if $target_number <= 0;
+sub reduce_to_basic {
+	my ($self, $target_number) = @_;
 	my @remaining_ranges;
+
+	die if $target_number <= 0;
 
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
 			my $taking = $target_number;
 			my $available_processors = $end + 1 - $start;
-			confess "big pb : $self" if $available_processors == 0;
+
 			if ($available_processors < $target_number) {
 				$taking = $available_processors;
 			}
+
 			push @remaining_ranges, $start;
 			push @remaining_ranges, $start + $taking - 1;
 			$target_number -= $taking;
+
 			return ($target_number != 0);
 		},
 	);
+
 	$self->{ranges} = [@remaining_ranges];
 	delete $self->{size};
 	$self->check_ok();
 }
 
 sub reduce_to_forced_contiguous {
-	my $self = shift;
-	my $target_number = shift;
+	my ($self, $target_number) = @_;
 	my @remaining_ranges;
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -334,8 +352,7 @@ sub reduce_to_forced_contiguous {
 }
 
 sub reduce_to_best_effort_contiguous {
-	my $self = shift;
-	my $target_number = shift;
+	my ($self, $target_number) = @_;
 	my @remaining_ranges;
 
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
@@ -358,15 +375,15 @@ sub reduce_to_best_effort_contiguous {
 }
 
 sub cluster_size {
-	my $cluster = shift;
+	my ($cluster) = @_;
 	return sum (map {$_->[1] - $_->[0] + 1} @{$cluster});
 }
 
 sub sort_and_fuse_contiguous_ranges {
-	my $ranges = shift;
+	my ($ranges) = @_;
 	my @sorted_ranges = sort {$a->[1] <=> $b->[1]} @{$ranges};
-
 	my @remaining_ranges;
+
 	push @remaining_ranges, (shift @sorted_ranges);
 
 	for my $range (@sorted_ranges) {
@@ -444,37 +461,33 @@ sub reduce_to_forced_local {
 	$self->check_ok();
 }
 
-#returns true if all processors form a contiguous block
-#needs processors number as jobs can wrap around
 sub contiguous {
-	my $self = shift;
-	my $processors_number = shift;
-	die "are 0 processors contiguous ?" if $self->is_empty();
+	my ($self, $processors_number) = @_;
+
+	# Are 0 processors contiguous?
+	die if $self->is_empty();
 	return 1 if @{$self->{ranges}} == 2;
+
 	if (@{$self->{ranges}} == 4) {
-		#complex case
 		return (($self->{ranges}->[0] == 0) and ($self->{ranges}->[4] == $processors_number - 1));
 	} else {
 		return 0;
 	}
 }
 
-#returns true if we use a minimal number of clusters
-#needs cluster size
 sub local {
-	my $self = shift;
-	my $cluster_size = shift;
+	my ($self, $cluster_size) = @_;
 	my $needed_clusters = ceil($self->size() / $cluster_size);
 	return ($needed_clusters == $self->used_clusters($cluster_size));
 }
 
-#returns the number of different clusters in use
-#needs cluster size
 sub used_clusters {
-	my $self = shift;
-	my $cluster_size = shift;
-	die "are 0 processors local ?" if $self->is_empty();
+	my ($self, $cluster_size) = @_;
 	my %used_clusters_ids;
+
+	# Are 0 processors local?
+	die if $self->is_empty();
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
