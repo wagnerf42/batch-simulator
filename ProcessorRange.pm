@@ -182,7 +182,6 @@ sub set_operation {
 		} else {
 			$advancing_range = 0;
 		}
-		print "@x ; advancing on $advancing_range\n";
 
 		$event_type = $lines[$advancing_range]->get_event_type;
 		if ($event_type == 0) {
@@ -190,19 +189,15 @@ sub set_operation {
 			$inside_segments++;
 			if ($inside_segments == $taking_limit) {
 				$starting_point = $x[$advancing_range];
-				print "start is $starting_point\n";
 			}
-			print "we are now inside $inside_segments segments\n";
 		} else {
 			# end of segment
 			if ($inside_segments == $taking_limit) {
 				push @result, $starting_point;
 				my $end_point = $x[$advancing_range];
-				print "end is $end_point\n";
 				push @result, $end_point;
 			}
 			$inside_segments--;
-			print "we are now inside $inside_segments segments\n";
 		}
 		$lines[$advancing_range]->advance;
 

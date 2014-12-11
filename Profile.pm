@@ -70,6 +70,13 @@ sub add_job {
 	return $self->split($job, $current_time);
 }
 
+#free some processors by canceling a job
+sub remove_job {
+	my $self = shift;
+	my $job = shift;
+	$self->{processors}->add($job->assigned_processors_ids());
+}
+
 #TODO : not very pretty ?
 sub split {
 	my $self = shift;

@@ -62,6 +62,49 @@ sub get_free_processors_for {
 	return $left_processors;
 }
 
+#TODO: use splice to only loop on the impacted profiles
+sub remove_job {
+	my $self = shift;
+	my $job = shift;
+	my $current_time = shift;
+	my $job_starting_time = $job->starting_time();
+	$job_starting_time = $current_time if $current_time > $job_starting_time;
+	my $job_ending_time = $job->submitted_ending_time();
+	#we loop on all profiles adding processors or recreating
+	#profiles (in case all processors were used)
+	#we use 'done_until_time' do keep track of up to when we already recreated free processors
+	my $done_until_time = $job_starting_time;
+	my $new_profiles = [];
+	for my $profile (@{$self->{profiles}}) {
+		#start by advancing until profile start
+		my $next_time = $profile->starting_time();
+
+		if (($next_time > $done_until_time) and ($done_until_time < $job_ending_time)) {
+			#create new profile
+			my $end = $next_time;
+			$end = $job_ending_time if $job_ending_time < $end;
+			push @{$new_profiles}, new Profile($done_until_time, $job->assigned_processors_ids(), $end - $done_until_time);
+			$done_until_time = $end;
+		}
+
+		#security check
+		die 'impossible' if ($profile->starting_time() < $job_starting_time) and ($profile->ending_time() > $job_starting_time);
+		die 'impossible' if ($profile->starting_time() < $job_ending_time) and ($profile->ending_time() > $job_ending_time);
+
+		#modify or not existing profile
+		if (($profile->starting_time() >= $job_starting_time) and ((defined $profile->ending_time()) and ($profile->ending_time() <= $job_ending_time))) {
+			#it is impacted by the processors we put back
+			$profile->remove_job($job);
+			push @{$new_profiles}, $profile;
+			$done_until_time = $profile->ending_time();
+		} else {
+			#our job has no impact on this profile
+			push @{$new_profiles}, $profile;
+		}
+	}
+	$self->{profiles} = $new_profiles;
+}
+
 sub compute_profiles_impacted_by_job {
 	my ($self, $job, $current_time) = @_;
 	my $in_count = 0;

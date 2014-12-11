@@ -58,20 +58,23 @@ sub run {
 		$self->{current_time} = $event->timestamp();
 		$self->{execution_profile}->set_current_time($self->{current_time});
 		
-		print STDERR $event->type() . " event for job " . $job->job_number() . "\n";
 
 		if ($event->type() == SUBMISSION_EVENT) {
 			$self->assign_job($job, $self->{reserved_jobs});
 		} else {
+			print STDERR "finishing event for job " . $job->job_number() . "\n";
+
 			delete $self->{started_jobs}->{$job->job_number()};
 
 			if ($job->requested_time() != $job->run_time()) {
-				# Build a new execution profile
-				$self->build_started_jobs_profile();
+
+				#remove finished job
+				$self->{execution_profile}->remove_job($job, $self->{current_time});
 
 				# Loop through all not yet started jobs and re-schedule them
 				my $remaining_reserved_jobs = [];
 				for my $job (@{$self->{reserved_jobs}}) {
+					$self->{execution_profile}->remove_job($job, $self->{current_time});
 					$self->assign_job($job, $remaining_reserved_jobs);
 				}
 				$self->{reserved_jobs} = $remaining_reserved_jobs;
