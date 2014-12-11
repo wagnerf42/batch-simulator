@@ -213,7 +213,7 @@ sub svg {
 			#rectangle
 			my $x = $self->{starting_time} * $w_ratio;
 			my $w;
-			if ($self->ending_time() <= $current_time) {
+			if ($self->real_ending_time() <= $current_time) {
 				$w = $self->{run_time} * $w_ratio;
 			} else {
 				$w = $self->{requested_time} * $w_ratio;
@@ -223,7 +223,7 @@ sub svg {
 			my $h = $h_ratio * ($end - $start + 1);
 			my $color = $svg_colors[$self->{job_number} % @svg_colors];
 			my $sw = min($w_ratio, $h_ratio) / 10;
-			if ($self->ending_time() > $current_time) {
+			if ($self->real_ending_time() > $current_time) {
 				my $x = ($self->{starting_time}+$self->{run_time}) * $w_ratio;
 				my $w = ($self->{requested_time}-$self->{run_time}) * $w_ratio;
 				print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:black;fill-opacity:1.0\"/>\n";

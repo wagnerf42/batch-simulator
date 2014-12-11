@@ -91,6 +91,8 @@ sub run {
 			}
 		}
 	}
+
+	$self->tycat($self->{current_time});
 }
 
 sub build_started_jobs_profile {
