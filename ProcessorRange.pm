@@ -14,11 +14,11 @@ use EventLine;
 use overload '""' => \&stringification;
 
 our @REDUCTION_FUNCTIONS = (
+	\&reduce_to_basic,
 	\&reduce_to_best_effort_contiguous,
 	\&reduce_to_forced_contiguous,
-	\&reduce_to_basic,
+	\&reduce_to_best_effort_local,
 	\&reduce_to_forced_local,
-	\&reduce_to_best_effort_local
 );
 
 our @EXPORT = qw(@REDUCTION_FUNCTIONS);
@@ -64,7 +64,7 @@ sub new {
 }
 
 sub check_ok {
-	return; #disabling check
+	#return; #disabling check
 	my $self = shift;
 	my $last_end;
 	$self->ranges_loop(
@@ -74,8 +74,8 @@ sub check_ok {
 			confess "invalid range $self" unless defined $end;
 			confess "invalid range $self" unless defined $start;
 			if (defined $last_end) {
-				die "bad range $self" if $start <= $last_end + 1;
-				die "bad range $self" if $end < $last_end;
+				confess "bad range $self" if $start <= $last_end + 1;
+				confess "bad range $self" if $end < $last_end;
 			}
 			$last_end = $end;
 			return 1;
@@ -132,6 +132,7 @@ sub intersection {
 	}
 
 	$ranges[0]->{ranges} = [@result];
+	$ranges[0]->check_ok();
 
 }
 
@@ -207,6 +208,11 @@ sub set_operation {
 	}
 
 	$self->{ranges} = [@result];
+	if ($taking_limit == 1) {
+		#union might generate contiguous ranges
+		$self->{ranges} = sort_and_fuse_contiguous_ranges([$self->compute_pairs()]);
+	}
+	$self->check_ok();
 	delete $self->{size};
 }
 
@@ -402,7 +408,7 @@ sub cluster_size {
 }
 
 sub sort_and_fuse_contiguous_ranges {
-	my ($ranges) = @_;
+	my $ranges = shift;
 	my @sorted_ranges = sort {$a->[1] <=> $b->[1]} @{$ranges};
 	my @remaining_ranges;
 
@@ -491,7 +497,7 @@ sub contiguous {
 	return 1 if @{$self->{ranges}} == 2;
 
 	if (@{$self->{ranges}} == 4) {
-		return (($self->{ranges}->[0] == 0) and ($self->{ranges}->[4] == $processors_number - 1));
+		return (($self->{ranges}->[0] == 0) and ($self->{ranges}->[3] == $processors_number - 1));
 	} else {
 		return 0;
 	}

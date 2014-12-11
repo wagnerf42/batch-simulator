@@ -12,10 +12,11 @@ use Backfilling;
 my ($trace_file_name, $cluster_size) = @ARGV;
 
 my $trace = Trace->new_from_swf($trace_file_name);
-$trace->fix_submit_times();
 $trace->reset_jobs_numbers();
-my $cpus_number = $trace->needed_cpus();
-my $schedule = Backfilling->new(NEW_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
+$trace->fix_submit_times();
+#my $cpus_number = $trace->needed_cpus();
+my $cpus_number = 77248;
+my $schedule = Backfilling->new(REUSE_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, CONTIGUOUS);
 $schedule->run();
 
 #print join(' ', $_->job_number(), $_->{schedule_times}, $_->{improved_schedule_times}) . "\n" for @{$schedule->{jobs}};

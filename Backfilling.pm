@@ -60,17 +60,18 @@ sub run {
 	# Add all jobs to the queue
 	$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{jobs}});
 
-	while (defined(my $event = $self->{events}->retrieve())) {
+	$self->{remaining_jobs} = @{$self->{jobs}};
 
+	while (defined(my $event = $self->{events}->retrieve())) {
 		my $job = $event->payload();
 		$self->{current_time} = $event->timestamp();
 		$self->{execution_profile}->set_current_time($self->{current_time});
 		
-
 		if ($event->type() == SUBMISSION_EVENT) {
 			$self->assign_job($job, $self->{reserved_jobs});
 		} else {
-			print STDERR "finishing event for job " . $job->job_number() . "\n";
+			$self->{remaining_jobs}--;
+			print $self->{remaining_jobs} . "\n";
 
 			delete $self->{started_jobs}->{$job->job_number()};
 
@@ -86,18 +87,20 @@ sub run {
 				for my $job (@{$self->{reserved_jobs}}) {
 					$self->{execution_profile}->remove_job($job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
 					$self->assign_job($job, $remaining_reserved_jobs);
+
+					if ($job->job_number() == 7) {
+						$self->tycat($self->{current_time});
+					}
 				}
 				$self->{reserved_jobs} = $remaining_reserved_jobs;
 			}
 		}
 	}
-
-	$self->tycat($self->{current_time});
 }
 
 sub build_started_jobs_profile {
 	my $self = shift;
-	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{version}, $self->{current_time});
+	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm}, $self->{current_time});
 	$self->{execution_profile}->add_job_at(0, $_, $self->{current_time}) for values %{$self->{started_jobs}};
 }
 

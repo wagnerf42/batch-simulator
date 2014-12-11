@@ -145,11 +145,11 @@ sub save_svg {
 my $file_count = 0;
 sub tycat {
 	my ($self, $time) = @_;
-	print STDERR "tycat $file_count\n";
+	#print STDERR "tycat $file_count\n";
 	$time = 0 unless defined $time;
 
 	my $user = $ENV{"USER"};
-	my $dir = "/tmp/$user";
+	my $dir = "$user";
 	mkdir $dir unless -f $dir;
 	$self->save_svg("$dir/$file_count.svg", $time);
 	`tycat $dir/$file_count.svg`;
