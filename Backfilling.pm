@@ -57,12 +57,11 @@ sub run {
 		my $job = $event->payload();
 		$self->{current_time} = $event->timestamp();
 		$self->{execution_profile}->set_current_time($self->{current_time});
+		
+		print STDERR $event->type() . " event for job " . $job->job_number() . "\n";
 
 		if ($event->type() == SUBMISSION_EVENT) {
-			$self->assign_job($job);
-			if ($job->starts_after($self->{current_time})) {
-				push @{$self->{reserved_jobs}}, $job;
-			}
+			$self->assign_job($job, $self->{reserved_jobs});
 		} else {
 			delete $self->{started_jobs}->{$job->job_number()};
 
@@ -73,10 +72,7 @@ sub run {
 				# Loop through all not yet started jobs and re-schedule them
 				my $remaining_reserved_jobs = [];
 				for my $job (@{$self->{reserved_jobs}}) {
-					$self->assign_job($job);
-					if ($job->starts_after($self->{current_time})) {
-						push @$remaining_reserved_jobs, $job;
-					}
+					$self->assign_job($job, $remaining_reserved_jobs);
 				}
 				$self->{reserved_jobs} = $remaining_reserved_jobs;
 			}
@@ -97,7 +93,7 @@ sub start_job {
 }
 
 sub assign_job {
-	my ($self, $job) = @_;
+	my ($self, $job, $still_reserved_jobs) = @_;
 
 	# Get the first valid profile_id for our job
 	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
@@ -110,6 +106,10 @@ sub assign_job {
 
 	if ($job->starting_time() == $self->{current_time}) {
 		$self->start_job($job);
+	}
+
+	if ($job->starts_after($self->{current_time})) {
+		push @{$still_reserved_jobs}, $job;
 	}
 }
 

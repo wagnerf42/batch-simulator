@@ -11,6 +11,9 @@ use POSIX qw(ceil floor);
 use Job;
 use Database;
 
+#TODO: remove needed cpus cache
+#TODO: clean code
+#TODO: new subroutine : set all requested times to run_times
 sub new_from_swf {
 	my ($class, $file) = @_;
 

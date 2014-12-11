@@ -6,7 +6,6 @@ use warnings;
 use Data::Dumper;
 
 use Profile;
-use ProcessorsSet;
 use ProcessorRange;
 
 use overload '""' => \&stringification;

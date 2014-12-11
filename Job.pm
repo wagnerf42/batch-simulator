@@ -25,6 +25,8 @@ sub stringification {
 	);
 }
 
+#TODO : new should die if job is invalid (allocated_cpus != requested_cpus) or cpus = -1
+#TODO : keep only requested cpus
 sub new {
 	my $class = shift;
 
@@ -48,6 +50,40 @@ sub new {
 		prec_job_number => shift, #17
 		think_time_prec_job => shift, #18
 	};
+
+	$self->{schedule_times} = 0;
+	$self->{improved_schedule_times} = 0;
+
+	bless $self, $class;
+	return $self;
+}
+
+sub new2 {
+	my $class = shift;
+
+	my $self = {
+		job_number => shift, #1
+		submit_time => shift, #2
+		wait_time => shift, #3
+		run_time => shift, #4
+		allocated_cpus => shift, #5
+		avg_cpu_time => shift, #6
+		used_mem => shift, #7
+		requested_cpus => shift, #8
+		requested_time => shift, #9
+		requested_mem => shift, #10
+		status => shift, #11, 0 = failed, 5 = cancelled, 1 = completed
+		uid => shift, #12
+		gid => shift, #13
+		exec_number => shift, #14
+		queue_number => shift, #15
+		partition_number => shift, #16
+		prec_job_number => shift, #17
+		think_time_prec_job => shift, #18
+	};
+
+	$self->{schedule_times} = 0;
+	$self->{improved_schedule_times} = 0;
 
 	bless $self, $class;
 	return $self;
@@ -150,8 +186,15 @@ sub job_number {
 
 sub assign_to {
 	my ($self, $starting_time, $assigned_processors) = @_;
+
+	if (defined($self->{starting_time}) and $starting_time < $self->{starting_time}) {
+		$self->{improved_schedule_times}++;
+	}
+	$self->{schedule_times}++;
+
 	$self->{starting_time} = $starting_time;
 	$self->{assigned_processors_ids} = $assigned_processors;
+
 }
 
 sub assigned_processors_ids {
@@ -159,6 +202,7 @@ sub assigned_processors_ids {
 	return $self->{assigned_processors_ids};
 }
 
+#TODO : rewrite in clearer code
 sub svg {
 	my ($self, $fh, $w_ratio, $h_ratio, $current_time) = @_;
 

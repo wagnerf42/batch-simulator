@@ -17,5 +17,7 @@ my $cpus_number = $trace->needed_cpus();
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
 
+print join(' ', $_->job_number(), $_->{schedule_times}, $_->{improved_schedule_times}) . "\n" for @{$schedule->{jobs}};
+
 print STDERR "Done\n";
 

@@ -70,6 +70,7 @@ sub add_job {
 	return $self->split($job, $current_time);
 }
 
+#TODO : not very pretty ?
 sub split {
 	my $self = shift;
 	my $job = shift;

@@ -48,14 +48,17 @@ sub get_event_type {
 
 sub get_x {
 	my $self = shift;
-	return $self->{events}->[$self->{next_event_index}] unless $self->{inverted};
 	return LONG_MAX if $self->{next_event_index} > $#{$self->{events}};
-	if ($self->get_event_type()) {
-		#end : we end one unit before indicated time
-		return $self->{events}->[$self->{next_event_index}] - 1;
+	if ($self->{inverted}) {
+		if ($self->get_event_type()) {
+			#end : we end one unit before indicated time
+			return $self->{events}->[$self->{next_event_index}] - 1;
+		} else {
+			#start : we start in fact one unit after stored position
+			return $self->{events}->[$self->{next_event_index}] + 1;
+		}
 	} else {
-		#start : we start in fact one unit after stored position
-		return $self->{events}->[$self->{next_event_index}] + 1;
+		return $self->{events}->[$self->{next_event_index}];
 	}
 }
 

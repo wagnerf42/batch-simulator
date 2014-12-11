@@ -136,9 +136,21 @@ sub intersection {
 }
 
 sub remove {
-	my ($self, $other) = @_;
+	my $self = shift;
+	my $other = shift;
+	$self->set_operation($other, 1, 2);
+}
 
-	my $invert = 1;
+sub add {
+	my $self = shift;
+	my $other = shift;
+	$self->set_operation($other, 0, 1);
+}
+
+#TODO: render it readable
+sub set_operation {
+	my ($self, $other, $invert, $taking_limit) = @_;
+
 	my $inside_segments = $invert;
 	my $starting_point;
 	my @result;
@@ -149,7 +161,13 @@ sub remove {
 	push @lines, new EventLine($other->{ranges}, $invert);
 
 	#loop on points from left to right
-	while ($lines[0]->is_not_completed() and $lines[1]->is_not_completed($limit)) {
+	my $completed_lines = 0;
+	$completed_lines++ unless $lines[0]->is_not_completed();
+	$completed_lines++ unless $lines[1]->is_not_completed($limit);
+
+	#for union loop until two lines are completed
+	#for removal loop until one line is completed
+	while ($completed_lines < 3-$taking_limit) {
 		# find next event
 		my $advancing_range;
 		my $event_type;
@@ -164,24 +182,33 @@ sub remove {
 		} else {
 			$advancing_range = 0;
 		}
+		print "@x ; advancing on $advancing_range\n";
 
 		$event_type = $lines[$advancing_range]->get_event_type;
 		if ($event_type == 0) {
 			# start
-			if ($inside_segments == 1) {
-				$starting_point = $x[$advancing_range];
-			}
 			$inside_segments++;
+			if ($inside_segments == $taking_limit) {
+				$starting_point = $x[$advancing_range];
+				print "start is $starting_point\n";
+			}
+			print "we are now inside $inside_segments segments\n";
 		} else {
 			# end of segment
-			if ($inside_segments == 2) {
+			if ($inside_segments == $taking_limit) {
 				push @result, $starting_point;
 				my $end_point = $x[$advancing_range];
+				print "end is $end_point\n";
 				push @result, $end_point;
 			}
 			$inside_segments--;
+			print "we are now inside $inside_segments segments\n";
 		}
 		$lines[$advancing_range]->advance;
+
+		$completed_lines = 0;
+		$completed_lines++ unless $lines[0]->is_not_completed();
+		$completed_lines++ unless $lines[1]->is_not_completed($limit);
 	}
 
 	$self->{ranges} = [@result];

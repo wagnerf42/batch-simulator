@@ -8,6 +8,8 @@ use Data::Dumper qw(Dumper);
 use Trace;
 use Job;
 
+#TODO: switch to new code
+
 sub new {
 	my ($class) = @_;
 	my $self = {
