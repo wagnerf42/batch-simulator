@@ -26,13 +26,21 @@ use constant {
 	LOCAL => 4
 };
 
-our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL );
+use constant {
+	NEW_EXECUTION_PROFILE => 0,
+	REUSE_EXECUTION_PROFILE => 1
+};
+
+our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL NEW_EXECUTION_PROFILE REUSE_EXECUTION_PROFILE);
 
 sub new {
 	my $class = shift;
+	my $schedule_algorithm = shift;
+
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{version});
+	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm});
+	$self->{schedule_algorithm} = $schedule_algorithm;
 
 	return $self;
 }
@@ -67,14 +75,16 @@ sub run {
 			delete $self->{started_jobs}->{$job->job_number()};
 
 			if ($job->requested_time() != $job->run_time()) {
-
-				#remove finished job
-				$self->{execution_profile}->remove_job($job, $self->{current_time});
+				if ($self->{schedule_algorithm} == NEW_EXECUTION_PROFILE) {
+					$self->build_started_jobs_profile();
+				} else {
+					$self->{execution_profile}->remove_job($job, $self->{current_time});
+				}
 
 				# Loop through all not yet started jobs and re-schedule them
 				my $remaining_reserved_jobs = [];
 				for my $job (@{$self->{reserved_jobs}}) {
-					$self->{execution_profile}->remove_job($job, $self->{current_time});
+					$self->{execution_profile}->remove_job($job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
 					$self->assign_job($job, $remaining_reserved_jobs);
 				}
 				$self->{reserved_jobs} = $remaining_reserved_jobs;

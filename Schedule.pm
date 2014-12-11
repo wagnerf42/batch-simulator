@@ -14,7 +14,7 @@ sub new {
 		trace => $trace,
 		num_processors => $processors_number,
 		cluster_size => $cluster_size,
-		version => $version,
+		reduction_algorithm => $version,
 		contiguous_jobs_number => 0,
 		local_jobs_number => 0,
 		cmax => 0
