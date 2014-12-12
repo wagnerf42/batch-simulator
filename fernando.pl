@@ -8,6 +8,16 @@ use List::Util qw(max);
 use Trace;
 use Schedule;
 use Backfilling;
+use BinarySearchList;
+use Util;
+use TestPackage;
+use BinarySearchTree;
+
+my $bst = BinarySearchTree->new_test();
+print "$bst\n";
+$bst->add(15);
+print "$bst\n";
+die;
 
 my ($trace_file_name, $cluster_size) = @ARGV;
 

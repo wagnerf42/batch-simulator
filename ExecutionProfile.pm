@@ -138,9 +138,7 @@ sub starting_time {
 
 #TODO There is code duplication with get_free_processors_for
 sub could_start_job_at {
-	my $self = shift;
-	my $job = shift;
-	my $profile_index = shift;
+	my ($self, $job, $profile_index) = @_;
 	my $min_processors = $self->{profiles}->[$profile_index]->processor_range()->size();
 	return 0 unless $min_processors >= $job->requested_cpus();
 	my $left_duration = $job->run_time();
@@ -162,7 +160,6 @@ sub could_start_job_at {
 		}
 	}
 	return 1;
-
 }
 
 sub find_first_profile_for {
