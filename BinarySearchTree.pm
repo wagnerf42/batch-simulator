@@ -4,6 +4,11 @@ use warnings;
 
 use overload '""' => \&_stringification;
 
+use constant {
+	RIGHT => 0,
+	LEFT => -1
+};
+
 =head1 NAME
 
 BinarySearchTree - Binary search tree package with basic generic operations
@@ -12,9 +17,12 @@ BinarySearchTree - Binary search tree package with basic generic operations
 
 =over 12
 
-=item new
+=item new(sentinel)
 
 Returns a new object of the class.
+
+The sentinel is an element that will always be valued as smaller than any other
+element in the tree.
 
 =cut
 
@@ -25,23 +33,19 @@ sub new {
 	return $self;
 }
 
-sub new_test {
-	my ($class) = @_;
-	my $self = [0, 8, 3, 10, 1, 6, undef, 14, undef, undef, 4, 7, undef, undef, 13];
-	bless $self, $class;
-	return $self;
-}
-
 =item add
 
 Adds a new element to the binary search tree.
+
+The basic algorithm is to go through the tree trying to find the best leaf for
+the new element. Note that adding elements may unbalance the tree if elements
+are already sorted.
 
 =cut
 
 sub add {
 	my ($self, $item) = @_;
 	my $current = 1;
-	return $self = [$self->[0], $item] unless $#{$self} > 1;
 
 	while (defined $self->[$current]) {
 		$current = ($item < $self->[$current] ? 2*$current : 2*$current + 1);
@@ -55,6 +59,10 @@ sub add {
 
 Finds an element in the binary search tree.
 
+This routine receives an actual element and looks for a similar one in the
+tree. Depending on the operators supported by the elements, a key may be used
+to compare to elements, instead of an element of the same type.
+
 =cut
 
 sub find {
@@ -65,9 +73,12 @@ sub find {
 	return $self->[$current] unless $#{$self} > 1;
 
 	while (defined $self->[$current]) {
-		return ($self->[$current], $current) if $self->[$current] == $item;
+		last if $self->[$current] == $item;
 		$current = ($item < $self->[$current] ? 2*$current : 2*$current + 1);
 	}
+
+	return ($self->[$current], $current);
+
 }
 
 =item remove_element
@@ -77,8 +88,9 @@ Removes an element from the binary search tree.
 =cut
 
 sub remove_element {
-
-
+	my ($self, $item) = @_;
+	my ($found_item, $found_index) = $self->find($item);
+	$self->remove_index($found_index) if defined $found_index;
 }
 
 =item remove_index
@@ -89,6 +101,51 @@ Removes an element in the binary search tree by index.
 
 sub remove_index {
 	my ($self, $index) = @_;
+	my ($left_child, $right_child) = (2*$index, 2*$index + 1);
+
+	if (not defined $self->[$left_child] and not defined $self->[$right_child]) {
+		$self->[$index] = undef;
+		return;
+
+	} elsif (not defined $self->[$left_child]) {
+		$self->move_up($right_child, LEFT);
+
+	} elsif (not defined $self->[$right_child]) {
+		$self->move_up($left_child, RIGHT);
+
+	} else {
+		my $direction = int rand(2);
+		my $last_child_index = $self->_last_child_index(2*$index + $direction, $direction);
+
+		$self->[$index] = $self->[$last_child_index];
+		$self->remove_index($last_child_index);
+	}
+
+}
+
+=item move_up
+
+Moves elements of the tree up.
+
+This subroutine is used during the removal of elements.
+
+=cut
+
+sub move_up {
+	my ($self, $position, $direction) = @_;
+	my $target_offset = $direction + $position%2;
+	my $target_position = int $position/2 + $target_offset;
+
+	return unless defined $self->[$position];
+
+	print "item=" . $self->[$position] . ", position=$position, target_position=$target_position, direction=$direction, offset=$target_offset\n";
+
+	$self->[$target_position] = $self->[$position];
+	$self->[$position] = undef;
+
+	# We need to move first the child that is on the side of the direction
+	$self->move_up($position*2 + $direction + 1, $direction);
+	$self->move_up($position*2 + abs $direction, $direction);
 }
 
 =item balance
@@ -106,6 +163,7 @@ sub _stringification {
 	my $current = 1;
 	my @stack;
 	my @print_order;
+	my @raw_print_order = map {defined $_ ? $_ : 'undef'} @{$self};
 
 	return unless defined $self->[1];
 
@@ -120,7 +178,19 @@ sub _stringification {
 		$current = $current*2 + 1;
 	}
 
-	return "[" . join(' ', @print_order) . "]";
+	return "[" . join(' ', @print_order) . "] -> [" . join(' ', @raw_print_order) . "]";
+}
+
+sub _last_child_index {
+	my ($self, $index, $direction) = @_;
+	my $next_index = $index;
+
+	while (defined $self->[$next_index]) {
+		$index = $next_index;
+		$next_index = $index*2 + 1 + $direction;
+	}
+
+	return $index;
 }
 
 1;

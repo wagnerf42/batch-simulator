@@ -13,10 +13,18 @@ use Util;
 use TestPackage;
 use BinarySearchTree;
 
-my $bst = BinarySearchTree->new_test();
-print "$bst\n";
+my $bst = BinarySearchTree->new(-1);
+$bst->add(10);
+$bst->add(5);
 $bst->add(15);
+$bst->add(3);
+$bst->add(1);
+$bst->add(4);
+$bst->add(6);
 print "$bst\n";
+$bst->remove_element(5);
+print "$bst\n";
+#print Dumper(@{$bst});
 die;
 
 my ($trace_file_name, $cluster_size) = @ARGV;
