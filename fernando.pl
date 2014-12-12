@@ -16,10 +16,10 @@ $trace->reset_jobs_numbers();
 $trace->fix_submit_times();
 #my $cpus_number = $trace->needed_cpus();
 my $cpus_number = 77248;
-my $schedule = Backfilling->new(REUSE_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, CONTIGUOUS);
+my $schedule = Backfilling->new(NEW_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
 
-#print join(' ', $_->job_number(), $_->{schedule_times}, $_->{improved_schedule_times}) . "\n" for @{$schedule->{jobs}};
+print join(' ', $_->job_number(), $_->{schedule_times}, $_->{improved_schedule_times}) . "\n" for @{$schedule->{jobs}};
 
 print STDERR "Done\n";
 

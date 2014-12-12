@@ -48,6 +48,11 @@ sub new_from_swf {
 	return $self;
 }
 
+sub reset_run_times {
+	my ($self) = @_;
+	$_->{requested_time} = $_->{run_time} for @{$self->{jobs}};
+}
+
 sub fix_submit_times {
 	my ($self) = @_;
 
