@@ -13,13 +13,11 @@ use constant {
 
 BinarySearchTree - Binary search tree package with basic generic operations
 
-=head1 METHODS
+=head2 METHODS
 
 =over 12
 
 =item new(sentinel)
-
-Returns a new object of the class.
 
 The sentinel is an element that will always be valued as smaller than any other
 element in the tree.
@@ -192,5 +190,8 @@ sub _last_child_index {
 
 	return $index;
 }
+
+=back
+=cut
 
 1;

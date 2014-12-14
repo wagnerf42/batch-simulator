@@ -86,9 +86,6 @@ sub run {
 				for my $job (@{$self->{reserved_jobs}}) {
 					$self->{execution_profile}->remove_job($job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
 					$self->assign_job($job, $remaining_reserved_jobs);
-
-					if ($job->job_number() == 7) {
-					}
 				}
 				$self->{reserved_jobs} = $remaining_reserved_jobs;
 

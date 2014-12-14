@@ -11,7 +11,7 @@ use overload '""' => \&_stringification;
 
 BinarySearchList - Binary search module with some basic operations
 
-=head1 METHODS
+=head2 METHODS
 
 =over 12
 
