@@ -69,7 +69,6 @@ sub new_block_from_trace {
 	return $self;
 }
 
-#TODO Test this routine
 sub new_from_trace {
 	my ($class, $trace, $size) = @_;
 
