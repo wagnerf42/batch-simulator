@@ -58,9 +58,9 @@ sub run {
 	$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
 
 	# Add all jobs to the queue
-	$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{jobs}});
+	$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
 
-	$self->{remaining_jobs} = @{$self->{jobs}};
+	$self->{remaining_jobs} = @{$self->{trace}->jobs()};
 
 	while (defined(my $event = $self->{events}->retrieve())) {
 		my $job = $event->payload();
@@ -96,7 +96,6 @@ sub run {
 		}
 	}
 }
-
 sub build_started_jobs_profile {
 	my $self = shift;
 	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm}, $self->{current_time});

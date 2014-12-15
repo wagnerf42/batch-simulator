@@ -11,12 +11,12 @@ use ProcessorRange;
 use overload '""' => \&stringification;
 
 sub new {
-	my ($class, $processors_number, $cluster_size, $version, $starting_time) = @_;
+	my ($class, $processors_number, $cluster_size, $reduction_algorithm, $starting_time) = @_;
 
 	my $self = {
 		processors_number => $processors_number,
 		cluster_size => $cluster_size,
-		version => $version
+		reduction_algorithm => $reduction_algorithm
 	};
 
 	$self->{profiles} = [initial Profile((defined($starting_time) ? $starting_time : 0), 0, $self->{processors_number}-1)];
@@ -53,7 +53,7 @@ sub get_free_processors_for {
 		}
 	}
 
-	my $reduction_function = $REDUCTION_FUNCTIONS[$self->{version}];
+	my $reduction_function = $REDUCTION_FUNCTIONS[$self->{reduction_algorithm}];
 	$left_processors->$reduction_function($job->requested_cpus());
 
 	return if $left_processors->is_empty();

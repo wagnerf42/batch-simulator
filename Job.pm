@@ -6,8 +6,7 @@ use Data::Dumper qw(Dumper);
 use POSIX;
 use Carp;
 
-use overload
-    '""' => \&stringification;
+use overload '""' => \&stringification;
 
 my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen darkred dimgray mediumpurple midnightblue olive chartreuse darkorchid hotpink lightskyblue peru goldenrod mediumslateblue orangered darkmagenta darkgoldenrod mediumslateblue);
 
@@ -17,7 +16,7 @@ sub stringification {
 	return join(' ',
 		$self->{job_number},
 		$self->{submit_time},
-		$self->{wait_time}, #update
+		$self->{wait_time},
 		$self->{run_time},
 		$self->{allocated_cpus},
 		$self->{requested_cpus},
@@ -25,8 +24,6 @@ sub stringification {
 	);
 }
 
-#TODO : new should die if job is invalid (allocated_cpus != requested_cpus) or cpus = -1
-#TODO : keep only requested cpus
 sub new {
 	my $class = shift;
 
@@ -54,36 +51,8 @@ sub new {
 	$self->{schedule_times} = 0;
 	$self->{improved_schedule_times} = 0;
 
-	bless $self, $class;
-	return $self;
-}
-
-sub new2 {
-	my $class = shift;
-
-	my $self = {
-		job_number => shift, #1
-		submit_time => shift, #2
-		wait_time => shift, #3
-		run_time => shift, #4
-		allocated_cpus => shift, #5
-		avg_cpu_time => shift, #6
-		used_mem => shift, #7
-		requested_cpus => shift, #8
-		requested_time => shift, #9
-		requested_mem => shift, #10
-		status => shift, #11, 0 = failed, 5 = cancelled, 1 = completed
-		uid => shift, #12
-		gid => shift, #13
-		exec_number => shift, #14
-		queue_number => shift, #15
-		partition_number => shift, #16
-		prec_job_number => shift, #17
-		think_time_prec_job => shift, #18
-	};
-
-	$self->{schedule_times} = 0;
-	$self->{improved_schedule_times} = 0;
+	die 'invalid job' unless $self->{allocated_cpus} == $self->{requested_cpus};
+	die 'invalid job' unless $self->{requested_time} > 0 and $self->{run_time} > 0;
 
 	bless $self, $class;
 	return $self;
@@ -102,14 +71,9 @@ sub schedule_time {
 	return $self->{schedule_time};
 }
 
-sub allocated_cpus {
-	my ($self) = @_;
-	return $self->{allocated_cpus};
-}
-
 sub requested_cpus {
 	my ($self) = @_;
-	return $self->{allocated_cpus};
+	return $self->{requested_cpus};
 }
 
 sub run_time {
@@ -243,9 +207,7 @@ sub svg {
 sub reset {
 	my ($self) = @_;
 	delete $self->{starting_time};
-	delete $self->{first_processor};
 	delete $self->{assigned_processors_ids};
-	delete $self->{wait_time};
 }
 
 sub used_clusters {

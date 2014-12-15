@@ -2,6 +2,23 @@ package Heap;
 use strict;
 use warnings;
 
+=head1 NAME
+
+Heap - Heap implementation with generic manipulation routines
+
+=head2 METHODS
+
+=over 12
+
+=item new(sentinel)
+
+Returns a new object of the Heap class.
+
+The sentinel is an object or scalar that is smaller than any other object or
+scalar that the heap can store.
+
+=cut
+
 sub new {
 	my $class = shift;
 	my $self = {};
@@ -13,6 +30,15 @@ sub new {
 	return $self;
 }
 
+=item retireve()
+
+Returns the smallest object or scalar stored in the heap.
+
+This routine removes the first element in the list and puts in its place the
+last element. Then it fixes the heap structure by moving it down as necessary.
+
+=cut
+
 sub retrieve {
 	my $self = shift;
 
@@ -22,10 +48,19 @@ sub retrieve {
 	return $min_element unless defined $self->{elements}->[1]; #no one left, no order to fix
 
 	$self->{elements}->[1] = $last_element;
-	$self->move_first_down();
+	$self->_move_first_down();
 
 	return $min_element;
 }
+
+=item add(element)
+
+Adds a new element to the heap structure.
+
+The new element is added at the end of the structure. Then it is moved up as
+necessary to preserve the priority order between the elements in the heap.
+
+=cut
 
 sub add {
 	my $self = shift;
@@ -33,42 +68,42 @@ sub add {
 
 	push @{$self->{elements}}, $element;
 
-	$self->move_last_up();
+	$self->_move_last_up();
 }
 
-sub move_last_up {
+sub _move_last_up {
 	my $self = shift;
 
 	my $current_position = $#{$self->{elements}};
 	my $father = int $current_position / 2;
 
 	while ($self->{elements}->[$current_position] < $self->{elements}->[$father]) {
-		$self->exchange($current_position, $father);
+		$self->_exchange($current_position, $father);
 
 		$current_position = $father;
 		$father = int $father / 2;
 	}
 }
 
-sub move_first_down {
+sub _move_first_down {
 	my $self = shift;
 
 	my $current_position = 1;
-	my $min_child_index = $self->find_min_child($current_position);
+	my $min_child_index = $self->_find_min_child($current_position);
 	while ((defined $min_child_index) and ($self->{elements}->[$min_child_index] < $self->{elements}->[$current_position])) {
-		$self->exchange($current_position, $min_child_index);
+		$self->_exchange($current_position, $min_child_index);
 		$current_position = $min_child_index;
-		$min_child_index = $self->find_min_child($current_position);
+		$min_child_index = $self->_find_min_child($current_position);
 	}
 }
 
-sub exchange {
+sub _exchange {
 	my $self = shift;
 	my ($a, $b) = @_;
 	($self->{elements}->[$a], $self->{elements}->[$b]) = ($self->{elements}->[$b], $self->{elements}->[$a]);
 }
 
-sub find_min_child {
+sub _find_min_child {
 	my $self = shift;
 	my $index = shift;
 	my ($child1, $child2) = (2*$index, 2*$index+1);

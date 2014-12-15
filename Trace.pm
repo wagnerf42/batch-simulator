@@ -11,17 +11,13 @@ use POSIX qw(ceil floor);
 use Job;
 use Database;
 
-#TODO: remove needed cpus cache
-#TODO: clean code
-#TODO: new subroutine : set all requested times to run_times
 sub new_from_swf {
 	my ($class, $file) = @_;
 
 	my $self = {
 		file => $file,
 		jobs => [],
-		status => [],
-		needed_cpus => 0
+		status => []
 	};
 
 	open (FILE, $self->{file}) or die "unable to open $self->{file}";
@@ -39,7 +35,6 @@ sub new_from_swf {
 		# Job line
 		elsif ($fields[0] ne ' ') {
 			my $job = new Job(@fields);
-			$self->{needed_cpus} = max($self->{needed_cpus}, $job->requested_cpus);
 			push @{$self->{jobs}}, $job;
 		}
 	}
@@ -48,16 +43,14 @@ sub new_from_swf {
 	return $self;
 }
 
-sub reset_run_times {
+sub reset_requested_times {
 	my ($self) = @_;
 	$_->{requested_time} = $_->{run_time} for @{$self->{jobs}};
 }
 
 sub fix_submit_times {
 	my ($self) = @_;
-
 	return if (!$self->{jobs}[0]->submit_time());
-
 	my $first_submit_time = $self->{jobs}[0]->submit_time();
 	$_->submit_time($_->submit_time() - $first_submit_time) for @{$self->{jobs}};
 }
@@ -65,34 +58,28 @@ sub fix_submit_times {
 sub new_block_from_trace {
 	my ($class, $trace, $size) = @_;
 	my $start_point = int(rand(scalar @{$trace->jobs()} - $size + 1));
-	my @selected_jobs = @{$trace->jobs()}[$start_point..($start_point + $size - 1)];
+	my $end_point = $start_point + $size - 1;
+	my @selected_jobs = @{$trace->jobs()}[$start_point..$end_point];
 
 	my $self = {
-		jobs => [@selected_jobs],
-		needed_cpus => max map {$_->requested_cpus} @selected_jobs,
+		jobs => [@selected_jobs]
 	};
 
 	bless $self, $class;
 	return $self;
 }
 
+#TODO Test this routine
 sub new_from_trace {
 	my ($class, $trace, $size) = @_;
 
-	die 'creating empty trace' unless defined $trace->{jobs}->[0];
+	die 'empty trace' unless defined $trace->{jobs}->[0];
 
 	my $self = {
-		jobs => [],
-		needed_cpus => 0
+		jobs => []
 	};
 
-	for my $job_number (1..$size) {
-		my $job_id = int(rand(@{$trace->{jobs}}));
-		my $new_job = dclone($trace->{jobs}->[$job_id]);
-
-		$self->{needed_cpus} = max($self->{needed_cpus}, $new_job->requested_cpus);
-		push @{$self->{jobs}}, $new_job;
-	}
+	push @{$self->{jobs}}, dclone($trace->{jobs}->[int rand(@{$trace->{jobs}})]) for (1..$size);
 
 	bless $self, $class;
 	return $self;
@@ -102,8 +89,7 @@ sub copy_from_trace {
 	my ($class, $trace) = @_;
 
 	my $self = {
-		jobs => [],
-		needed_cpus => $trace->needed_cpus()
+		jobs => []
 	};
 
 	for my $job (@{$trace->jobs()}) {
@@ -121,7 +107,6 @@ sub new_from_database {
 
 	my $self = {
 		jobs => [],
-		needed_cpus => 0
 	};
 
 	my $database = Database->new();
@@ -150,7 +135,6 @@ sub new_from_database {
 			$job_ref->{think_time_prec_job}
 		);
 
-		$self->{needed_cpus} = max($self->{needed_cpus}, $job->requested_cpus);
 		push @{$self->{jobs}}, $job;
 	}
 
@@ -164,7 +148,6 @@ sub copy {
 		jobs => []
 	};
 	push @{$self->{jobs}}, copy Job($_) for @{$original->{jobs}};
-	$self->{needed_cpus} = $original->{needed_cpus};
 	bless $self, $class;
 	return $self;
 }
@@ -194,9 +177,8 @@ sub write_to_file {
 }
 
 sub needed_cpus {
-	my ($self, $needed_cpus) = @_;
-	$self->{needed_cpus} = $needed_cpus if defined $needed_cpus;
-	return $self->{needed_cpus};
+	my ($self) = @_;
+	return max map {$_->requested_cpus()} @{$self->{jobs}};
 }
 
 sub jobs {
@@ -207,22 +189,19 @@ sub jobs {
 
 sub job {
 	my ($self, $job_number) = @_;
-	return $self->{jobs}[$job_number];
+	return $self->{jobs}->[$job_number];
 }
 
 sub remove_large_jobs {
 	my ($self, $limit) = @_;
-	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
-
 	die unless defined $limit;
-
+	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
 	$self->{jobs} = [@left_jobs];
 }
 
 sub reset {
 	my ($self) = @_;
 	$_->reset() for @{$self->{jobs}};
-	$self->{needed_cpus} = 0;
 }
 
 sub load {

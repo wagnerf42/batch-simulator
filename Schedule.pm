@@ -5,44 +5,35 @@ use warnings;
 use List::Util qw(max sum);
 use Time::HiRes qw(time);
 
-local $| = 1;
-
 sub new {
-	my ($class, $trace, $processors_number, $cluster_size, $version) = @_;
+	my ($class, $trace, $processors_number, $cluster_size, $reduction_algorithm) = @_;
 
 	my $self = {
 		trace => $trace,
 		num_processors => $processors_number,
 		cluster_size => $cluster_size,
-		reduction_algorithm => $version,
+		reduction_algorithm => $reduction_algorithm,
 		contiguous_jobs_number => 0,
 		local_jobs_number => 0,
 		cmax => 0
 	};
 
-	# If no cluster size was chosen, use the number of processors as cluster size
-	$self->{cluster_size} = $self->{num_processors} unless defined $self->{cluster_size};
-
-	# If no algorithm version was chosen, use 0 as the default version
-	$self->{version} = 0 unless defined $self->{version};
-
 	# Make sure the trace is clean
 	#$self->{trace}->reset();
 
-	#shortcut for access to jobs list (which is also in trace)
-	$self->{jobs} = $self->{trace}->jobs();
+	#$self->{jobs} = $self->{trace}->jobs();
 
 	bless $self, $class;
 	return $self;
 }
 
 sub run {
-	my $self = shift;
+	my ($self) = @_;
 	my $start_time = time();
 
 	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
 
-	for my $job (@{$self->{jobs}}) {
+	for my $job (@{$self->{trace}->jobs()}) {
 		$self->assign_job($job);
 		$job->schedule_time(time() - $start_time);
 	}
@@ -51,61 +42,61 @@ sub run {
 }
 
 sub run_time {
-	my $self = shift;
+	my ($self) = @_;
 	return $self->{run_time};
 }
 
 sub sum_flow_time {
-	my $self = shift;
-	return sum map {$_->flow_time()} @{$self->{jobs}};
+	my ($self) = @_;
+	return sum map {$_->flow_time()} @{$self->{trace}->jobs()};
 }
 
 sub max_flow_time {
-	my $self = shift;
-	return max map {$_->flow_time()} @{$self->{jobs}};
+	my ($self) = @_;
+	return max map {$_->flow_time()} @{$self->{trace}->jobs()};
 }
 
 sub mean_flow_time {
-	my $self = shift;
-	return $self->sum_flow_time() / @{$self->{jobs}};
+	my ($self) = @_;
+	return $self->sum_flow_time() / @{$self->{trace}->jobs()};
 }
 
 sub max_stretch {
-	my $self = shift;
-	return max map {$_->stretch()} @{$self->{jobs}};
+	my ($self) = @_;
+	return max map {$_->stretch()} @{$self->{trace}->jobs()};
 }
 
 sub mean_stretch {
 	my ($self) = @_;
-	return (sum map {$_->stretch()} @{$self->{jobs}}) / @{$self->{jobs}};
+	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
 }
 
-sub compute_cmax {
-	my $self = shift;
-	return max map {$_->ending_time()} @{$self->{jobs}};
+sub cmax {
+	my ($self) = @_;
+	return max map {$_->ending_time()} @{$self->{trace}->jobs()};
 }
 
-sub compute_cmax_estimation {
-	my $self = shift;
-	my $time = shift;
-	return max map {$_->ending_time_estimation($time)} @{$self->{jobs}};
+sub cmax_estimation {
+	my ($self, $time) = @_;
+	return max map {$_->ending_time_estimation($time)} @{$self->{trace}->jobs()};
 }
 
 sub contiguous_jobs_number {
-	my $self = shift;
-	return scalar grep {$_->get_processor_range()->contiguous($self->{num_processors})} @{$self->{jobs}};
+	my ($self) = @_;
+	return scalar grep {$_->get_processor_range()->contiguous($self->{num_processors})} @{$self->{trace}->jobs()};
 }
 
 sub local_jobs_number {
-	my $self = shift;
-	return scalar grep {$_->get_processor_range()->local($self->{cluster_size})} @{$self->{jobs}};
+	my ($self) = @_;
+	return scalar grep {$_->get_processor_range()->local($self->{cluster_size})} @{$self->{trace}->jobs()};
 }
 
 sub locality_factor {
-	my $self = shift;
+	my ($self) = @_;
 	my $used_clusters = 0;
 	my $optimum_clusters = 0;
-	for my $job (@{$self->{jobs}}) {
+
+	for my $job (@{$self->{trace}->jobs()}) {
 		$used_clusters += $job->used_clusters($self->{cluster_size});
 		$optimum_clusters += $job->clusters_required($self->{cluster_size});
 	}
@@ -113,9 +104,10 @@ sub locality_factor {
 }
 
 sub locality_factor_2 {
-	my $self = shift;
+	my ($self) = @_;
 	my $sum_of_ratios = 0;
-	for my $job (@{$self->{jobs}}) {
+
+	for my $job (@{$self->{trace}->jobs()}) {
 		my $used_clusters = $job->used_clusters($self->{cluster_size});
 		my $optimum_clusters = $job->clusters_required($self->{cluster_size});
 		$sum_of_ratios += $used_clusters / $optimum_clusters;
@@ -136,7 +128,7 @@ sub save_svg {
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
 
-	$_->svg($filehandle, $w_ratio, $h_ratio, $time) for grep {defined $_->starting_time()} (@{$self->{jobs}});
+	$_->svg($filehandle, $w_ratio, $h_ratio, $time) for grep {defined $_->starting_time()} (@{$self->{trace}->jobs()});
 
 	print $filehandle "</svg>\n";
 	close $filehandle;

@@ -136,8 +136,6 @@ sub move_up {
 
 	return unless defined $self->[$position];
 
-	print "item=" . $self->[$position] . ", position=$position, target_position=$target_position, direction=$direction, offset=$target_offset\n";
-
 	$self->[$target_position] = $self->[$position];
 	$self->[$position] = undef;
 
