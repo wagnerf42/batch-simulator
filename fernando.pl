@@ -11,16 +11,6 @@ use Backfilling;
 use BinarySearchTree;
 use TestPackage;
 
-my $bst = BinarySearchTree->new(TestPackage->new(-1));
-$bst->add(TestPackage->new($_)) for (15, 10, 20, 8, 12);
-print "$bst\n";
-my $node = $bst->find_node(10);
-#print "$node\n";
-$bst->remove_node($node);
-print "$bst\n";
-die 'Done';
-
-
 my ($trace_file_name) = @ARGV;
 my $trace = Trace->new_from_swf($trace_file_name);
 $trace->reset_jobs_numbers();
