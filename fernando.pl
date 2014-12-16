@@ -11,10 +11,12 @@ use Backfilling;
 use BinarySearchTree;
 use TestPackage;
 
-my $bst = BinarySearchTree->new(TestPackage->new(6));
-#$bst->add(TestPackage->new(int rand(30))) for (0..1);
-$bst->add(TestPackage->new(8));
+my $bst = BinarySearchTree->new(TestPackage->new(-1));
+$bst->add(TestPackage->new($_)) for (15, 10, 20, 8, 9);
 print "$bst\n";
+#my $number = <STDIN>;
+#$bst->remove_element($number);
+#print "$bst\n";
 die;
 
 
