@@ -2,16 +2,17 @@ package BinarySearchTree;
 use strict;
 use warnings;
 
+use Data::Dumper qw(Dumper);
+
 use BinarySearchTree::Node;
 
 use overload '""' => \&_stringification;
 
 sub new {
-	my ($class, $sentinel, $key_type) = @_;
+	my ($class, $sentinel) = @_;
 
 	my $self = {
-		root => new BinarySearchTree::Node($sentinel, undef),
-		key_type => $key_type
+		root => new BinarySearchTree::Node($sentinel, undef)
 	};
 
 	bless $self, $class;
@@ -25,15 +26,7 @@ sub add {
 
 sub find_node {
 	my ($self, $key) = @_;
-	die unless (ref $key) eq $self->{key_type};
 	return $self->{root}->find_node($key);
-}
-
-sub find_content {
-	my ($self, $key) = @_;
-	my $node = $self->{root}->find_node($key);
-	return unless defined $node;
-	return $node->content();
 }
 
 sub _stringification {

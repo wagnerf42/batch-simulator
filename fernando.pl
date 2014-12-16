@@ -12,12 +12,13 @@ use BinarySearchTree;
 use TestPackage;
 
 my $bst = BinarySearchTree->new(TestPackage->new(-1));
-$bst->add(TestPackage->new($_)) for (15, 10, 20, 8, 9);
+$bst->add(TestPackage->new($_)) for (15, 10, 20, 8, 12);
 print "$bst\n";
-#my $number = <STDIN>;
-#$bst->remove_element($number);
-#print "$bst\n";
-die;
+my $node = $bst->find_node(10);
+#print "$node\n";
+$bst->remove_node($node);
+print "$bst\n";
+die 'Done';
 
 
 my ($trace_file_name) = @ARGV;

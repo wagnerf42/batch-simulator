@@ -2,7 +2,11 @@ package BinarySearchTree::Node;
 use strict;
 use warnings;
 
-use overload '""' => \&_stringification;
+use Data::Dumper qw(Dumper);
+use Scalar::Util qw(refaddr);
+use Carp qw(confess);
+
+use overload '""' => \&_stringification, '==' => \&_is_equal;
 
 use constant {
 	LEFT => 0,
@@ -45,7 +49,7 @@ sub find_node {
 
 	while (defined $current) {
 		last if $current->{content} == $key;
-		my $direction = $key < $self->{content} ? LEFT : RIGHT;
+		my $direction = ($key < $current->{content} ? LEFT : RIGHT);
 		$current = $current->{children}->[$direction];
 	}
 
@@ -58,15 +62,19 @@ sub remove_node {
 	if (not defined $node->{children}->[LEFT] and not defined $node->{children}->[RIGHT]) {
 		$node->{father}->{children}->[$node->_direction()] = undef;
 
-	} elsif (not defined $self->{children}->[LEFT]) {
+	} elsif (not defined $node->{children}->[LEFT]) {
 		$node->{father}->{children}->[$node->_direction()] = $node->{children}->[RIGHT];
 		$node->{children}->[RIGHT]->{father} = $node->{father};
 
-	} elsif (not defined $self->{children}->[RIGHT]) {
+	} elsif (not defined $node->{children}->[RIGHT]) {
 		$node->{father}->{children}->[$node->_direction()] = $node->{children}->[LEFT];
 		$node->{children}->[LEFT]->{father} = $node->{father};
 
 	} else {
+		my $direction = int rand(2);
+		my $last_child = $self->_last_child($node->{children}->[$direction], 1 - $direction);
+		$node->{content} = $last_child->{content};
+		$self->remove_node($last_child);
 	}
 }
 
@@ -91,24 +99,26 @@ sub _stringification {
 	
 }
 
-sub _last_child_index {
-	my ($self, $index, $direction) = @_;
-	my $next_index = $index;
-
-	while (defined $self->[$next_index]) {
-		$index = $next_index;
-		$next_index = $index*2 + 1 + $direction;
+sub _last_child {
+	my ($self, $node, $direction) = @_;
+	while (defined $node->{children}->[$direction]) {
+		$node = $node->{children}->[$direction];
 	}
-
-	return $index;
+	return $node;
 }
 
 sub _direction {
 	my ($self) = @_;
-	return ($self == $self->{father}->{children}->[LEFT] ? LEFT : RIGHT) if defined $self->{father};
+	my $children = $self->{father}->{children};
+
+	return LEFT if (defined $children->[LEFT] and $self == $children->[LEFT]);
+	return RIGHT;
 }
 
-=back
-=cut
+sub _is_equal {
+	my ($self, $other) = @_;
+	confess unless defined $self and defined $other;
+	return refaddr($self) == refaddr($other);
+}
 
 1;
