@@ -78,11 +78,6 @@ sub remove_node {
 	}
 }
 
-sub move_up {
-	my ($self, $node) = @_;
-	$node
-}
-
 sub content {
 	my ($self, $content) = @_;
 	$self->{content} = $content if defined $content;
@@ -91,12 +86,10 @@ sub content {
 
 sub _stringification {
 	my ($self) = @_;
-	my @children_strings = map {if (defined $_){"$_"} else{""}} @{$self->{children}};
+	my @children_strings = map {if (defined $_) {"$_"} else {""}} @{$self->{children}};
 	my $string = join(',', @children_strings);
 
-	#return join(' ', $self->{children}->[LEFT], $self->{content}, $self->{children}->[RIGHT]);
 	return $self->{content} . "[$string]";
-	
 }
 
 sub _last_child {
@@ -117,7 +110,6 @@ sub _direction {
 
 sub _is_equal {
 	my ($self, $other) = @_;
-	confess unless defined $self and defined $other;
 	return refaddr($self) == refaddr($other);
 }
 
