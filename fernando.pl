@@ -8,9 +8,17 @@ use List::Util qw(max);
 use Trace;
 use Schedule;
 use Backfilling;
+use BinarySearchTree;
+use TestPackage;
+
+my $bst = BinarySearchTree->new(TestPackage->new(6));
+#$bst->add(TestPackage->new(int rand(30))) for (0..1);
+$bst->add(TestPackage->new(8));
+print "$bst\n";
+die;
+
 
 my ($trace_file_name) = @ARGV;
-
 my $trace = Trace->new_from_swf($trace_file_name);
 $trace->reset_jobs_numbers();
 $trace->fix_submit_times();

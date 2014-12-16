@@ -146,7 +146,7 @@ sub copy {
 	my $self = {
 		jobs => []
 	};
-	push @{$self->{jobs}}, copy Job($_) for @{$original->{jobs}};
+	push @{$self->{jobs}}, Job->copy($_) for @{$original->{jobs}};
 	bless $self, $class;
 	return $self;
 }

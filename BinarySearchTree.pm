@@ -5,8 +5,8 @@ use warnings;
 use overload '""' => \&_stringification;
 
 use constant {
-	RIGHT => 0,
-	LEFT => -1
+	LEFT => 0,
+	RIGHT => 1
 };
 
 =head1 NAME
@@ -25,8 +25,13 @@ element in the tree.
 =cut
 
 sub new {
-	my ($class, $sentinel) = @_;
-	my $self = [$sentinel];
+	my ($class, $payload) = @_;
+
+	my $self = {
+		payload => $payload,
+		children => []
+	};
+
 	bless $self, $class;
 	return $self;
 }
@@ -43,14 +48,19 @@ are already sorted.
 
 sub add {
 	my ($self, $item) = @_;
-	my $current = 1;
+	my $current = $self;
+	my $direction = $item < $current->payload() ? LEFT : RIGHT;
+	my $next = $current->{children}->[$direction];
 
-	while (defined $self->[$current]) {
-		$current = ($item < $self->[$current] ? 2*$current : 2*$current + 1);
+	while (defined $next) {
+		$current = $next;
+		$direction = $item < $current->payload() ? LEFT : RIGHT;
+		$next = $current->{children}->[$direction];
 	}
 
-	$self->[$current] = $item;
-	return $current;
+	$next = new BinarySearchTree($item);
+	$current->{children}->[$direction] = $next;
+	return $next;
 }
 
 =item find
@@ -154,27 +164,26 @@ sub balance {
 	my ($self) = @_;
 }
 
+=item payload
+
+Returns the payload contained in a BinarySearchTree object or set a new one.
+
+=cut
+
+sub payload {
+	my ($self, $payload) = @_;
+	$self->{payload} = $payload if defined $payload;
+	return $self->{payload};
+}
+
 sub _stringification {
 	my ($self) = @_;
-	my $current = 1;
-	my @stack;
-	my @print_order;
-	my @raw_print_order = map {defined $_ ? $_ : 'undef'} @{$self};
+	my $left_child_string = defined $self->{children}->[LEFT] ? $self->{children}->[LEFT] : "u";
+	my $right_child_string = defined $self->{children}->[RIGHT] ? $self->{children}->[RIGHT] : "u";
 
-	return unless defined $self->[1];
-
-	while ($#stack >= 0 or defined $self->[$current]) {
-		while (defined $self->[$current]) {
-			push @stack, $current;
-			$current *= 2;
-		}
-
-		$current = pop @stack;
-		push @print_order, $self->[$current];
-		$current = $current*2 + 1;
-	}
-
-	return "[" . join(' ', @print_order) . "] -> [" . join(' ', @raw_print_order) . "]";
+	#return join(' ', $self->{children}->[LEFT], $self->{payload}, $self->{children}->[RIGHT]);
+	return $self->{payload} . " [" . $left_child_string . " " . $right_child_string . "]";
+	
 }
 
 sub _last_child_index {
