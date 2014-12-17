@@ -91,7 +91,6 @@ sub run {
 
 				$self->{remaining_jobs}--;
 				print STDERR $self->{remaining_jobs} . " " . (time() - $start_time) . "\n";
-
 			}
 		}
 	}
@@ -111,18 +110,36 @@ sub start_job {
 sub assign_job {
 	my ($self, $job, $still_reserved_jobs) = @_;
 
-	# Get the first valid profile_id for our job
-	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
-	my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
+	my $last_suitable_profile = $self->{execution_profile}->find_suitable_profiles_for($job);
 
-	$job->assign_to($starting_time, $chosen_processors);
+	#print 'profiles ' . join(' ', $last_suitable_profile + 1, scalar(@{$self->{execution_profile}->{profiles}})) . "\n";
+	#print 'last profile: ' . $self->{execution_profile}->{profiles}->[$last_suitable_profile] . "\n";
+	#for my $profile (@{$self->{execution_profile}->{profiles}}) {
+	#	print "\tprofile " . $profile . "\n";
+	#}
+	#print "\n";
+	#my $nhack = <STDIN>;
 
-	# Update profiles
-	$self->{execution_profile}->add_job_at($chosen_profile, $job, $self->{current_time});
+	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $last_suitable_profile);
 
-	if ($job->starting_time() == $self->{current_time}) {
-		$self->start_job($job);
+	if (defined $chosen_profile) {
+		my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
+
+		$job->assign_to($starting_time, $chosen_processors);
+
+		# Update profiles
+		$self->{execution_profile}->add_job_at($chosen_profile, $job, $self->{current_time});
+
+		if ($job->starting_time() == $self->{current_time}) {
+			$self->start_job($job);
+		} else {
+			push @{$still_reserved_jobs}, $job;
+		}
 	} else {
+		#TODO Improve this line. With this implementation jobs that can't be scheduled
+		#go to the end of the queue, which is not fair. I could just use splice to
+		#insert the job in the beginning of the queue, but we probably want something
+		#better than that.
 		push @{$still_reserved_jobs}, $job;
 	}
 }
