@@ -122,9 +122,7 @@ sub assign_job {
 
 	if ($job->starting_time() == $self->{current_time}) {
 		$self->start_job($job);
-	}
-
-	if ($job->starts_after($self->{current_time})) {
+	} else {
 		push @{$still_reserved_jobs}, $job;
 	}
 }
