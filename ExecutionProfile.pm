@@ -163,31 +163,18 @@ sub could_start_job_at {
 }
 
 sub find_first_profile_for {
-	my ($self, $job, $last_profile) = @_;
+	my ($self, $job) = @_;
 
-	for my $profile_id (0..$last_profile) {
-		if ($self->could_start_job_at($job, $profile_id)) {
+	my $previous_profile_ending_time = $self->{profiles}->[0]->starting_time();
+	for my $profile_id (0..$#{$self->{profiles}}) {
+		return unless $previous_profile_ending_time == $self->{profiles}->[$profile_id]->starting_time();
+		my $profile_could_be_ok = $self->could_start_job_at($job, $profile_id);
+		if ($profile_could_be_ok) {
 			my $processors = $self->get_free_processors_for($job, $profile_id);
 			return ($profile_id, $processors) if $processors;
 		}
+		$previous_profile_ending_time = $self->{profiles}->[$profile_id]->ending_time();
 	}
-}
-
-sub find_suitable_profiles_for {
-	my ($self, $job) = @_;
-
-	# First profile should always be suitable
-	my $last_profile = 0;
-	my $ending_time = $self->{profiles}->[0]->ending_time();
-
-	for my $profile_index (1..$#{$self->{profiles}}) {
-		last if $self->{profiles}->[$profile_index]->starting_time() != $ending_time;
-
-		$ending_time = $self->{profiles}->[$profile_index]->ending_time();
-		$last_profile = $profile_index;
-	}
-
-	return $last_profile;
 }
 
 sub set_current_time {

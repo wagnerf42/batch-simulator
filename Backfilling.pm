@@ -109,19 +109,9 @@ sub start_job {
 
 sub assign_job {
 	my ($self, $job, $still_reserved_jobs) = @_;
+	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 
-	my $last_suitable_profile = $self->{execution_profile}->find_suitable_profiles_for($job);
-
-	#print 'profiles ' . join(' ', $last_suitable_profile + 1, scalar(@{$self->{execution_profile}->{profiles}})) . "\n";
-	#print 'last profile: ' . $self->{execution_profile}->{profiles}->[$last_suitable_profile] . "\n";
-	#for my $profile (@{$self->{execution_profile}->{profiles}}) {
-	#	print "\tprofile " . $profile . "\n";
-	#}
-	#print "\n";
-	#my $nhack = <STDIN>;
-
-	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $last_suitable_profile);
-
+	my $job_starts = 0;
 	if (defined $chosen_profile) {
 		my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
@@ -132,16 +122,11 @@ sub assign_job {
 
 		if ($job->starting_time() == $self->{current_time}) {
 			$self->start_job($job);
-		} else {
-			push @{$still_reserved_jobs}, $job;
+			$job_starts = 1;
 		}
-	} else {
-		#TODO Improve this line. With this implementation jobs that can't be scheduled
-		#go to the end of the queue, which is not fair. I could just use splice to
-		#insert the job in the beginning of the queue, but we probably want something
-		#better than that.
-		push @{$still_reserved_jobs}, $job;
 	}
+
+	push @{$still_reserved_jobs}, $job unless $job_starts;
 }
 
 1;
