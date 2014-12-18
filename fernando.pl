@@ -16,7 +16,6 @@ my $trace = Trace->new_from_swf($trace_file_name);
 $trace->reset_jobs_numbers();
 $trace->fix_submit_times();
 my $cpus_number = $trace->needed_cpus();
-#my $cpus_number = 77248;
 my $cluster_size = 16;
 my $schedule = Backfilling->new(NEW_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
