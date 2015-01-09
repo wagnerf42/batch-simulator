@@ -1,0 +1,3 @@
+TYPEMAP
+processor_range* T_PTROBJ
+ProcessorRange T_PTROBJ

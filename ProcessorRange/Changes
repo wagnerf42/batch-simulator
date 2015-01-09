@@ -1,0 +1,6 @@
+Revision history for Perl extension ProcessorRange.
+
+0.01  Fri Dec 12 10:33:54 2014
+	- original version; created by h2xs 1.23 with options
+		-A -n ProcessorRange
+
