@@ -17,6 +17,7 @@ sub new {
 		local_jobs_number => 0,
 		cmax => 0
 	};
+	die "bad trace $self->{trace}" unless ref $self->{trace} eq 'Trace';
 
 	# Make sure the trace is clean
 	#$self->{trace}->reset();
