@@ -66,7 +66,7 @@ sub run {
 		my $job = $event->payload();
 		$self->{current_time} = $event->timestamp();
 		$self->{execution_profile}->set_current_time($self->{current_time});
-		
+
 		if ($event->type() == SUBMISSION_EVENT) {
 			$self->assign_job($job, $self->{reserved_jobs});
 		} else {
@@ -93,6 +93,7 @@ sub run {
 				print STDERR $self->{remaining_jobs} . " " . (time() - $start_time) . "\n";
 			}
 		}
+		$self->tycat();
 	}
 }
 sub build_started_jobs_profile {

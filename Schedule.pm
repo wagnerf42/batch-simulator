@@ -121,7 +121,7 @@ sub save_svg {
 
 	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
 
-	my $cmax = $self->compute_cmax_estimation($time);
+	my $cmax = $self->cmax_estimation($time);
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
 	my $w_ratio = 800/$cmax;
 	my $h_ratio = 600/$self->{num_processors};
