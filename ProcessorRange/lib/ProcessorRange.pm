@@ -23,9 +23,15 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-our @EXPORT = qw(
-	
+our @REDUCTION_FUNCTIONS = (
+	\&reduce_to_basic,
+	\&reduce_to_best_effort_contiguous,
+	\&reduce_to_forced_contiguous,
+	\&reduce_to_best_effort_local,
+	\&reduce_to_forced_local,
 );
+
+our @EXPORT = qw(@REDUCTION_FUNCTIONS);
 
 our $VERSION = '0.01';
 
@@ -148,7 +154,7 @@ sub contains_at_least {
 	return $self->size() >= $limit;
 }
 
-sub reduce_to_first {
+sub reduce_to_basic {
 	my $self = shift;
 	my $target_number = shift;
 	confess "invalid argument $target_number" if $target_number <= 0;

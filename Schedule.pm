@@ -143,7 +143,7 @@ sub tycat {
 	#print STDERR "tycat $file_count\n";
 
 	my $user = $ENV{"USER"};
-	my $dir = "$user";
+	my $dir = "/tmp/$user";
 	mkdir $dir unless -f $dir;
 	$self->save_svg("$dir/$file_count.svg");
 	`tycat $dir/$file_count.svg`;

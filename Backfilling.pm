@@ -90,7 +90,6 @@ sub run {
 				$self->{remaining_jobs}--;
 			}
 		}
-		$self->tycat();
 	}
 }
 sub build_started_jobs_profile {
