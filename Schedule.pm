@@ -117,7 +117,9 @@ sub locality_factor_2 {
 }
 
 sub save_svg {
-	my ($self, $svg_filename, $time) = @_;
+	my ($self, $svg_filename) = @_;
+	my $time = $self->{current_time};
+	$time = 0 unless defined $time;
 
 	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
 
@@ -137,14 +139,13 @@ sub save_svg {
 
 my $file_count = 0;
 sub tycat {
-	my ($self, $time) = @_;
+	my $self = shift;
 	#print STDERR "tycat $file_count\n";
-	$time = 0 unless defined $time;
 
 	my $user = $ENV{"USER"};
 	my $dir = "$user";
 	mkdir $dir unless -f $dir;
-	$self->save_svg("$dir/$file_count.svg", $time);
+	$self->save_svg("$dir/$file_count.svg");
 	`tycat $dir/$file_count.svg`;
 	$file_count++;
 }
