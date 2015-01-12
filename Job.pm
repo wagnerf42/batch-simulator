@@ -51,7 +51,10 @@ sub new {
 	$self->{schedule_times} = 0;
 	$self->{improved_schedule_times} = 0;
 
-	#die 'invalid job' unless $self->{allocated_cpus} == $self->{requested_cpus};
+	unless ($self->{allocated_cpus} == $self->{requested_cpus}) {
+		print STDERR "warning : invalid job $self->{job_number} : allocated cpus does not match requested cpus ; replacing wrong values\n";
+		$self->{allocated_cpus} = $self->{requested_cpus};
+	}
 	die 'invalid job' unless $self->{requested_time} > 0 and $self->{run_time} > 0;
 
 	bless $self, $class;

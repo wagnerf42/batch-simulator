@@ -81,9 +81,9 @@ sub run {
 
 				# Loop through all not yet started jobs and re-schedule them
 				my $remaining_reserved_jobs = [];
-				for my $job (@{$self->{reserved_jobs}}) {
-					$self->{execution_profile}->remove_job($job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
-					$self->assign_job($job, $remaining_reserved_jobs);
+				for my $rescheduled_job (@{$self->{reserved_jobs}}) {
+					$self->{execution_profile}->remove_job($rescheduled_job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
+					$self->assign_job($rescheduled_job, $remaining_reserved_jobs);
 				}
 				$self->{reserved_jobs} = $remaining_reserved_jobs;
 
@@ -113,7 +113,6 @@ sub assign_job {
 	if (defined $chosen_profile) {
 		my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
-		print STDERR "assigning job $job at time $starting_time on processors $chosen_processors\n";
 		$job->assign_to($starting_time, $chosen_processors);
 
 		# Update profiles

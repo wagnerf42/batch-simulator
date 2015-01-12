@@ -85,11 +85,10 @@ sub remove_job {
 			#create new profile
 			my $end = $next_time;
 			$end = $job_ending_time if $job_ending_time < $end;
-			push @{$new_profiles}, new Profile($done_until_time, $job->assigned_processors_ids(), $end - $done_until_time);
+			push @{$new_profiles}, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $end - $done_until_time);
 			$done_until_time = $end;
 		}
 
-	print STDERR "removing $job ($job_starting_time to $job_ending_time) from $profile\n";
 		#security check
 		die 'impossible' if ($profile->starting_time() < $job_starting_time) and ($profile->ending_time() > $job_starting_time);
 		die 'impossible' if ($profile->starting_time() < $job_ending_time) and ($profile->ending_time() > $job_ending_time);
