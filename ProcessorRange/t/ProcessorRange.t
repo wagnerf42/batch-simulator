@@ -8,7 +8,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 BEGIN { use_ok('ProcessorRange') };
 
 #########################
@@ -58,12 +58,6 @@ $s = ProcessorRange->new(6,6);
 $r->add($s);
 ok("$r" eq '[1-4] [6-6] [9-10]');
 
-##reductions
-#first
-$r = ProcessorRange->new(1,1, 3,3, 6,8);
-$r->reduce_to_basic(2);
-ok("$r" eq '[1-1] [3-3]');
-
 $r = ProcessorRange->new(1,4, 9,10);
 $s = ProcessorRange->new(5,6);
 $r->add($s);
@@ -78,6 +72,18 @@ $r = ProcessorRange->new(1,4, 9,10);
 $s = ProcessorRange->new(3,12);
 $r->add($s);
 ok("$r" eq '[1-12]');
+
+$r = ProcessorRange->new(560,575, 1982,1982);
+$s = ProcessorRange->new(0,431);
+$r->add($s);
+ok("$r" eq '[0-431] [560-575] [1982-1982]');
+
+##reductions
+#first
+$r = ProcessorRange->new(1,1, 3,3, 6,8);
+$r->reduce_to_basic(2);
+ok("$r" eq '[1-1] [3-3]');
+
 
 #contiguous
 $r = ProcessorRange->new(1,1, 3,3, 6,8);

@@ -91,14 +91,16 @@ static void fix_ranges(ProcessorRange p) {
 	vector *fixed_ranges = vector_new();
 	unsigned int size = vector_get_size(p->ranges);
 	unsigned int i;
-	unsigned int previous_end = UINT_MAX;
-	for(i = 0 ; i < size ; i+=2) {
+
+	unsigned int start = vector_get(p->ranges, 0);
+	vector_push(fixed_ranges, start);
+	unsigned int previous_end = vector_get(p->ranges, 1);
+
+	for(i = 2 ; i < size ; i+=2) {
 		unsigned int start = vector_get(p->ranges, i);
 		unsigned int end = vector_get(p->ranges, i+1);
 		if (previous_end != start - 1) {
-			if (previous_end != UINT_MAX) {
-				vector_push(fixed_ranges, previous_end);
-			}
+			vector_push(fixed_ranges, previous_end);
 			vector_push(fixed_ranges, start);
 		}
 		previous_end = end;

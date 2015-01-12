@@ -60,12 +60,12 @@ sub check_ok {
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
-			die "invalid range $self" unless $end >= $start;
-			die "invalid range $self" unless defined $end;
-			die "invalid range $self" unless defined $start;
+			confess "invalid range $self" unless $end >= $start;
+			confess "invalid range $self" unless defined $end;
+			confess "invalid range $self" unless defined $start;
 			if (defined $last_end) {
-				die "bad range $self" if $start <= $last_end + 1;
-				die "bad range $self" if $end < $last_end;
+				confess "bad range $self" if $start <= $last_end + 1;
+				confess "bad range $self" if $end < $last_end;
 			}
 			$last_end = $end;
 			return 1;
