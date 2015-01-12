@@ -2,6 +2,7 @@
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
+#include <limits.h>
 
 #include "ppport.h"
 
@@ -85,6 +86,28 @@ static ProcessorRange assign_ranges(ProcessorRange p, AV *array) {
 	return p;
 }
 
+//merge contiguous ranges into one
+static void fix_ranges(ProcessorRange p) {
+	vector *fixed_ranges = vector_new();
+	unsigned int size = vector_get_size(p->ranges);
+	unsigned int i;
+	unsigned int previous_end = UINT_MAX;
+	for(i = 0 ; i < size ; i+=2) {
+		unsigned int start = vector_get(p->ranges, i);
+		unsigned int end = vector_get(p->ranges, i+1);
+		if (previous_end != start - 1) {
+			if (previous_end != UINT_MAX) {
+				vector_push(fixed_ranges, previous_end);
+			}
+			vector_push(fixed_ranges, start);
+		}
+		previous_end = end;
+	}
+	vector_push(fixed_ranges, previous_end);
+	vector_free(p->ranges);
+	p->ranges = fixed_ranges;
+}
+
 MODULE = ProcessorRange		PACKAGE = ProcessorRange		
 
 ProcessorRange
@@ -119,6 +142,63 @@ invert(ProcessorRange p, unsigned int limit)
 	RETVAL = inverted;
 	OUTPUT:
 	RETVAL
+
+void
+add(ProcessorRange range1, ProcessorRange range2)
+	CODE:
+	processor_range *ranges[2];
+	ranges[0] = range1;
+	ranges[1] = range2;
+	range1->processors_number = 0;
+	unsigned int inside_segments = 0;
+	unsigned int starting_point; //starting point of range when iterating building them
+	vector *result = vector_new();
+	unsigned int indices[2] = { 0, 0 };
+	unsigned int limits[2];
+	unsigned int i;
+	for (i = 0 ; i < 2 ; i++) limits[i] = vector_get_size(ranges[i]->ranges);
+	while((indices[0] < limits[0]) || (indices[1] < limits[1])) {
+		unsigned int x[2];
+		for (i = 0 ; i < 2 ; i++) {
+			if (indices[i] < limits[i]) {
+				x[i] = vector_get(ranges[i]->ranges, indices[i]);
+			} else {
+				x[i] = UINT_MAX;
+			}
+		}
+		unsigned int advancing_range;
+		if (x[0] < x[1]) {
+			advancing_range = 0;
+		} else if (x[0] > x[1]) {
+			advancing_range = 1;
+		} else if (indices[1] % 2 == 0) {
+			advancing_range = 1;
+		} else {
+			advancing_range = 0;
+		}
+
+		unsigned int event_type = indices[advancing_range] % 2;
+		if (event_type == 0) {
+			//start
+			inside_segments++;
+			if (inside_segments == 1) {
+				starting_point = x[advancing_range];
+			}
+		} else {
+			//end
+			if (inside_segments == 1) {
+				vector_push(result, starting_point);
+				unsigned int end_point = x[advancing_range];
+				vector_push(result, end_point);
+				ranges[0]->processors_number += end_point - starting_point + 1;
+			}
+			inside_segments--;
+		}
+		indices[advancing_range]++;
+	}
+	vector_free(range1->ranges);
+	range1->ranges = result;
+	fix_ranges(range1);
 
 void
 intersection(ProcessorRange range1, ProcessorRange range2)
