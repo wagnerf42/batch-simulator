@@ -49,10 +49,10 @@ sub reset_requested_times {
 }
 
 sub fix_submit_times {
-	my ($self) = @_;
-	return if (!$self->{jobs}[0]->submit_time());
-	my $first_submit_time = $self->{jobs}[0]->submit_time();
-	$_->submit_time($_->submit_time() - $first_submit_time) for @{$self->{jobs}};
+	my $self = shift;
+	my $start = $self->{jobs}->[0]->submit_time();
+	return unless defined $start;
+	$_->submit_time($_->submit_time() - $start) for @{$self->{jobs}};
 }
 
 sub new_block_from_trace {

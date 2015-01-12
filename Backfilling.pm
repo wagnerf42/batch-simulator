@@ -90,6 +90,7 @@ sub run {
 				$self->{remaining_jobs}--;
 			}
 		}
+		$self->tycat();
 	}
 }
 sub build_started_jobs_profile {
@@ -112,6 +113,7 @@ sub assign_job {
 	if (defined $chosen_profile) {
 		my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
+		print STDERR "assigning job $job at time $starting_time on processors $chosen_processors\n";
 		$job->assign_to($starting_time, $chosen_processors);
 
 		# Update profiles

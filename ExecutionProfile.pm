@@ -7,6 +7,7 @@ use Data::Dumper;
 
 use Profile;
 use ProcessorRange;
+use Carp;
 
 use overload '""' => \&stringification;
 
@@ -68,6 +69,7 @@ sub remove_job {
 	my $job = shift;
 	my $current_time = shift;
 	my $job_starting_time = $job->starting_time();
+	return unless defined $job_starting_time; #do not remove jobs which are not here anyway
 	$job_starting_time = $current_time if $current_time > $job_starting_time;
 	my $job_ending_time = $job->submitted_ending_time();
 	#we loop on all profiles adding processors or recreating
@@ -87,6 +89,7 @@ sub remove_job {
 			$done_until_time = $end;
 		}
 
+	print STDERR "removing $job ($job_starting_time to $job_ending_time) from $profile\n";
 		#security check
 		die 'impossible' if ($profile->starting_time() < $job_starting_time) and ($profile->ending_time() > $job_starting_time);
 		die 'impossible' if ($profile->starting_time() < $job_ending_time) and ($profile->ending_time() > $job_ending_time);
