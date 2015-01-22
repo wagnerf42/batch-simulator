@@ -75,9 +75,11 @@ sub remove_job {
 	my $self = shift;
 	my $job = shift;
 	$self->{processors}->add($job->assigned_processors_ids());
+	return $self;
 }
 
 #TODO : not very pretty ?
+#TODO : documentation
 sub split {
 	my $self = shift;
 	my $job = shift;

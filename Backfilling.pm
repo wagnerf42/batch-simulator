@@ -76,7 +76,10 @@ sub run {
 				if ($self->{schedule_algorithm} == NEW_EXECUTION_PROFILE) {
 					$self->build_started_jobs_profile();
 				} else {
+					# Remove the job from the execution profile to reuse the remaining time.
+					print STDERR "removing finished job\n";
 					$self->{execution_profile}->remove_job($job, $self->{current_time});
+					$self->check_execution_profile();
 				}
 
 				# Loop through all not yet started jobs and re-schedule them
@@ -93,6 +96,22 @@ sub run {
 		$self->tycat();
 	}
 }
+
+sub check_execution_profile {
+	my $self = shift;
+
+	for my $profile ($self->{execution_profile}->profiles()) {
+		for my $job (@{$self->{trace}->jobs()}) {
+			my $job_starting_time = $job->starting_time();
+			next unless defined $job_starting_time;
+			my $job_ending_time = $job->submitted_ending_time();
+			die "starting time of job $job for profile $profile" if ($profile->starting_time() < $job_starting_time) and ($profile->ending_time() > $job_starting_time);
+			die "ending time of job $job (between $job_starting_time and $job_ending_time) for profile $profile" if ($profile->starting_time() < $job_ending_time) and ($profile->ending_time() > $job_ending_time);
+		}
+	}
+
+}
+
 sub build_started_jobs_profile {
 	my $self = shift;
 	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm}, $self->{current_time});

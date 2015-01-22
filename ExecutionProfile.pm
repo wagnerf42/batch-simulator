@@ -3,6 +3,8 @@ package ExecutionProfile;
 use strict;
 use warnings;
 
+use List::Util qw(min max);
+
 use Data::Dumper;
 
 use Profile;
@@ -63,48 +65,75 @@ sub get_free_processors_for {
 	return $left_processors;
 }
 
+sub profiles {
+	my $self = shift;
+	return @{$self->{profiles}};
+}
+
 #TODO: use splice to only loop on the impacted profiles
 sub remove_job {
-	my $self = shift;
-	my $job = shift;
-	my $current_time = shift;
-	my $job_starting_time = $job->starting_time();
-	return unless defined $job_starting_time; #do not remove jobs which are not here anyway
-	$job_starting_time = $current_time if $current_time > $job_starting_time;
+	my ($self, $job, $current_time) = @_;
+	return unless defined $job->starting_time(); #do not remove jobs which are not here anyway
+
+	# those are the time stamps that will affect profiles
+	my $job_starting_time = max($job->starting_time(), $current_time);
 	my $job_ending_time = $job->submitted_ending_time();
-	#we loop on all profiles adding processors or recreating
-	#profiles (in case all processors were used)
-	#we use 'done_until_time' do keep track of up to when we already recreated free processors
+
+	print "remove $job between $job_starting_time and $job_ending_time\n";
+	print $self . "\n";
+
 	my $done_until_time = $job_starting_time;
-	my $new_profiles = [];
+	my @new_profiles;
+	my @impacted_profiles;
+	my @end_profiles;
+	#compute what is impacted by job
 	for my $profile (@{$self->{profiles}}) {
-		#start by advancing until profile start
-		my $next_time = $profile->starting_time();
-
-		if (($next_time > $done_until_time) and ($done_until_time < $job_ending_time)) {
-			#create new profile
-			my $end = $next_time;
-			$end = $job_ending_time if $job_ending_time < $end;
-			push @{$new_profiles}, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $end - $done_until_time);
-			$done_until_time = $end;
-		}
-
-		#security check
-		die 'impossible' if ($profile->starting_time() < $job_starting_time) and ($profile->ending_time() > $job_starting_time);
-		die 'impossible' if ($profile->starting_time() < $job_ending_time) and ($profile->ending_time() > $job_ending_time);
-
-		#modify or not existing profile
-		if (($profile->starting_time() >= $job_starting_time) and ((defined $profile->ending_time()) and ($profile->ending_time() <= $job_ending_time))) {
-			#it is impacted by the processors we put back
-			$profile->remove_job($job);
-			push @{$new_profiles}, $profile;
-			$done_until_time = $profile->ending_time();
+		if ((defined $profile->ending_time()) and ($profile->ending_time() <= $job_starting_time) {
+			push @new_profiles, $profile;
+		} elsif ($profile->starting_time() >= $job_ending_time) {
+			push @end_profiles;
 		} else {
-			#our job has no impact on this profile
-			push @{$new_profiles}, $profile;
+			push @impacted_profiles, $profile;
 		}
 	}
-	$self->{profiles} = $new_profiles;
+
+	while ($done_until_time < $job_ending_time) {
+		my $current_profile = shift @impacted_profiles;
+		die 'impossible' unless defined $current_profile;
+		my $profile_starting_time = $current_profile->starting_time();
+		my $profile_ending_time = $current_profile->ending_time();
+		if ($profile_starting_time > $done_until_time) {
+			push @new_profiles, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $starting_time - $done_until_time);
+			$done_until_time = $profile_starting_time;
+		}
+
+		if ($profile_starting_time < $done_until_time) {
+			push @new_profiles, new Profile($profile_starting_time, ProcessorRange->new($current_profile->processor_range()), $done_until_time - $profile_starting_time);
+			$current_profile->starting_time($done_until_time);
+			$current_profile->duration($profile_ending_time - $done_until_time);
+			$profile_starting_time = $done_until_time;
+		}
+
+		if ((defined $profile_ending_time) and ($profile_ending_time < $job_ending_time)) {
+			push @new_profiles, $current_profile->remove_job($job);
+		} else {
+			my $last_profile;
+			if (defined $profile_ending_time) {
+				$last_profile = new Profile($job_ending_time, ProcessorRange->new($current_profile->processor_range()), $profile_ending_time - $job_ending_time);
+			} else {
+				$last_profile = new Profile($job_ending_time, ProcessorRange->new($current_profile->processor_range()));
+			}
+			$current_profile->remove_job($job);
+			push @new_profiles, new Profile($profile_starting_time, ProcessorRange->new($current_profile->processor_range()), $job_ending_time - $profile_starting_time);
+			push @new_profiles, $last_profile;
+		}
+		$done_until_time = $profile_ending_time;
+	}
+
+	push @new_profiles, @end_profiles;
+	$self->{profiles} = [@new_profiles];
+
+	print "after removal : $self\n";
 }
 
 sub compute_profiles_impacted_by_job {
