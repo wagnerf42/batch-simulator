@@ -77,7 +77,6 @@ sub run {
 					$self->build_started_jobs_profile();
 				} else {
 					# Remove the job from the execution profile to reuse the remaining time.
-					print STDERR "removing finished job\n";
 					$self->{execution_profile}->remove_job($job, $self->{current_time});
 					$self->check_execution_profile();
 				}
