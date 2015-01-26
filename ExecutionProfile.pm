@@ -79,7 +79,7 @@ sub remove_job {
 	my $job_ending_time = $job->submitted_ending_time();
 	my $done_until_time = $job_starting_time;
 
-	print "remove $job between $job_starting_time and $job_ending_time: $self\n";
+	#print "remove $job between $job_starting_time and $job_ending_time: $self\n";
 
 	my @new_profiles;
 	my @impacted_profiles;
@@ -135,7 +135,7 @@ sub remove_job {
 		$done_until_time = $profile_ending_time;
 	}
 
-	print "after removal: $self\n";
+	#print "after removal: $self\n";
 
 	push @new_profiles, @end_profiles;
 	$self->{profiles} = [@new_profiles];
