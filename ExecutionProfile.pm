@@ -84,7 +84,6 @@ sub remove_job {
 	my @new_profiles;
 	my @impacted_profiles;
 
-
 	while (my $profile = shift @{$self->{profiles}}) {
 		if ((defined $profile->ending_time()) and ($profile->ending_time() <= $job_starting_time)) {
 			push @new_profiles, $profile;
@@ -220,26 +219,19 @@ sub find_first_profile_for {
 
 sub set_current_time {
 	my ($self, $current_time) = @_;
-	return if $self->{profiles}->[0]->starting_time() >= $current_time;
-	my @remaining_profiles;
 
-	for my $profile (@{$self->{profiles}}) {
-		if ($profile->starting_time() >= $current_time) {
-			push @remaining_profiles, $profile;
-		}
-
-		elsif ((not defined $profile->ending_time()) or ($profile->ending_time() > $current_time)) {
-			my $ending_time = $profile->ending_time();
+	my $profile;
+	while($profile = shift @{$self->{profiles}}) {
+		my $ending_time = $profile->ending_time();
+		if (defined $ending_time and $ending_time > $current_time) {
 			$profile->starting_time($current_time);
-			if (defined $ending_time) {
-				my $new_duration = $ending_time - $current_time;
-				$profile->duration($new_duration);
-			}
-			push @remaining_profiles, $profile;
+			$profile->duration($ending_time - $current_time);
+			last;
 		}
+		last unless defined $ending_time;
 	}
-
-	$self->{profiles} = [@remaining_profiles];
+	unshift @{$self->{profiles}}, $profile;
+	return;
 }
 
 sub stringification {
@@ -263,7 +255,9 @@ sub save_svg {
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
 
-	$_->svg($filehandle, $w_ratio, $h_ratio, $time) for grep {defined $_->duration()} (@{$self->{profiles}});
+	for my $profile_index (0..$#{$self->{profiles}}-1) {
+		$self->{profiles}->[$profile_index]->svg($filehandle, $w_ratio, $h_ratio, $time, $profile_index);
+	}
 
 	print $filehandle "</svg>\n";
 	close $filehandle;
@@ -274,7 +268,7 @@ sub tycat {
 	my $self = shift;
 	my $current_time = shift;
 	my $filename = shift;
-	#print STDERR "tycat $file_count\n";
+	#print STDERR "ep tycat $file_count\n";
 
 	my $user = $ENV{"USER"};
 	my $dir = "/tmp/$user";

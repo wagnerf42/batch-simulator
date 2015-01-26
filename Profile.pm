@@ -137,14 +137,13 @@ sub ending_time {
 }
 
 sub svg {
-	my ($self, $fh, $w_ratio, $h_ratio, $current_time) = @_;
+	my ($self, $fh, $w_ratio, $h_ratio, $current_time, $index) = @_;
 
 	my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen darkred dimgray mediumpurple midnightblue olive chartreuse darkorchid hotpink lightskyblue peru goldenrod mediumslateblue orangered darkmagenta darkgoldenrod mediumslateblue);
 
 	$self->{processors}->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
-			die "$start is after $end" if $end < $start;
 
 			#rectangle
 			my $x = $self->{starting_time} * $w_ratio;
@@ -152,9 +151,10 @@ sub svg {
 
 			my $y = $start * $h_ratio;
 			my $h = $h_ratio * ($end - $start + 1);
-			my $color = $svg_colors[0];
+			my $color = $svg_colors[$index % @svg_colors];
 			my $sw = min($w_ratio, $h_ratio) / 10;
 			print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:$color;fill-opacity:0.2;stroke:black;stroke-width:$sw\"/>\n";
+			return 1;
 		}
 	);
 }

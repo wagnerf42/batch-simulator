@@ -69,12 +69,9 @@ sub run {
 		$self->{execution_profile}->set_current_time($self->{current_time});
 
 		if ($event->type() == SUBMISSION_EVENT) {
-			print STDERR "new submission\n";
 			$self->assign_job($job, $self->{reserved_jobs});
-			$self->{execution_profile}->tycat($self->{current_time});
 		} else {
 			delete $self->{started_jobs}->{$job->job_number()};
-			print STDERR "$self->{current_time} : job $job finishes\n";
 
 			if ($job->requested_time() != $job->run_time()) {
 				if ($self->{schedule_algorithm} == NEW_EXECUTION_PROFILE) {
@@ -94,9 +91,21 @@ sub run {
 				$self->{reserved_jobs} = $remaining_reserved_jobs;
 
 				$self->{remaining_jobs}--;
+			} else {
+				#only check which job starts now
+				#TODO: factorize code ?
+
+				my @still_reserved_jobs;
+				for my $job (@{$self->{reserved_jobs}}) {
+					if ($job->starting_time() == $self->{current_time}) {
+						$self->start_job($job);
+					} else {
+						push @still_reserved_jobs, $job;
+					}
+				}
+				$self->{reserved_jobs} = [@still_reserved_jobs];
 			}
 		}
-		$self->tycat();
 	}
 }
 
@@ -121,7 +130,6 @@ sub assign_job {
 		my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
 		$job->assign_to($starting_time, $chosen_processors);
-		print STDERR "assigned job : $job is now assigned to ".$job->assigned_processors_ids()." at time ".$job->starting_time()."\n";
 
 		# Update profiles
 		$self->{execution_profile}->add_job_at($chosen_profile, $job, $self->{current_time});
