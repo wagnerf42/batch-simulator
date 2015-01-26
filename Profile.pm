@@ -1,6 +1,8 @@
 package Profile;
 
-use ProcessorRange;
+use Carp;
+
+use ProcessorRangeOld;
 
 use strict;
 use warnings;
@@ -15,7 +17,7 @@ sub initial {
 	my $class = shift;
 	my $self = {};
 	$self->{starting_time} = shift;
-	$self->{processors} = new ProcessorRange(@_);
+	$self->{processors} = new ProcessorRangeOld(@_);
 	$self->{duration} = undef;
 	bless $self, $class;
 	return $self;
@@ -26,10 +28,10 @@ sub new {
 	my $self = {};
 	$self->{starting_time} = shift;
 	my $ids = shift;
-	if (ref $ids eq "ProcessorRange") {
+	if (ref $ids eq "ProcessorRangeOld") {
 		$self->{processors} = $ids;
 	} else {
-		$self->{processors} = new ProcessorRange($ids);
+		$self->{processors} = new ProcessorRangeOld($ids);
 	}
 	$self->{duration} = shift;
 
@@ -61,12 +63,18 @@ sub duration {
 
 #returns two or one profile if it is split or not by job insertion
 sub add_job {
-	my $self = shift;
-	my $job = shift;
-	my $current_time = shift;
+	my ($self, $job, $current_time) = @_;
+
 	die unless defined $current_time;
 	die if $self->{starting_time} >= $job->ending_time_estimation($current_time);
-	die if defined $self->ending_time() and $self->ending_time() <= $job->starting_time();
+
+	if (defined $self->ending_time() and $self->ending_time() <= $job->starting_time()) {
+		print "job $job\n";
+		print "self $self\n";
+		print $job->starting_time() . "\n";
+		confess;
+	}
+
 	return $self->split($job, $current_time);
 }
 
@@ -96,7 +104,7 @@ sub split {
 	}
 
 	my $middle_duration = $middle_end - $middle_start if defined $middle_end;
-	my $middle_profile = new Profile($middle_start, new ProcessorRange($self->{processors}), $middle_duration);
+	my $middle_profile = new Profile($middle_start, new ProcessorRangeOld($self->{processors}), $middle_duration);
 	$middle_profile->remove_used_processors($job);
 	push @profiles, $middle_profile unless $middle_profile->is_fully_loaded();
 
@@ -105,7 +113,7 @@ sub split {
 		if (defined $self->{duration}) {
 			$end_duration = $self->ending_time() - $job->ending_time_estimation($current_time);
 		}
-		my $end_profile = new Profile($job->ending_time_estimation($current_time), new ProcessorRange($self->{processors}), $end_duration);
+		my $end_profile = new Profile($job->ending_time_estimation($current_time), new ProcessorRangeOld($self->{processors}), $end_duration);
 		push @profiles, $end_profile;
 	}
 	return @profiles;
