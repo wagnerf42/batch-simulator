@@ -20,9 +20,7 @@ sub new {
 	die "bad trace $self->{trace}" unless ref $self->{trace} eq 'Trace';
 
 	# Make sure the trace is clean
-	#$self->{trace}->reset();
-
-	#$self->{jobs} = $self->{trace}->jobs();
+	$self->{trace}->reset();
 
 	bless $self, $class;
 	return $self;

@@ -19,8 +19,19 @@ sub stringification {
 		$self->{wait_time},
 		$self->{run_time},
 		$self->{allocated_cpus},
+		$self->{avg_cpu_time},
+		$self->{used_mem},
 		$self->{requested_cpus},
-		$self->{requested_time}
+		$self->{requested_time},
+		$self->{requested_mem},
+		$self->{status},
+		$self->{uid},
+		$self->{gid},
+		$self->{exec_number},
+		$self->{queue_number},
+		$self->{partition_number},
+		$self->{prec_job_number},
+		$self->{think_time_prec_job}
 	);
 }
 
