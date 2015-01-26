@@ -136,13 +136,16 @@ sub save_svg {
 my $file_count = 0;
 sub tycat {
 	my $self = shift;
+	my $filename = shift;
 	#print STDERR "tycat $file_count\n";
 
 	my $user = $ENV{"USER"};
 	my $dir = "/tmp/$user";
 	mkdir $dir unless -f $dir;
-	$self->save_svg("$dir/$file_count.svg");
-	`tycat $dir/$file_count.svg`;
+
+	$filename = "$dir/$file_count.svg" unless defined $filename;
+	$self->save_svg($filename);
+	`tycat $filename`;
 	$file_count++;
 }
 

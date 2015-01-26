@@ -6,6 +6,7 @@ use warnings;
 use Data::Dumper qw(Dumper);
 use List::Util qw(max sum);
 use Exporter qw(import);
+use Carp;
 
 use Trace;
 use Job;
@@ -78,13 +79,13 @@ sub run {
 				} else {
 					# Remove the job from the execution profile to reuse the remaining time.
 					$self->{execution_profile}->remove_job($job, $self->{current_time});
-					$self->check_execution_profile();
 				}
 
 				# Loop through all not yet started jobs and re-schedule them
 				my $remaining_reserved_jobs = [];
 				for my $rescheduled_job (@{$self->{reserved_jobs}}) {
 					$self->{execution_profile}->remove_job($rescheduled_job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
+					$rescheduled_job->unassign();
 					$self->assign_job($rescheduled_job, $remaining_reserved_jobs);
 				}
 				$self->{reserved_jobs} = $remaining_reserved_jobs;
@@ -92,23 +93,7 @@ sub run {
 				$self->{remaining_jobs}--;
 			}
 		}
-		$self->tycat();
 	}
-}
-
-sub check_execution_profile {
-	my $self = shift;
-
-	for my $profile ($self->{execution_profile}->profiles()) {
-		for my $job (@{$self->{trace}->jobs()}) {
-			my $job_starting_time = $job->starting_time();
-			next unless defined $job_starting_time;
-			my $job_ending_time = $job->submitted_ending_time();
-			die "starting time of job $job for profile $profile" if ($profile->starting_time() < $job_starting_time) and ($profile->ending_time() > $job_starting_time);
-			die "ending time of job $job (between $job_starting_time and $job_ending_time) for profile $profile" if ($profile->starting_time() < $job_ending_time) and ($profile->ending_time() > $job_ending_time);
-		}
-	}
-
 }
 
 sub build_started_jobs_profile {

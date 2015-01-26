@@ -79,17 +79,18 @@ sub remove_job {
 	my $job_ending_time = $job->submitted_ending_time();
 	my $done_until_time = $job_starting_time;
 
-	#print "remove $job between $job_starting_time and $job_ending_time: $self\n";
+	#print "\nremove $job between $job_starting_time and $job_ending_time: $self\n";
 
 	my @new_profiles;
 	my @impacted_profiles;
-	my @end_profiles;
 
-	for my $profile (@{$self->{profiles}}) {
+
+	while (my $profile = shift @{$self->{profiles}}) {
 		if ((defined $profile->ending_time()) and ($profile->ending_time() <= $job_starting_time)) {
 			push @new_profiles, $profile;
 		} elsif ($profile->starting_time() >= $job_ending_time) {
-			push @end_profiles, $profile;
+			unshift @{$self->{profiles}}, $profile;
+			last;
 		} else {
 			push @impacted_profiles, $profile;
 		}
@@ -135,10 +136,14 @@ sub remove_job {
 		$done_until_time = $profile_ending_time;
 	}
 
-	#print "after removal: $self\n";
+	if ($done_until_time < $job_ending_time) {
+		push @new_profiles, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $job_ending_time - $done_until_time);
+	}
 
-	push @new_profiles, @end_profiles;
+	push @new_profiles, @{$self->{profiles}};
 	$self->{profiles} = [@new_profiles];
+
+	#print "after removal: $self\n";
 }
 
 sub compute_profiles_impacted_by_job {

@@ -48,9 +48,6 @@ sub new {
 		think_time_prec_job => shift, #18
 	};
 
-	$self->{schedule_times} = 0;
-	$self->{improved_schedule_times} = 0;
-
 	unless ($self->{allocated_cpus} == $self->{requested_cpus}) {
 		print STDERR "warning : invalid job $self->{job_number} : allocated cpus does not match requested cpus ; replacing wrong values\n";
 		$self->{allocated_cpus} = $self->{requested_cpus};
@@ -64,8 +61,9 @@ sub new {
 sub copy {
 	my ($class, $original) = @_;
 	my $self = {};
-	$self->{$_} = $original->{$_} for (keys %{$original});
+	%{$self} = %{$original};
 	bless $self, $class;
+	return $self;
 }
 
 sub schedule_time {
@@ -151,17 +149,19 @@ sub job_number {
 	return $self->{job_number};
 }
 
+sub unassign {
+	my $self = shift;
+	delete $self->{starting_time};
+	delete $self->{assigned_processors_ids};
+	return;
+}
+
 sub assign_to {
 	my ($self, $starting_time, $assigned_processors) = @_;
 
-	if (defined($self->{starting_time}) and $starting_time < $self->{starting_time}) {
-		$self->{improved_schedule_times}++;
-	}
-	$self->{schedule_times}++;
-
 	$self->{starting_time} = $starting_time;
 	$self->{assigned_processors_ids} = $assigned_processors;
-
+	return;
 }
 
 sub assigned_processors_ids {
