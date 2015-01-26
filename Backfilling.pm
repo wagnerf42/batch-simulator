@@ -71,6 +71,7 @@ sub run {
 		if ($event->type() == SUBMISSION_EVENT) {
 			print STDERR "new submission\n";
 			$self->assign_job($job, $self->{reserved_jobs});
+			$self->{execution_profile}->tycat($self->{current_time});
 		} else {
 			delete $self->{started_jobs}->{$job->job_number()};
 			print STDERR "$self->{current_time} : job $job finishes\n";

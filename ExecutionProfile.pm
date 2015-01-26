@@ -247,4 +247,43 @@ sub stringification {
 	return join(', ', @{$self->{profiles}});
 }
 
+sub save_svg {
+	my ($self, $svg_filename, $time) = @_;
+	$time = 0 unless defined $time;
+
+	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
+
+	my $last_starting_time = $self->{profiles}->[$#{$self->{profiles}}]->starting_time();
+
+	print $filehandle "<svg width=\"800\" height=\"600\">\n";
+	my $w_ratio = 800/$last_starting_time;
+	my $h_ratio = 600/$self->{processors_number};
+
+	# red line at the current time
+	my $current_x = $w_ratio * $time;
+	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
+
+	$_->svg($filehandle, $w_ratio, $h_ratio, $time) for grep {defined $_->duration()} (@{$self->{profiles}});
+
+	print $filehandle "</svg>\n";
+	close $filehandle;
+}
+
+my $file_count = 0;
+sub tycat {
+	my $self = shift;
+	my $current_time = shift;
+	my $filename = shift;
+	#print STDERR "tycat $file_count\n";
+
+	my $user = $ENV{"USER"};
+	my $dir = "/tmp/$user";
+	mkdir $dir unless -f $dir;
+
+	$filename = "$dir/ep$file_count.svg" unless defined $filename;
+	$self->save_svg($filename, $current_time);
+	`tycat $filename`;
+	$file_count++;
+}
+
 1;

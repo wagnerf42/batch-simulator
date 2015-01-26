@@ -25,5 +25,5 @@ print STDERR "new schedule\n";
 my $schedule_new = Backfilling->new(NEW_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
 $schedule_new->run();
 $schedule_new->tycat();
-
+print STDERR "Done\n";
 
