@@ -55,6 +55,9 @@ sub new {
 
 #check we are not forming invalid ranges
 sub check_ok {
+	#disable the test
+	return;
+
 	my $self = shift;
 	my $last_end;
 	$self->ranges_loop(

@@ -8,7 +8,7 @@ use List::Util qw(min max);
 use Data::Dumper;
 
 use Profile;
-use ProcessorRangeOld;
+use ProcessorRange;
 use Carp;
 
 use overload '""' => \&stringification;
@@ -33,7 +33,7 @@ sub get_free_processors_for {
 
 	my $left_duration = $job->requested_time();
 	my $candidate_processors = $self->{profiles}->[$profile_index]->processors_ids();
-	my $left_processors = new ProcessorRangeOld($candidate_processors);
+	my $left_processors = new ProcessorRange($candidate_processors);
 	my $starting_time = $self->{profiles}->[$profile_index]->starting_time();
 
 	while ($left_duration > 0) {
@@ -103,13 +103,13 @@ sub remove_job {
 
 		if ($profile_starting_time > $done_until_time) {
 			# create a new profile to fill a gap in the execution profile
-			push @new_profiles, new Profile($done_until_time, ProcessorRangeOld->new($job->assigned_processors_ids()), $profile_starting_time - $done_until_time);
+			push @new_profiles, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $profile_starting_time - $done_until_time);
 			$done_until_time = $profile_starting_time;
 		}
 
 		if ($profile_starting_time < $job_starting_time) {
 			# profile starts before the beginning of the job, so we split it
-			push @new_profiles, new Profile($profile_starting_time, ProcessorRangeOld->new($current_profile->processor_range()), $job_starting_time - $profile_starting_time);
+			push @new_profiles, new Profile($profile_starting_time, ProcessorRange->new($current_profile->processor_range()), $job_starting_time - $profile_starting_time);
 			$current_profile->starting_time($job_starting_time);
 			$current_profile->duration($profile_ending_time - $job_starting_time);
 			$profile_starting_time = $done_until_time;
@@ -124,12 +124,12 @@ sub remove_job {
 			# split the profile in 2 for the end of the job
 			my $last_profile;
 			if (defined $profile_ending_time) {
-				$last_profile = new Profile($job_ending_time, ProcessorRangeOld->new($current_profile->processor_range()), $profile_ending_time - $job_ending_time);
+				$last_profile = new Profile($job_ending_time, ProcessorRange->new($current_profile->processor_range()), $profile_ending_time - $job_ending_time);
 			} else {
-				$last_profile = new Profile($job_ending_time, ProcessorRangeOld->new($current_profile->processor_range()));
+				$last_profile = new Profile($job_ending_time, ProcessorRange->new($current_profile->processor_range()));
 			}
 			$current_profile->remove_job($job);
-			push @new_profiles, new Profile($profile_starting_time, ProcessorRangeOld->new($current_profile->processor_range()), $job_ending_time - $profile_starting_time);
+			push @new_profiles, new Profile($profile_starting_time, ProcessorRange->new($current_profile->processor_range()), $job_ending_time - $profile_starting_time);
 			push @new_profiles, $last_profile;
 		}
 		$done_until_time = $profile_ending_time;
@@ -158,10 +158,6 @@ sub add_job_at {
 	my @new_profiles = splice @{$self->{profiles}}, 0, $before;
 	my $in = $self->compute_profiles_impacted_by_job($job, $current_time);
 	my @impacted_profiles = splice @{$self->{profiles}}, 0, $in;
-
-	if ($job->{job_number} == 477375) {
-		print "$_\n" for @impacted_profiles;
-	}
 
 	for my $profile (@impacted_profiles) {
 		push @new_profiles, $profile->add_job($job, $current_time);
