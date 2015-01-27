@@ -94,10 +94,9 @@ sub run {
 			} else {
 				#only check which job starts now
 				#TODO: factorize code ?
-
 				my @still_reserved_jobs;
 				for my $job (@{$self->{reserved_jobs}}) {
-					if ($job->starting_time() == $self->{current_time}) {
+					if (defined $job->starting_time() and $job->starting_time() == $self->{current_time}) {
 						$self->start_job($job);
 					} else {
 						push @still_reserved_jobs, $job;
