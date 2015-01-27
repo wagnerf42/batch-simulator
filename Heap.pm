@@ -53,6 +53,19 @@ sub retrieve {
 	return $min_element;
 }
 
+sub retrieve_all {
+	my $self = shift;
+	return unless defined $self->{elements}->[1];
+
+	my @min_elements = ($self->retrieve());
+
+	while (defined $self->{elements}->[1] and $self->{elements}->[1] == $min_elements[0]) {
+		push @min_elements, $self->retrieve();
+	}
+
+	return @min_elements;
+}
+
 =item add(element)
 
 Adds a new element to the heap structure.

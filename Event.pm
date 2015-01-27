@@ -2,7 +2,7 @@ package Event;
 use strict;
 use warnings;
 
-use overload '<' => \&is_less_than;
+use overload '<=>' => \&three_way_comparison;
 
 sub new {
 	my $class = shift;
@@ -35,9 +35,10 @@ sub payload {
 	return $self->{payload};
 }
 
-sub is_less_than {
-	my ($a, $b) = @_;
-	return $a->{timestamp} < $b->{timestamp};
+sub three_way_comparison {
+	my ($self, $other, $inverted) = @_;
+	return $self->{type} <=> $other->{type} if ($self->{timestamp} == $other->{timestamp});
+	return $self->{timestamp} <=> $other->{timestamp};
 }
 
 1;
