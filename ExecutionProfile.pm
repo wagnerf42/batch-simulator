@@ -203,8 +203,9 @@ sub could_start_job_at {
 }
 
 sub find_first_profile_for {
-	my ($self, $job) = @_;
+	my ($self, $job, $current_time) = @_;
 
+	return if $current_time < $self->{profiles}->[0]->starting_time(); #if there is a barrier before first profile then return immediately
 	my $previous_profile_ending_time = $self->{profiles}->[0]->starting_time();
 	for my $profile_id (0..$#{$self->{profiles}}) {
 		return unless $previous_profile_ending_time == $self->{profiles}->[$profile_id]->starting_time(); #we do not shedule anything after encoutering a barrier to save scheduling time
@@ -215,11 +216,13 @@ sub find_first_profile_for {
 		}
 		$previous_profile_ending_time = $self->{profiles}->[$profile_id]->ending_time();
 	}
+	return;
 }
 
 sub set_current_time {
 	my ($self, $current_time) = @_;
 
+	return if $self->{profiles}->[0]->starting_time() > $current_time;
 	my $profile;
 	while($profile = shift @{$self->{profiles}}) {
 		my $ending_time = $profile->ending_time();
@@ -243,9 +246,10 @@ sub save_svg {
 	my ($self, $svg_filename, $time) = @_;
 	$time = 0 unless defined $time;
 
-	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
-
 	my $last_starting_time = $self->{profiles}->[$#{$self->{profiles}}]->starting_time();
+	return if $last_starting_time == 0;
+
+	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
 
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
 	my $w_ratio = 800/$last_starting_time;
@@ -276,7 +280,7 @@ sub tycat {
 
 	$filename = "$dir/ep$file_count.svg" unless defined $filename;
 	$self->save_svg($filename, $current_time);
-	`tycat $filename`;
+	`tycat $filename` if -f $filename;
 	$file_count++;
 }
 

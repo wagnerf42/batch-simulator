@@ -122,7 +122,7 @@ sub start_job {
 
 sub assign_job {
 	my ($self, $job, $still_reserved_jobs) = @_;
-	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
+	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
 
 	my $job_starts = 0;
 	if (defined $chosen_profile) {
