@@ -12,7 +12,7 @@ use Job;
 use Database;
 
 sub new_from_swf {
-	my ($class, $file) = @_;
+	my ($class, $file, $jobs_number) = @_;
 
 	my $self = {
 		file => $file,
@@ -22,7 +22,7 @@ sub new_from_swf {
 
 	open (FILE, $self->{file}) or die "unable to open $self->{file}";
 
-	while (my $line = <FILE>) {
+	while (defined(my $line = <FILE>) and (not defined $jobs_number or @{$self->{jobs}} < $jobs_number)) {
 		my @fields = split(' ', $line);
 
 		next unless defined $fields[0];

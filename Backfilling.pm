@@ -99,18 +99,19 @@ sub run {
 			my $next_event = $self->{events}->next();
 			my $next_time_stamp = $next_event->timestamp() if defined $next_event;
 
+			if (($self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE) and ($reassign_jobs)) {
+				$self->{execution_profile}->remove_job($_, $self->{current_time}) for (@{$self->{reserved_jobs}});
+			}
+
 			for my $job (@{$self->{reserved_jobs}}) {
 				if ($reassign_jobs) {
-					$self->{execution_profile}->remove_job($job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
 					$job->unassign();
-
 					$self->assign_and_start_job($job, $remaining_reserved_jobs);
-
 				} elsif (defined $job->starting_time() and $job->starting_time() == $self->{current_time}) {
 					$self->start_job($job);
 
-				} elsif (defined $job->starting_time() and (not defined $self->{events}->next() or $job->starting_time() < $self->{events}->next()->timestamp())) {
-					$self->start_job($job);
+				} elsif (defined $job->starting_time() and (not defined $next_event or $job->starting_time() < $next_time_stamp)) {
+					die 'a job is starting before the next event';
 
 				} else {
 					push @{$remaining_reserved_jobs}, $job;
