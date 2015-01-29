@@ -13,28 +13,17 @@ use BinarySearchTree;
 use Heap;
 use Event;
 
-my $heap = Heap->new(Event->new(1, -1));
-$heap->add(Event->new(1, 1));
-$heap->add(Event->new(1, 1));
-$heap->add(Event->new(1, 1));
-$heap->add(Event->new(1, 1));
-
-my $nhack = $heap->retrieve_all();
-print Dumper($nhack);
-die;
-
-my ($trace_file_name) = @ARGV;
-my $trace = Trace->new_from_swf($trace_file_name);
+my ($trace_file_name, $jobs_number, $algorithm) = @ARGV;
+my $trace = Trace->new_from_swf($trace_file_name, $jobs_number);
 my $cpus_number = $trace->needed_cpus();
 #$trace->reset_jobs_numbers();
 $trace->fix_submit_times();
 my $cluster_size = 16;
 
-#my $schedule = Backfilling->new(REUSE_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
-#$schedule->run();
-##$schedule->tycat("reuse.svg");
+my $schedule = Backfilling->new($algorithm, $trace, $cpus_number, $cluster_size, BASIC);
+$schedule->run();
+$schedule->tycat("$algorithm.svg");
+#print "$jobs_number $schedule->{schedule_time}\n";
 
-my $schedule2 = Backfilling->new(NEW_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
-$schedule2->run();
-$schedule2->tycat("new.svg");
+#print STDERR "Done\n";
 

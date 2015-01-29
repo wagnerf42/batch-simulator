@@ -70,62 +70,87 @@ sub run {
 		# Flag to see if any job ends before declared time
 		my $reassign_jobs = 0;
 
-
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
-
 
 		if ($events_type == SUBMISSION_EVENT) {
 			for my $event (@events) {
 				my $job = $event->payload();
-				$self->assign_and_start_job($job, $self->{reserved_jobs});
+				push @{$self->{reserved_jobs}}, $job;
+				$self->assign_job($job);
 			}
 		} else {
 			delete $self->{started_jobs}->{$_->payload()} for (@events);
-			$self->build_started_jobs_profile() if $self->{schedule_algorithm} == NEW_EXECUTION_PROFILE;
 
-			for my $event (@events) {
-				my $job = $event->payload();
-				if ($job->requested_time() != $job->run_time()) {
-					$reassign_jobs = 1;
-					if ($self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE) {
-						$self->{execution_profile}->remove_job($job, $self->{current_time});
-					}
-				}
-			}
-
-			# Remove, reassign and start jobs as necessary
-			my $remaining_reserved_jobs = [];
-			my $next_event = $self->{events}->next();
-			my $next_time_stamp = $next_event->timestamp() if defined $next_event;
-
-			if (($self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE) and ($reassign_jobs)) {
-				$self->{execution_profile}->remove_job($_, $self->{current_time}) for (@{$self->{reserved_jobs}});
-			}
-
-			for my $job (@{$self->{reserved_jobs}}) {
-				if ($reassign_jobs) {
-					$job->unassign();
-					$self->assign_and_start_job($job, $remaining_reserved_jobs);
-				} elsif (defined $job->starting_time() and $job->starting_time() == $self->{current_time}) {
-					$self->start_job($job);
-
-				} elsif (defined $job->starting_time() and (not defined $next_event or $job->starting_time() < $next_time_stamp)) {
-					die 'a job is starting before the next event';
-
+			my $reassign_jobs = $self->compute_if_jobs_need_reassignment(\@events);
+			if ($reassign_jobs) {
+				if ($self->{schedule_algorithm} == NEW_EXECUTION_PROFILE) {
+					$self->update_profiles_new();
 				} else {
-					push @{$remaining_reserved_jobs}, $job;
+					$self->update_profiles_reuse(\@events);
 				}
+				$self->reschedule_jobs()
 			}
-			$self->{reserved_jobs} = $remaining_reserved_jobs;
 		}
+		$self->start_jobs();
 	}
 }
 
-sub build_started_jobs_profile {
+sub compute_if_jobs_need_reassignment {
+	my $self = shift;
+	my $events = shift;
+	for my $event (@$events) {
+		my $job = $event->payload();
+		if ($job->requested_time() != $job->run_time()) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+sub start_jobs {
+	my $self = shift;
+	my @remaining_reserved_jobs;
+	for my $job (@{$self->{reserved_jobs}}) {
+		if (defined $job->starting_time() and $job->starting_time() == $self->{current_time}) {
+			$self->start_job($job);
+		} else {
+			push @remaining_reserved_jobs, $job;
+		}
+	}
+	$self->{reserved_jobs} = [@remaining_reserved_jobs];
+	return;
+}
+
+sub update_profiles_new {
 	my $self = shift;
 	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm}, $self->{current_time});
 	$self->{execution_profile}->add_job_at(0, $_, $self->{current_time}) for values %{$self->{started_jobs}};
+}
+
+sub update_profiles_reuse {
+	my $self = shift;
+	my $events = shift;
+	for my $event (@$events) {
+		my $job = $event->payload();
+		if ($job->requested_time() != $job->run_time()) {
+			$self->{execution_profile}->remove_job($job, $self->{current_time});
+		}
+	}
+
+	$self->{execution_profile}->remove_job($_, $self->{current_time}) for (@{$self->{reserved_jobs}});
+
+	return;
+}
+
+sub reschedule_jobs {
+	my $self = shift;
+	# Remove, reassign and start jobs as necessary
+	for my $job (@{$self->{reserved_jobs}}) {
+		$job->unassign();
+		$self->assign_job($job);
+	}
+	return ;
 }
 
 sub start_job {
@@ -134,11 +159,10 @@ sub start_job {
 	$self->{started_jobs}->{$job->job_number()} = $job;
 }
 
-sub assign_and_start_job {
-	my ($self, $job, $still_reserved_jobs) = @_;
+sub assign_job {
+	my ($self, $job) = @_;
 	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
 
-	my $job_starts = 0;
 	if (defined $chosen_profile) {
 		my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
 
@@ -146,14 +170,8 @@ sub assign_and_start_job {
 
 		# Update profiles
 		$self->{execution_profile}->add_job_at($chosen_profile, $job, $self->{current_time});
-
-		if ($job->starting_time() == $self->{current_time}) {
-			$self->start_job($job);
-			$job_starts = 1;
-		}
 	}
-
-	push @{$still_reserved_jobs}, $job unless $job_starts;
+	return;
 }
 
 1;

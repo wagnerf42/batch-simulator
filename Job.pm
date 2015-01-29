@@ -184,7 +184,6 @@ sub assigned_processors_ids {
 	return $self->{assigned_processors_ids};
 }
 
-#TODO : rewrite in clearer code
 sub svg {
 	my ($self, $fh, $w_ratio, $h_ratio, $current_time) = @_;
 
