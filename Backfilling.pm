@@ -15,8 +15,8 @@ use Heap;
 use Event;
 
 use constant {
-	SUBMISSION_EVENT => 0,
-	JOB_COMPLETED_EVENT => 1
+	JOB_COMPLETED_EVENT => 0,
+	SUBMISSION_EVENT => 1
 };
 
 use constant {
@@ -61,49 +61,62 @@ sub run {
 	# Add all jobs to the queue
 	$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
 
-	$self->{remaining_jobs} = @{$self->{trace}->jobs()};
+	while ($self->{events}->not_empty()) {
+		# Events coming from the Heap will have same timestamp and type
+		my @events = $self->{events}->retrieve_all();
+		my $events_type = $events[0]->type();
+		my $events_timestamp = $events[0]->timestamp();
 
-	while (defined(my $event = $self->{events}->retrieve())) {
-		my $job = $event->payload();
-		$self->{current_time} = $event->timestamp();
-		$self->{execution_profile}->set_current_time($self->{current_time});
+		# Flag to see if any job ends before declared time
+		my $reassign_jobs = 0;
 
-		if ($event->type() == SUBMISSION_EVENT) {
-			$self->assign_job($job, $self->{reserved_jobs});
+
+		$self->{current_time} = $events_timestamp;
+		$self->{execution_profile}->set_current_time($events_timestamp);
+
+
+		if ($events_type == SUBMISSION_EVENT) {
+			for my $event (@events) {
+				my $job = $event->payload();
+				$self->assign_and_start_job($job, $self->{reserved_jobs});
+			}
 		} else {
-			delete $self->{started_jobs}->{$job->job_number()};
+			delete $self->{started_jobs}->{$_->payload()} for (@events);
+			$self->build_started_jobs_profile() if $self->{schedule_algorithm} == NEW_EXECUTION_PROFILE;
 
-			if ($job->requested_time() != $job->run_time()) {
-				if ($self->{schedule_algorithm} == NEW_EXECUTION_PROFILE) {
-					$self->build_started_jobs_profile();
-				} else {
-					# Remove the job from the execution profile to reuse the remaining time.
-					$self->{execution_profile}->remove_job($job, $self->{current_time});
-				}
-
-				# Loop through all not yet started jobs and re-schedule them
-				my $remaining_reserved_jobs = [];
-				for my $rescheduled_job (@{$self->{reserved_jobs}}) {
-					$self->{execution_profile}->remove_job($rescheduled_job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
-					$rescheduled_job->unassign();
-					$self->assign_job($rescheduled_job, $remaining_reserved_jobs);
-				}
-				$self->{reserved_jobs} = $remaining_reserved_jobs;
-
-				$self->{remaining_jobs}--;
-			} else {
-				#only check which job starts now
-				#TODO: factorize code ?
-				my @still_reserved_jobs;
-				for my $job (@{$self->{reserved_jobs}}) {
-					if (defined $job->starting_time() and $job->starting_time() == $self->{current_time}) {
-						$self->start_job($job);
-					} else {
-						push @still_reserved_jobs, $job;
+			for my $event (@events) {
+				my $job = $event->payload();
+				if ($job->requested_time() != $job->run_time()) {
+					$reassign_jobs = 1;
+					if ($self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE) {
+						$self->{execution_profile}->remove_job($job, $self->{current_time});
 					}
 				}
-				$self->{reserved_jobs} = [@still_reserved_jobs];
 			}
+
+			# Remove, reassign and start jobs as necessary
+			my $remaining_reserved_jobs = [];
+			my $next_event = $self->{events}->next();
+			my $next_time_stamp = $next_event->timestamp() if defined $next_event;
+
+			for my $job (@{$self->{reserved_jobs}}) {
+				if ($reassign_jobs) {
+					$self->{execution_profile}->remove_job($job, $self->{current_time}) if $self->{schedule_algorithm} == REUSE_EXECUTION_PROFILE;
+					$job->unassign();
+
+					$self->assign_and_start_job($job, $remaining_reserved_jobs);
+
+				} elsif (defined $job->starting_time() and $job->starting_time() == $self->{current_time}) {
+					$self->start_job($job);
+
+				} elsif (defined $job->starting_time() and (not defined $self->{events}->next() or $job->starting_time() < $self->{events}->next()->timestamp())) {
+					$self->start_job($job);
+
+				} else {
+					push @{$remaining_reserved_jobs}, $job;
+				}
+			}
+			$self->{reserved_jobs} = $remaining_reserved_jobs;
 		}
 	}
 }
@@ -116,11 +129,11 @@ sub build_started_jobs_profile {
 
 sub start_job {
 	my ($self, $job) = @_;
-	$self->{events}->add(Event->new(1, $job->real_ending_time(), $job));
+	$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
 	$self->{started_jobs}->{$job->job_number()} = $job;
 }
 
-sub assign_job {
+sub assign_and_start_job {
 	my ($self, $job, $still_reserved_jobs) = @_;
 	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
 

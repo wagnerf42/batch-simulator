@@ -2,7 +2,7 @@ package Event;
 use strict;
 use warnings;
 
-use overload '<=>' => \&three_way_comparison;
+use overload '<=>' => \&three_way_comparison, '""' => \&stringification;
 
 sub new {
 	my $class = shift;
@@ -39,6 +39,11 @@ sub three_way_comparison {
 	my ($self, $other, $inverted) = @_;
 	return $self->{type} <=> $other->{type} if ($self->{timestamp} == $other->{timestamp});
 	return $self->{timestamp} <=> $other->{timestamp};
+}
+
+sub stringification {
+	my ($self) = @_;
+	return "[$self->{type}, $self->{timestamp}, ($self->{payload})]";
 }
 
 1;

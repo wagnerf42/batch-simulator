@@ -66,6 +66,16 @@ sub retrieve_all {
 	return @min_elements;
 }
 
+sub not_empty {
+	my $self = shift;
+	return defined $self->{elements}->[1];
+}
+
+sub next {
+	my ($self) = @_;
+	return $self->{elements}->[1];
+}
+
 =item add(element)
 
 Adds a new element to the heap structure.

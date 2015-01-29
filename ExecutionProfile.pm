@@ -222,11 +222,10 @@ sub find_first_profile_for {
 sub set_current_time {
 	my ($self, $current_time) = @_;
 
-	return if $self->{profiles}->[0]->starting_time() > $current_time;
-
 	my $profile;
 	while($profile = shift @{$self->{profiles}}) {
 		my $ending_time = $profile->ending_time();
+
 		if (defined $ending_time and $ending_time > $current_time) {
 			$profile->starting_time($current_time);
 			$profile->duration($ending_time - $current_time);
