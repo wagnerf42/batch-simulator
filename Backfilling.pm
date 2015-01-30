@@ -89,7 +89,7 @@ sub run {
 				} else {
 					$self->update_profiles_reuse(\@events);
 				}
-				$self->reschedule_jobs()
+				$self->reschedule_jobs();
 			}
 		}
 		$self->start_jobs();
