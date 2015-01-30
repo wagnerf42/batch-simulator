@@ -7,6 +7,7 @@ use Data::Dumper qw(Dumper);
 use List::Util qw(max sum);
 use Exporter qw(import);
 use Carp;
+use Time::HiRes qw(time);
 
 use Trace;
 use Job;
@@ -48,6 +49,8 @@ sub new {
 
 sub run {
 	my $self = shift;
+
+	my $start_time = time();
 
 	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
 
@@ -94,6 +97,8 @@ sub run {
 		}
 		$self->start_jobs();
 	}
+
+	$self->{schedule_time} = time() - $start_time;
 }
 
 sub compute_if_jobs_need_reassignment {

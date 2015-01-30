@@ -43,6 +43,12 @@ sub new_from_swf {
 	return $self;
 }
 
+sub keep_first_jobs {
+	my ($self, $jobs_number) = @_;
+	#@{$self->{jobs} = splice(@{$self->{jobs}}, 0, $jobs_number);
+	@{$self->{jobs}} = @{$self->{jobs}}[0..($jobs_number-1)];
+}
+
 sub reset_requested_times {
 	my ($self) = @_;
 	$_->{requested_time} = $_->{run_time} for @{$self->{jobs}};

@@ -7,19 +7,16 @@ use Data::Dumper qw(Dumper);
 use Trace;
 use Backfilling;
 
-my $cpus = 9;
-my $t = Trace->new_from_swf($ARGV[0]);
-$t->remove_large_jobs($cpus);
-$t->reset_submit_times();
-#$t->write_to_file('test.swf');
-my $schedule = Backfilling->new(REUSE_EXECUTION_PROFILE, $t, $cpus, 4, BASIC);
+my ($trace_file, $jobs_number, $cpus_number) = @ARGV;
+my $cluster_size = 16;
+
+my $trace = Trace->new_from_swf($trace_file);
+$trace->remove_large_jobs($cpus_number);
+$trace->keep_first_jobs($jobs_number);
+$trace->fix_submit_times();
+$trace->write_to_file("experiment_fred/$jobs_number-$cpus_number.swf");
+my $schedule = Backfilling->new(NEW_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
-$schedule->tycat();
 
-my $schedule2 = Backfilling->new(NEW_EXECUTION_PROFILE, $t, $cpus, 4, BASIC);
-$schedule2->run();
-$schedule2->tycat();
+print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
 
-
-
-print "Done\n";

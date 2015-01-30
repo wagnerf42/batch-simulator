@@ -16,6 +16,7 @@ use Event;
 my ($trace_file_name, $jobs_number, $algorithm) = @ARGV;
 my $trace = Trace->new_from_swf($trace_file_name, $jobs_number);
 my $cpus_number = $trace->needed_cpus();
+print STDERR "using $cpus_number CPUs\n";
 #$trace->reset_jobs_numbers();
 $trace->fix_submit_times();
 my $cluster_size = 16;
