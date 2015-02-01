@@ -14,8 +14,8 @@ my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 $trace->fix_submit_times();
-$trace->write_to_file("experiment_fred/$jobs_number-$cpus_number.swf");
-my $schedule = Backfilling->new(NEW_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
+$trace->write_to_file("experiment_fred3/$jobs_number-$cpus_number.swf");
+my $schedule = Backfilling->new(REUSE_EXECUTION_PROFILE, $trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
 
 print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
