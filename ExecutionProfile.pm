@@ -207,6 +207,7 @@ sub find_first_profile_for {
 
 	return if $current_time < $self->{profiles}->[0]->starting_time(); #if there is a barrier before first profile then return immediately
 	my $previous_profile_ending_time = $self->{profiles}->[0]->starting_time();
+
 	for my $profile_id (0..$#{$self->{profiles}}) {
 		return unless $previous_profile_ending_time == $self->{profiles}->[$profile_id]->starting_time(); #we do not shedule anything after encoutering a barrier to save scheduling time
 		my $profile_could_be_ok = $self->could_start_job_at($job, $profile_id);
@@ -287,7 +288,7 @@ sub tycat {
 	my $dir = "/tmp/$user";
 	mkdir $dir unless -f $dir;
 
-	$filename = "$dir/ep$file_count.svg" unless defined $filename;
+	$filename = "$dir/$file_count" . "a.svg" unless defined $filename;
 	$self->save_svg($filename, $current_time);
 	`tycat $filename` if -f $filename;
 	$file_count++;
