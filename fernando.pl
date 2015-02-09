@@ -18,6 +18,6 @@ $trace->fix_submit_times();
 my $schedule = Backfilling->new($algorithm, $trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
 
-#$schedule->tycat("$algorithm-$cpus_number-$cluster_size.svg");
+$schedule->tycat("$algorithm-$cpus_number-$cluster_size.svg");
 #print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
 

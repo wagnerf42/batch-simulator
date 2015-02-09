@@ -204,12 +204,9 @@ sub could_start_job_at {
 
 sub find_first_profile_for {
 	my ($self, $job, $current_time) = @_;
-
-	return if $current_time < $self->{profiles}->[0]->starting_time(); #if there is a barrier before first profile then return immediately
 	my $previous_profile_ending_time = $self->{profiles}->[0]->starting_time();
 
 	for my $profile_id (0..$#{$self->{profiles}}) {
-		return unless $previous_profile_ending_time == $self->{profiles}->[$profile_id]->starting_time(); #we do not shedule anything after encoutering a barrier to save scheduling time
 		my $profile_could_be_ok = $self->could_start_job_at($job, $profile_id);
 		if ($profile_could_be_ok) {
 			my $processors = $self->get_free_processors_for($job, $profile_id);
