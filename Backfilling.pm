@@ -28,31 +28,19 @@ use constant {
 	LOCAL => 4
 };
 
-use constant {
-	NEW_EXECUTION_PROFILE => 0,
-	REUSE_EXECUTION_PROFILE => 1
-};
-
 our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL NEW_EXECUTION_PROFILE REUSE_EXECUTION_PROFILE);
 
 sub new {
 	my $class = shift;
-	my $schedule_algorithm = shift;
-
 	my $self = $class->SUPER::new(@_);
 
 	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm});
-	$self->{schedule_algorithm} = $schedule_algorithm;
 
 	return $self;
 }
 
 sub run {
 	my $self = shift;
-
-	my $start_time = time();
-
-	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
 
 	# Jobs not started yet
 	$self->{reserved_jobs} = [];
@@ -79,83 +67,42 @@ sub run {
 		if ($events_type == SUBMISSION_EVENT) {
 			for my $event (@events) {
 				my $job = $event->payload();
-				push @{$self->{reserved_jobs}}, $job;
 				$self->assign_job($job);
-			}
-		} else {
-			delete $self->{started_jobs}->{$_->payload()} for (@events);
 
-			my $reassign_jobs = $self->compute_if_jobs_need_reassignment(\@events);
-			if ($reassign_jobs) {
-				if ($self->{schedule_algorithm} == NEW_EXECUTION_PROFILE) {
-					$self->update_profiles_new();
+				# We did not implement the policy part so it's possible that the job starts now
+				if ($job->starting_time() == $self->{current_time}) {
+					$self->start_job($job);
 				} else {
-					$self->update_profiles_reuse(\@events);
+					push @{$self->{reserved_jobs}}, $job;
 				}
-				$self->reschedule_jobs();
+			}
+		} else {
+			for my $event (@events) {
+				my $job = $event->payload();
+				$reassign_jobs = 1 if ($job->requested_time() != $job->run_time());
+				delete $self->{started_jobs}->{$job->job_number()};
+				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
+			}
+
+			if ($reassign_jobs) {
+				my @remaining_reserved_jobs;
+				for my $job (@{$self->{reserved_jobs}}) {
+					if ($self->{execution_profile}->starting_time(0) == $self->{current_time} and $self->{execution_profile}->could_start_job_at($job, 0)) {
+						# Job can start now, assign it again
+						$self->{execution_profile}->remove_job($job, $self->{current_time});
+						my $processors = $self->{execution_profile}->get_free_processors_for($job, 0);
+						$job->assign_to($self->{current_time}, $processors);
+						$self->{execution_profile}->add_job_at(0, $job, $self->{current_time});
+						$self->start_job($job);
+					} else {
+						push @remaining_reserved_jobs, $job;
+					}
+				}
+
+				$self->{reserved_jobs} = [@remaining_reserved_jobs];
 			}
 		}
-		$self->start_jobs();
 	}
-
-	$self->{schedule_time} = time() - $start_time;
-}
-
-sub compute_if_jobs_need_reassignment {
-	my $self = shift;
-	my $events = shift;
-	for my $event (@$events) {
-		my $job = $event->payload();
-		if ($job->requested_time() != $job->run_time()) {
-			return 1;
-		}
-	}
-	return 0;
-}
-
-sub start_jobs {
-	my $self = shift;
-	my @remaining_reserved_jobs;
-	for my $job (@{$self->{reserved_jobs}}) {
-		if (defined $job->starting_time() and $job->starting_time() == $self->{current_time}) {
-			$self->start_job($job);
-		} else {
-			push @remaining_reserved_jobs, $job;
-		}
-	}
-	$self->{reserved_jobs} = [@remaining_reserved_jobs];
-	return;
-}
-
-sub update_profiles_new {
-	my $self = shift;
-	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm}, $self->{current_time});
-	$self->{execution_profile}->add_job_at(0, $_, $self->{current_time}) for values %{$self->{started_jobs}};
-}
-
-sub update_profiles_reuse {
-	my $self = shift;
-	my $events = shift;
-	for my $event (@$events) {
-		my $job = $event->payload();
-		if ($job->requested_time() != $job->run_time()) {
-			$self->{execution_profile}->remove_job($job, $self->{current_time});
-		}
-	}
-
-	$self->{execution_profile}->remove_job($_, $self->{current_time}) for (@{$self->{reserved_jobs}});
-
-	return;
-}
-
-sub reschedule_jobs {
-	my $self = shift;
-	# Remove, reassign and start jobs as necessary
-	for my $job (@{$self->{reserved_jobs}}) {
-		$job->unassign();
-		$self->assign_job($job);
-	}
-	return ;
 }
 
 sub start_job {

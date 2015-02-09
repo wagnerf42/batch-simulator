@@ -65,6 +65,11 @@ sub get_free_processors_for {
 	return $left_processors;
 }
 
+sub available_processors {
+	my ($self) = @_;
+	return $self->{profiles}->[0]->processors();
+}
+
 sub profiles {
 	my $self = shift;
 	return @{$self->{profiles}};

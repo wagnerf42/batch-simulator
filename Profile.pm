@@ -55,6 +55,11 @@ sub processors_ids {
 	return $self->{processors};
 }
 
+sub processors {
+	my $self = shift;
+	return $self->{processors}->processors_ids();
+}
+
 sub duration {
 	my $self = shift;
 	$self->{duration} = shift if @_;

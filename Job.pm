@@ -64,7 +64,7 @@ sub new {
 		$self->{allocated_cpus} = $self->{requested_cpus};
 	}
 	if ($self->{requested_time} < $self->{run_time}) {
-		print STDERR "warning : invalid job $self->{job_number} : requested time is less than runtime\n";
+		#print STDERR "warning : invalid job $self->{job_number} : requested time is less than runtime\n";
 		$self->{run_time} = $self->{requested_time};
 	}
 	die 'invalid job' unless $self->{requested_time} > 0 and $self->{run_time} > 0;

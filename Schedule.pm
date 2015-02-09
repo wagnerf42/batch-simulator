@@ -17,7 +17,10 @@ sub new {
 		local_jobs_number => 0,
 		cmax => 0
 	};
+
+
 	die "bad trace $self->{trace}" unless ref $self->{trace} eq 'Trace';
+	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
 
 	# Make sure the trace is clean
 	$self->{trace}->reset();
