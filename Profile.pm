@@ -6,8 +6,7 @@ use ProcessorRange;
 
 use strict;
 use warnings;
-use overload
-	'""' => \&stringification;
+use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 
 use List::Util qw(min);
 
@@ -28,20 +27,16 @@ sub new {
 	my $self = {};
 	$self->{starting_time} = shift;
 	my $ids = shift;
+	$self->{duration} = shift;
+
 	if (ref $ids eq "ProcessorRange") {
 		$self->{processors} = $ids;
 	} else {
 		$self->{processors} = new ProcessorRange($ids);
 	}
-	$self->{duration} = shift;
 
 	bless $self, $class;
 	return $self;
-}
-
-sub processor_range {
-	my $self = shift;
-	return $self->{processors};
 }
 
 sub stringification {
@@ -50,12 +45,12 @@ sub stringification {
 	return "[$self->{starting_time} ; ($self->{processors}) ]";
 }
 
-sub processors_ids {
+sub processors {
 	my $self = shift;
 	return $self->{processors};
 }
 
-sub processors {
+sub processors_ids {
 	my $self = shift;
 	return $self->{processors}->processors_ids();
 }
@@ -68,7 +63,9 @@ sub duration {
 
 #returns two or one profile if it is split or not by job insertion
 sub add_job {
-	my ($self, $job, $current_time) = @_;
+	my $self = shift;
+	my $job = shift;
+	my $current_time = shift;
 
 	die unless defined $current_time;
 	die if $self->{starting_time} >= $job->ending_time_estimation($current_time);
@@ -162,6 +159,15 @@ sub svg {
 			return 1;
 		}
 	);
+}
+
+sub three_way_comparison {
+	my $self = shift;
+	my $other = shift;
+	my $inverted = shift;
+
+	return $other <=> $self->{starting_time} if $inverted;
+	return $self->{starting_time} <=> $other;
 }
 
 1;
