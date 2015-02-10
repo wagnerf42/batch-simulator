@@ -41,8 +41,6 @@ sub add {
 	$current_node->{children}->[$next_direction] = $new_node;
 	$new_node->set_father($current_node,$next_direction);
 
-	print STDERR "ajout de $content\n";
-	$self->create_dot();
 	return;
 }
 

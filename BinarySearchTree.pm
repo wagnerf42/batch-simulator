@@ -24,20 +24,16 @@ sub add {
 	return $self->{root}->add($content);
 }
 
-sub remove {
-	my $node = shift;
-	$node->remove();
-}
-
 sub find_node {
 	my $self = shift;
-	my $key = shift;
-	return $self->{root}->find_node($key);
+	my $content = shift;
+	return $self->{root}->find_node($content);
 }
 
 sub create_dot {
 	my $self = shift;
 	$self->{root}->create_dot();
+	return;
 }
 
 1;
