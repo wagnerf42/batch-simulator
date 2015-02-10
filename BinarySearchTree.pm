@@ -1,6 +1,7 @@
 package BinarySearchTree;
 use strict;
 use warnings;
+use parent 'Displayable';
 
 use Data::Dumper qw(Dumper);
 
@@ -30,9 +31,10 @@ sub find_node {
 	return $self->{root}->find_node($content);
 }
 
-sub create_dot {
+sub save_svg {
 	my $self = shift;
-	$self->{root}->create_dot();
+	my $filename = shift;
+	$self->{root}->save_svg($filename);
 	return;
 }
 

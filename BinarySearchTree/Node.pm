@@ -164,23 +164,20 @@ sub dot_all_content {
 	return;
 }
 
-# Write a file .dot, create the jpg of this and display it
-my $directory = '/tmp';
-# Incremental id for graphics
-my $id_file = 0;
-sub create_dot {
+sub save_svg {
 	my $self = shift;
-
-	open(my $fd, ">", "$directory/graph$id_file.dot")
-		or die "can't open > graph$id_file.dot";
+	my $filename = shift;
+	my $dotfile = $filename;
+	$dotfile =~s/svg$/dot/;
+	open(my $fd, ">", "$dotfile")
+		or die "can't open $dotfile";
 
 	print $fd "digraph G {\n";
 	$self->dot_all_content($fd);
 	print $fd "}";
 
-	system "dot -Tjpg -o$directory/graph$id_file.jpg $directory/graph$id_file.dot";
-	system "tycat $directory/graph$id_file.jpg";
-	$id_file++;
+	system "dot -Tsvg -o$filename $dotfile";
+	close($fd);
 	return;
 }
 
