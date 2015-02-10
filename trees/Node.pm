@@ -1,6 +1,7 @@
 package Node;
 
 use Data::Dumper;
+use Scalar::Util qw(refaddr);
 
 use warnings;
 use strict;
@@ -10,14 +11,12 @@ use constant {
 	NONE => 2
 };
 
-# Incremental id for graphics
-my $id_file = 0;
 
 sub new {
 	my $class = shift;
 	my $self = {
 		content => shift,
-		children => [undef,undef], #left 0, right 1
+		children => [undef, undef], #left 0, right 1
 		father => shift
 	};
 
@@ -44,74 +43,42 @@ sub add {
 
 	print STDERR "ajout de $content\n";
 	$self->create_dot();
-	
-#	my $current_parent = $location_on_tree;
-#	
-#	#TODO
-#	while($current_parent->{priority} > $random_priority)
-#	{
-#		$current_parent = ($content < $current_parent->{content} ? rotate_right($current_parent) : rotate_left($current_parent));
-#	}
+	return;
 }
 
 sub direction_of_unique_child {
 	my $self = shift;
 	return NONE unless $self->children_number() == 1;
 	if (defined $self->{children}->[LEFT]) {
+		die if defined $self->{children}->[RIGHT];
 		return LEFT;
 	} else {
+		die if defined $self->{children}->[LEFT];
 		return RIGHT;
 	}
 }
 
 sub remove {
 	my $self = shift;
-	my $node = shift;
-	my $father = $node->{father};
+	my $father = $self->{father};
 
-	my $unique_child_direction = $node->direction_of_unique_child();
+	my $unique_child_direction = $self->direction_of_unique_child();
 	if ($unique_child_direction == NONE) {
-
 		if ($self->children_number() == 0) {
 			# no children ! very easy case
-			$father->{children}->[get_node_direction($father,$node)] = undef;
+			$father->{children}->[get_node_direction($father, $self)] = undef;
 		} else {
 			#complex case : 2 children : exchange and remove
 			my $direction = int rand(2);
-			my $last_child = $self->last_child($node->{children}->[$direction], 1 - $direction);
-			$node->{content} = $last_child->{content};
-			$self->remove($last_child);
+			my $last_child = $self->{children}->[$direction]->last_child(1 - $direction);
+			$self->{content} = $last_child->{content};
+			$last_child->remove();
 		}
-
 	} else {
 		#easy case : we have only one child
-		$father->{children}->[get_node_direction($father,$node)] = $node->{children}->[$unique_child_direction];
-		$node->{children}->[$unique_child_direction]->{father} = $father;
+		$father->{children}->[get_node_direction($father, $self)] = $self->{children}->[$unique_child_direction];
+		$self->{children}->[$unique_child_direction]->{father} = $father;
 	}
-	return;
-}
-
-sub rotate {
-	# For left rotate of D
-	#	      A 		  	  A
-	#		 /			     /
-	#	 	B 			  	D
-	#	   / \		 => 	 \
-	#	  C   D 		      B
-	#		   \			 / \
-	#			E			C   E
-	#
-	my $father = shift;
-	my $direction = shift;
-	my $other_direction = 1 - $direction;
-	my $child = $father->{children}->[$direction];
-	my $grandfather = $father->{father};
-	my $b = $child->{children}->[$direction];
-	my $grand_father_direction = $grandfather->get_node_direction($father);
-
-	$father->set_father($child, $direction);
-	$b->set_father($father, $other_direction);
-	$child->set_father($grandfather, $grand_father_direction);
 	return;
 }
 
@@ -121,6 +88,7 @@ sub get_node_direction {
 	my $child = shift;
 
 	for my $direction (LEFT,RIGHT) {
+		next unless defined $self->{children}->[$direction];
 		return $direction if $self->{children}->[$direction] == $child;
 	}
 }
@@ -139,25 +107,14 @@ sub set_father {
 	$father->{children}->[$direction] = $self;
 }
 
-# Return children of the node given
-sub children {
-	my $self = shift;
-	return $self->{children};
-}
-
 # Return the last children of the node given
 sub last_child {
-	my ($self, $node, $direction) = @_;
+	my $node = shift;
+	my $direction = shift;
 	while (defined $node->{children}->[$direction]) {
 		$node = $node->{children}->[$direction];
 	}
 	return $node;
-}
-
-# Return the father of the node given
-sub father {
-	my $self = shift;
-	return $self->{father};
 }
 
 # Return the node of the content if he exist
@@ -169,7 +126,7 @@ sub find_node {
 	while(defined $current_node)
 	{
 		last if $current_node->{content} == $content;
-		my $direction = ($current_node->{content} < $content ? RIGHT : LEFT);
+		my $direction = $current_node->get_direction_for($content);
 		$current_node = $current_node->{children}->[$direction];
 	}
 	
@@ -186,40 +143,42 @@ sub get_direction_for {
 # Write information of the tree on a file
 sub dot_all_content {
 	my $self = shift;
-	my $node = shift;
-	my $fi = shift;
+	my $fd = shift;
 
-	my $addr =  $node;
-	my $content = $node->{content};
+	my $addr = refaddr $self;
+	my $content = $self->{content};
 
-	print $fi "$content [label = $content];\n";
+	print $fd "$addr [label = $content];\n";
 
-	if(defined $node->{father}) {
-		my $addrf = \($node->{father});
-		print $fi "$node->{father}->{content} -> $content\n";
+	if (defined $self->{father}) {
+		my $addrf = refaddr $self->{father};
+		print $fd "$addrf -> $addr\n";
 	}
-	if(defined $node->{children}->[LEFT]) {
-		$self->dot_all_content($node->{children}->[LEFT],$fi);
+	for my $direction(LEFT, RIGHT) {
+		next unless defined $self->{children}->[$direction];
+		$self->{children}->[$direction]->dot_all_content($fd);
 	}
-	if(defined $node->{children}->[RIGHT]) {
-		$self->dot_all_content($node->{children}->[RIGHT],$fi);
-	}
+	return;
 }
 
 # Write a file .dot, create the jpg of this and display it
+my $directory = '/tmp';
+# Incremental id for graphics
+my $id_file = 0;
 sub create_dot {
 	my $self = shift;
 
-	open(my $fi,">","graph/graph$id_file.dot")
+	open(my $fd, ">", "$directory/graph$id_file.dot")
 		or die "can't open > graph$id_file.dot";
 
-	print $fi "digraph G {\n";
-	$self->dot_all_content($self,$fi);
-	print $fi "}";
+	print $fd "digraph G {\n";
+	$self->dot_all_content($fd);
+	print $fd "}";
 
-	system "dot -Tjpg -ograph/graph$id_file.jpg graph/graph$id_file.dot";
-	system "tycat graph/graph$id_file.jpg";
+	system "dot -Tjpg -o$directory/graph$id_file.jpg $directory/graph$id_file.dot";
+	system "tycat $directory/graph$id_file.jpg";
 	$id_file++;
+	return;
 }
 
 1;
