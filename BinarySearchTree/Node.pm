@@ -1,4 +1,4 @@
-package Node;
+package BinarySearchTree::Node;
 
 use Data::Dumper;
 use Scalar::Util qw(refaddr);
@@ -36,7 +36,7 @@ sub add {
 		$next_direction = $current_node->get_direction_for($content);
 	}
 
-	my $new_node = Node->new($content);
+	my $new_node = BinarySearchTree::Node->new($content);
 
 	$current_node->{children}->[$next_direction] = $new_node;
 	$new_node->set_father($current_node,$next_direction);
