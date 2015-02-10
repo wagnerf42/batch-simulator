@@ -28,14 +28,14 @@ sub add {
 	my $self = shift;
 	my $content = shift;
 	my $current_node = $self;
-	
+
 	my $next_direction = $current_node->get_direction_for($content);
-	
+
 	while(defined $current_node->{children}->[$next_direction]) {
 		$current_node = $current_node->{children}->[$next_direction];
 		$next_direction = $current_node->get_direction_for($content);
 	}
-	
+
 	my $new_node = Node->new($content);
 
 	$current_node->{children}->[$next_direction] = $new_node;
@@ -50,10 +50,8 @@ sub direction_of_unique_child {
 	my $self = shift;
 	return NONE unless $self->children_number() == 1;
 	if (defined $self->{children}->[LEFT]) {
-		die if defined $self->{children}->[RIGHT];
 		return LEFT;
 	} else {
-		die if defined $self->{children}->[LEFT];
 		return RIGHT;
 	}
 }
@@ -129,8 +127,18 @@ sub find_node {
 		my $direction = $current_node->get_direction_for($content);
 		$current_node = $current_node->{children}->[$direction];
 	}
-	
+
 	return $current_node;
+}
+
+sub children {
+	my $self = shift;
+	my @children;
+	for my $direction(LEFT, RIGHT) {
+		next unless defined $self->{children}->[$direction];
+		push @children, $self->{children}->[$direction];
+	}
+	return @children;
 }
 
 # Return the direction for a content
@@ -154,10 +162,7 @@ sub dot_all_content {
 		my $addrf = refaddr $self->{father};
 		print $fd "$addrf -> $addr\n";
 	}
-	for my $direction(LEFT, RIGHT) {
-		next unless defined $self->{children}->[$direction];
-		$self->{children}->[$direction]->dot_all_content($fd);
-	}
+	$_->dot_all_content($fd) for ($self->children());
 	return;
 }
 
