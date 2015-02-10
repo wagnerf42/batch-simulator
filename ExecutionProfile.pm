@@ -65,9 +65,13 @@ sub get_free_processors_for {
 	return $left_processors;
 }
 
-sub available_processors {
-	my ($self) = @_;
-	return $self->{profiles}->[0]->processors();
+#returns number of processors available right now
+sub processors_available_now {
+	my $self = shift;
+	my $now_time = shift;
+	#now can only be at first profile
+	return 0 unless $self->{profiles}->[0]->starting_time() == $now_time;
+	return $self->{profiles}->[0]->processors_ids()->size();
 }
 
 sub profiles {
@@ -79,7 +83,7 @@ sub remove_job {
 	my ($self, $job, $current_time) = @_;
 	return unless defined $job->starting_time(); #do not remove jobs which are not here anyway
 
-	# those are the time stamps that will affect profiles
+	# those are the timestamps that will affect profiles
 	my $job_starting_time = max($job->starting_time(), $current_time);
 	my $job_ending_time = $job->submitted_ending_time();
 	my $done_until_time = $job_starting_time;

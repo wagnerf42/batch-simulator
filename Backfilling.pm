@@ -68,47 +68,64 @@ sub run {
 			for my $event (@events) {
 				my $job = $event->payload();
 				$self->assign_job($job);
-
-				# We did not implement the policy part so it's possible that the job starts now
-				if ($job->starting_time() == $self->{current_time}) {
-					$self->start_job($job);
-				} else {
-					push @{$self->{reserved_jobs}}, $job;
-				}
+				push @{$self->{reserved_jobs}}, $job;
 			}
 		} else {
+
 			for my $event (@events) {
 				my $job = $event->payload();
-				$reassign_jobs = 1 if ($job->requested_time() != $job->run_time());
 				delete $self->{started_jobs}->{$job->job_number()};
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
 			}
 
-			if ($reassign_jobs) {
-				my @remaining_reserved_jobs;
-				for my $job (@{$self->{reserved_jobs}}) {
-					if ($self->{execution_profile}->starting_time(0) == $self->{current_time} and $self->{execution_profile}->could_start_job_at($job, 0)) {
-						# Job can start now, assign it again
-						$self->{execution_profile}->remove_job($job, $self->{current_time});
-						my $processors = $self->{execution_profile}->get_free_processors_for($job, 0);
-						$job->assign_to($self->{current_time}, $processors);
-						$self->{execution_profile}->add_job_at(0, $job, $self->{current_time});
-						$self->start_job($job);
-					} else {
-						push @remaining_reserved_jobs, $job;
-					}
-				}
+			$self->reassign_jobs();
 
-				$self->{reserved_jobs} = [@remaining_reserved_jobs];
-			}
+			#$self->tycat();
+			#$self->{execution_profile}->tycat();
+		}
+		$self->start_jobs();
+	}
+	return;
+}
+
+sub start_jobs {
+	my $self = shift;
+	my @remaining_reserved_jobs;
+
+	for my $job (@{$self->{reserved_jobs}}) {
+		if ($job->starting_time() == $self->{current_time}) {
+			$self->start_job($job);
+		} else {
+			push @remaining_reserved_jobs, $job;
 		}
 	}
+
+	$self->{reserved_jobs} = \@remaining_reserved_jobs;
+	return;
+}
+
+sub reassign_jobs {
+	my $self = shift;
+
+	for my $job (@{$self->{reserved_jobs}}) {
+		if ($self->{execution_profile}->processors_available_now($self->{current_time}) >= $job->requested_cpus()) {
+			# Maybe job can start now, assign it again
+			# TODO: these routines loop on the whole set of profiles
+			# both for removal and assigning
+			# but since assigning should just try first profile and current position
+			# we could do better : especially with a TREE for storing profiles
+			$self->{execution_profile}->remove_job($job, $self->{current_time});
+			$self->assign_job($job);
+		}
+	}
+	return;
 }
 
 sub start_job {
 	my ($self, $job) = @_;
 	$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
 	$self->{started_jobs}->{$job->job_number()} = $job;
+	return;
 }
 
 sub assign_job {
