@@ -146,6 +146,8 @@ sub remove_job {
 	if ($done_until_time < $job_ending_time) {
 		$self->{profile_tree}->add(new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $job_ending_time - $done_until_time));
 	}
+
+	return;
 }
 
 sub add_job_at {
@@ -160,6 +162,8 @@ sub add_job_at {
 			$profile->add_job($job, $current_time);
 			return 1;
 		});
+
+	return;
 }
 
 sub starting_time {
@@ -179,61 +183,76 @@ sub could_start_job_at {
 		sub {
 			my $profile = shift;
 
+			# Ok to return, profile may be good for the job
 			return 0 if $starting_time >= $job->ending_time();
 
-			return 0 unless $starting_time == $profile->starting_time();
+			if ($starting_time != $profile->starting_time()) {
+				# Gap in the profile, can't use it to run the job
+				$min_processors = 0;
+				return 0;
+			}
 			$starting_time += $profile->duration();
 
 			$min_processors = min($min_processors, $profile->processors()->size());
 			return 0 unless $min_processors >= $job->requested_cpus();
+			return 1;
+		});
+
+	return $min_processors >= $job->requested_cpus() ? 1 : 0;
+}
+
+sub find_first_profile_for {
+	my $self = shift;
+	my $job = shift;
+	my $current_time = shift;
+	my $processors;
+
+	$self->{profile_tree}->nodes_loop($current_time, undef,
+		sub {
+			my $profile = shift;
+			if ($self->could_start_job_at($job, $profile->starting_time())) {
+				$processors = $self->get_free_processors_for($job, $profile->starting_time());
+				return 0 if $processors;
+			}
 
 			return 1;
 		});
-}
 
-#NOTE I stopped here
-
-sub find_first_profile_for {
-	my ($self, $job, $current_time) = @_;
-	my $previous_profile_ending_time = $self->{profiles}->[0]->starting_time();
-
-	for my $profile_id (0..$#{$self->{profiles}}) {
-		my $profile_could_be_ok = $self->could_start_job_at($job, $profile_id);
-		if ($profile_could_be_ok) {
-			my $processors = $self->get_free_processors_for($job, $profile_id);
-			return ($profile_id, $processors) if $processors;
-		}
-		$previous_profile_ending_time = $self->{profiles}->[$profile_id]->ending_time();
-	}
+	return $processors if $processors;
 	return;
 }
 
 sub set_current_time {
-	my ($self, $current_time) = @_;
+	my $self = shift;
+	my $current_time = shift;
 
-	return if $self->{profiles}->[0]->starting_time() > $current_time;
+	$self->{profile_tree}->nodes_loop($current_time, undef,
+		sub {
+			my $profile = shift;
+			my $starting_time = $profile->starting_time();
+			my $ending_time = $profile->ending_time();
 
-	my $profile;
-	while($profile = shift @{$self->{profiles}}) {
-		my $ending_time = $profile->ending_time();
+			return 0 if $starting_time > $current_time;
 
-		if (defined $ending_time and $ending_time > $current_time) {
-			$profile->starting_time($current_time);
-			$profile->duration($ending_time - $current_time);
-			last;
-		}
+			if (defined $ending_time and $ending_time > $current_time) {
+				$profile->starting_time($current_time);
+				$profile->duration($ending_time - $current_time);
+				return 0;
+			}
 
-		if (not defined $ending_time and $profile->starting_time() < $current_time) {
-			$profile->starting_time($current_time);
-			last;
-		}
+			if (not defined $ending_time and $starting_time < $current_time) {
+				$profile->starting_time($current_time);
+				return 0;
+			}
 
-		last unless defined $ending_time;
-	}
+			return 0 unless defined $ending_time;
+			return 1;
+		});
 
-	unshift @{$self->{profiles}}, $profile;
 	return;
 }
+
+#NOTE fernando: I stopped here
 
 sub stringification {
 	my $self = shift;
