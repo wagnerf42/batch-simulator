@@ -31,12 +31,17 @@ sub find_node {
 	return $self->{root}->find_node($content);
 }
 
-sub find_node_range {
+sub nodes_loop {
 	my $self = shift;
 	my $start_content = shift;
 	my $end_content = shift;
+	my $routine = shift;
 
-	return $self->{root}->find_node_range($start_content, $end_content);
+	my @content = $self->{root}->find_node_range($start_content, $end_content);
+	for my $content (@content) {
+		last if (my $return_code = &$routine($content)) == 0;
+	}
+	return;
 }
 
 sub save_svg {
