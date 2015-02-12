@@ -5,21 +5,13 @@ use warnings;
 use Data::Dumper qw(Dumper);
 
 use BinarySearchTree;
+use TestPackage;
 
 my $tree = BinarySearchTree->new(-1);
-$tree->add($_) for(qw(10 2 20 4 5 1));
+$tree->add(TestPackage->new($_)) for(qw(20 8 22 4 2 6 12));
+$tree->save_svg("tree.svg");
 
-my $node = $tree->find_node(4);
-$node->remove();
-print STDERR "removed 4\n";
-$tree->create_dot();
+my @nodes = $tree->find_node_range(10, 22);
+print Dumper(@nodes);
 
-$node = $tree->find_node(10);
-$node->remove();
-print STDERR "removed 10\n";
-$tree->create_dot();
-
-$node = $tree->find_node(5);
-$node->remove();
-print STDERR "removed 5\n";
-$tree->create_dot();
+print STDERR "Done\n";

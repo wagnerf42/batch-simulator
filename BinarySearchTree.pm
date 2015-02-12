@@ -31,6 +31,14 @@ sub find_node {
 	return $self->{root}->find_node($content);
 }
 
+sub find_node_range {
+	my $self = shift;
+	my $start_content = shift;
+	my $end_content = shift;
+
+	return $self->{root}->find_node_range($start_content, $end_content);
+}
+
 sub save_svg {
 	my $self = shift;
 	my $filename = shift;
