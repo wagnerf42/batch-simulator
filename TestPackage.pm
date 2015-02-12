@@ -29,4 +29,9 @@ sub _three_way_comparison {
 	return $self->{value} <=> $other;
 }
 
+sub key {
+	my $self = shift;
+	return $self->{value};
+}
+
 1;

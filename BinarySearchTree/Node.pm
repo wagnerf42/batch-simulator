@@ -26,17 +26,17 @@ sub new {
 
 sub add {
 	my $self = shift;
-	my $content = shift;
+	my $key = shift;
 	my $current_node = $self;
 
-	my $next_direction = $current_node->get_direction_for($content);
+	my $next_direction = $current_node->get_direction_for($key);
 
 	while(defined $current_node->{children}->[$next_direction]) {
 		$current_node = $current_node->{children}->[$next_direction];
-		$next_direction = $current_node->get_direction_for($content);
+		$next_direction = $current_node->get_direction_for($key);
 	}
 
-	my $new_node = BinarySearchTree::Node->new($content);
+	my $new_node = BinarySearchTree::Node->new($key);
 
 	$current_node->{children}->[$next_direction] = $new_node;
 	$new_node->set_father($current_node,$next_direction);
@@ -113,16 +113,16 @@ sub last_child {
 	return $node;
 }
 
-# Return the node of the content if he exist
+# Return the node of the key if he exist
 sub find_node {
 	my $self = shift;
-	my $content = shift;
+	my $key = shift;
 	my $current_node = $self;
 
 	while(defined $current_node)
 	{
-		last if $current_node->{content} == $content;
-		my $direction = $current_node->get_direction_for($content);
+		last if $current_node->{content}->key() == $key;
+		my $direction = $current_node->get_direction_for($key);
 		$current_node = $current_node->{children}->[$direction];
 	}
 
@@ -167,22 +167,22 @@ sub children {
 	return @children;
 }
 
-# Return the direction for a content
+# Return the direction for a key
 sub get_direction_for {
 	my $self = shift;
-	my $content = shift;
-	return ($content < $self->{content}) ? LEFT : RIGHT;
+	my $key = shift;
+	return ($key < $self->{content}->key()) ? LEFT : RIGHT;
 }
 
 # Write information of the tree on a file
-sub dot_all_content {
+sub dot_all_key {
 	my $self = shift;
 	my $fd = shift;
 
 	my $addr = refaddr $self;
-	my $content = $self->{content};
+	my $key = $self->{content}->key();
 
-	print $fd "$addr [label = $content];\n";
+	print $fd "$addr [label = $key];\n";
 
 	if (defined $self->{father}) {
 		my $addrf = refaddr $self->{father};
@@ -201,7 +201,7 @@ sub save_svg {
 		or die "can't open $dotfile";
 
 	print $fd "digraph G {\n";
-	$self->dot_all_content($fd);
+	$self->dot_all_key($fd);
 	print $fd "}";
 
 	system "dot -Tsvg -o$filename $dotfile";

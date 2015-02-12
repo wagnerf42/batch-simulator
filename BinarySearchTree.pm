@@ -7,6 +7,12 @@ use Data::Dumper qw(Dumper);
 
 use BinarySearchTree::Node;
 
+use constant {
+	LEFT => 0,
+	RIGHT => 1,
+	NONE => 2
+};
+
 sub new {
 	my $class = shift;
 	my $sentinel = shift;
@@ -29,8 +35,8 @@ sub add {
 
 sub find_node {
 	my $self = shift;
-	my $content = shift;
-	return $self->{root}->find_node($content);
+	my $key = shift;
+	return $self->{root}->find_node($key);
 }
 
 sub nodes_loop {
