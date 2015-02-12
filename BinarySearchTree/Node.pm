@@ -129,48 +129,23 @@ sub find_node {
 	return $current_node;
 }
 
-sub find_node_range_root {
-	my $self = shift;
-	my $start_content = shift;
-	my $end_content = shift;
-	my $current_node = $self;
-
-	while (defined $current_node) {
-		if ($current_node->{content} < $start_content) {
-			$current_node = $current_node->{children}->[RIGHT];
-		} elsif ($current_node->{content} > $end_content) {
-			$current_node = $current_node->{children}->[LEFT];
-		} else {
-			return $current_node;
-		}
-	}
-
-	die;
-	return;
-}
-
 sub find_node_range {
 	my $self = shift;
 	my $start_content = shift;
 	my $end_content = shift;
 
-	my $current_node = $self->find_node_range_root($start_content, $end_content);
-	print STDERR "Got root $current_node->{content}\n";
-
+	my $current_node = $self;
 	my @parents;
 	my @content;
 
 	while (@parents or defined $current_node) {
 		if (defined $current_node) {
-			print STDERR "Defined $current_node->{content}\n";
-			my $nhack = <STDIN>;
 			push @parents, $current_node;
 			$current_node = ($current_node->{content} > $start_content) ? $current_node->{children}->[LEFT] : undef;
 		} else {
 			$current_node = pop @parents;
-			print STDERR "Visiting node $current_node->{content}\n";
 			push @content, $current_node->{content} if ($current_node->{content} >= $start_content and $current_node->{content} <= $end_content);
-			$current_node = $current_node->{children}->[RIGHT];
+			$current_node = ($current_node->{content} < $end_content) ? $current_node->{children}->[RIGHT] : undef;
 		}
 	}
 
