@@ -38,8 +38,8 @@ sub get_free_processors_for {
 	my $starting_time = shift;
 
 	my $left_duration = $job->requested_time();
-	my $profile = $self->{profile_tree}->find_node($starting_time);
-	my $candidate_processors = $profile->processors_ids();
+	my $profile = $self->{profile_tree}->find_content($starting_time);
+	my $candidate_processors = $profile->processors();
 	my $left_processors = new ProcessorRange($candidate_processors);
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
@@ -178,22 +178,27 @@ sub could_start_job_at {
 	my $job = shift;
 	my $starting_time = shift;
 	my $min_processors = $job->requested_cpus();
+	my $job_ending_time = $starting_time + $job->requested_time();
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my $profile = shift;
-
-			# Ok to return, profile may be good for the job
-			return 0 if $starting_time >= $job->ending_time();
 
 			if ($starting_time != $profile->starting_time()) {
 				# Gap in the profile, can't use it to run the job
 				$min_processors = 0;
 				return 0;
 			}
-			$starting_time += $profile->duration();
 
+			# Ok to return if it's the last profile
+			return 0 unless defined $profile->duration();
+
+			$starting_time += $profile->duration();
 			$min_processors = min($min_processors, $profile->processors()->size());
+
+			# Ok to return, profile may be good for the job
+			return 0 unless $starting_time < $job_ending_time;
+
 			return 0 unless $min_processors >= $job->requested_cpus();
 			return 1;
 		});

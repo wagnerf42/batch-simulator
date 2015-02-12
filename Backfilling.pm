@@ -39,6 +39,43 @@ sub new {
 	return $self;
 }
 
+# Simpler run routine that only assigns, used to test the new execution profile implementation
+sub run_assign {
+	my $self = shift;
+
+	# Jobs not started yet
+	$self->{reserved_jobs} = [];
+
+	# Jobs which started before current time
+	$self->{started_jobs} = {};
+	$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
+
+	# Add all jobs to the queue
+	$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
+
+	while ($self->{events}->not_empty()) {
+		# Events coming from the Heap will have same timestamp and type
+		my @events = $self->{events}->retrieve_all();
+		my $events_type = $events[0]->type();
+		my $events_timestamp = $events[0]->timestamp();
+
+		# Flag to see if any job ends before declared time
+		my $reassign_jobs = 0;
+
+		$self->{current_time} = $events_timestamp;
+		$self->{execution_profile}->set_current_time($events_timestamp);
+
+		if ($events_type == SUBMISSION_EVENT) {
+			for my $event (@events) {
+				my $job = $event->payload();
+				$self->assign_job($job);
+				push @{$self->{reserved_jobs}}, $job;
+			}
+		}
+	}
+}
+
+
 sub run {
 	my $self = shift;
 

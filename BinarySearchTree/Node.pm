@@ -121,7 +121,7 @@ sub find_node {
 
 	while(defined $current_node)
 	{
-		last if $current_node->{content}->key() == $key;
+		last if $current_node->{content} == $key;
 		my $direction = $current_node->get_direction_for($key);
 		$current_node = $current_node->{children}->[$direction];
 	}
@@ -156,6 +156,28 @@ sub next_node_between {
 	return;
 }
 
+sub nodes_loop2 {
+	my $self = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+	my $routine = shift;
+
+	my $current_node = $self;
+	my $continue = 1;
+	my @parents;
+
+	while ($continue and (@parents or defined $current_node)) {
+		if (defined $current_node) {
+			push @parents, $current_node;
+
+			$current_node = ($current_node->{content} > $start_key) ? $current_node->{children}->[LEFT] : undef;
+		} else {
+			$current_node = pop @parents;
+			$continue = $routine->($current_node->{content}) if ($current_node->{content} >= $start_key and (not defined $end_key or $current_node->{content} <= $end_key));
+			$current_node = (not defined $end_key or $current_node->{content} < $end_key) ? $current_node->{children}->[RIGHT] : undef;
+		}
+	}
+}
 
 sub children {
 	my $self = shift;
@@ -171,18 +193,18 @@ sub children {
 sub get_direction_for {
 	my $self = shift;
 	my $key = shift;
-	return ($key < $self->{content}->key()) ? LEFT : RIGHT;
+	return ($key < $self->{content}) ? LEFT : RIGHT;
 }
 
 # Write information of the tree on a file
-sub dot_all_key {
+sub dot_all_content {
 	my $self = shift;
 	my $fd = shift;
 
 	my $addr = refaddr $self;
-	my $key = $self->{content}->key();
+	my $content = $self->{content};
 
-	print $fd "$addr [label = $key];\n";
+	print $fd "$addr [label = $content];\n";
 
 	if (defined $self->{father}) {
 		my $addrf = refaddr $self->{father};
@@ -201,7 +223,7 @@ sub save_svg {
 		or die "can't open $dotfile";
 
 	print $fd "digraph G {\n";
-	$self->dot_all_key($fd);
+	$self->dot_all_content($fd);
 	print $fd "}";
 
 	system "dot -Tsvg -o$filename $dotfile";

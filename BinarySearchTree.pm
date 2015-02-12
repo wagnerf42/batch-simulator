@@ -16,11 +16,10 @@ use constant {
 sub new {
 	my $class = shift;
 	my $sentinel = shift;
-	my $minimal_valid_key = shift;
 
 	my $self = {
 		root => new BinarySearchTree::Node($sentinel, undef),
-		minimal_valid_key => $minimal_valid_key
+		min_valid_key => shift
 	};
 
 	bless $self, $class;
@@ -39,12 +38,25 @@ sub find_node {
 	return $self->{root}->find_node($key);
 }
 
+sub nodes_loop2 {
+	my $self = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+	my $routine = shift;
+
+	$start_key = $self->{min_valid_key} unless defined $start_key;
+
+	$self->{root}->nodes_loop2($start_key, $end_key, $routine);
+	return;
+}
+
 sub nodes_loop {
 	my $self = shift;
 	my $start_key = shift;
-	$start_key = $self->{minimal_valid_key} unless defined $start_key;
 	my $end_key = shift;
 	my $routine = shift;
+
+	$start_key = $self->{min_valid_key} unless defined $start_key;
 
 	my @stack;
 	push @stack, [$self->{root}, LEFT];
