@@ -129,34 +129,7 @@ sub find_node {
 	return $current_node;
 }
 
-sub next_node_between {
-	my $min = shift;
-	my $max = shift;
-	my $min_allowed = shift;
-	my $stack = shift;
-
-	while(@{$stack}) {
-		my $move = pop @{$stack};
-		my ($current_node, $direction) = @{$move};
-		if ($direction == LEFT) {
-			#go left if we can
-			if (($current_node->{content} > $min) and (defined $current_node->{children}->[LEFT])) {
-
-				push @{$stack}, [$current_node->{children}->[$direction], LEFT];
-				push @{$stack}, [$current_node->{children}->[$direction], NONE];
-				push @{$stack}, [$current_node->{children}->[$direction], RIGHT];
-			}
-		} elsif ($direction == NONE) {
-			#compare ourselves
-			#if we match constraints, return current node
-		} else {
-			#go right if we can
-		}
-	}
-	return;
-}
-
-sub nodes_loop2 {
+sub nodes_loop {
 	my $self = shift;
 	my $start_key = shift;
 	my $end_key = shift;
@@ -168,15 +141,21 @@ sub nodes_loop2 {
 
 	while ($continue and (@parents or defined $current_node)) {
 		if (defined $current_node) {
+			# if node is defined we go to the left if we can
+
 			push @parents, $current_node;
 
 			$current_node = ($current_node->{content} > $start_key) ? $current_node->{children}->[LEFT] : undef;
 		} else {
+			# we collect the last unvisited father
 			$current_node = pop @parents;
+			# we do routine with current_node if the content is on the range
 			$continue = $routine->($current_node->{content}) if ($current_node->{content} >= $start_key and (not defined $end_key or $current_node->{content} <= $end_key));
+			# we go on the left if we can
 			$current_node = (not defined $end_key or $current_node->{content} < $end_key) ? $current_node->{children}->[RIGHT] : undef;
 		}
 	}
+	return;
 }
 
 sub children {
