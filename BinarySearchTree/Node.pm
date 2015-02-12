@@ -129,28 +129,33 @@ sub find_node {
 	return $current_node;
 }
 
-sub find_node_range {
-	my $self = shift;
-	my $start_content = shift;
-	my $end_content = shift;
+sub next_node_between {
+	my $min = shift;
+	my $max = shift;
+	my $min_allowed = shift;
+	my $stack = shift;
 
-	my $current_node = $self;
-	my @parents;
-	my @content;
+	while(@{$stack}) {
+		my $move = pop @{$stack};
+		my ($current_node, $direction) = @{$move};
+		if ($direction == LEFT) {
+			#go left if we can
+			if (($current_node->{content} > $min) and (defined $current_node->{children}->[LEFT])) {
 
-	while (@parents or defined $current_node) {
-		if (defined $current_node) {
-			push @parents, $current_node;
-			$current_node = (not defined $start_content or $current_node->{content} > $start_content) ? $current_node->{children}->[LEFT] : undef;
+				push @{$stack}, [$current_node->{children}->[$direction], LEFT];
+				push @{$stack}, [$current_node->{children}->[$direction], NONE];
+				push @{$stack}, [$current_node->{children}->[$direction], RIGHT];
+			}
+		} elsif ($direction == NONE) {
+			#compare ourselves
+			#if we match constraints, return current node
 		} else {
-			$current_node = pop @parents;
-			push @content, $current_node->{content} if ((not defined $start_content or $current_node->{content} >= $start_content) and (not defined $end_content or $current_node->{content} <= $end_content));
-			$current_node = (not defined $end_content or $current_node->{content} < $end_content) ? $current_node->{children}->[RIGHT] : undef;
+			#go right if we can
 		}
 	}
-
-	return @content;
+	return;
 }
+
 
 sub children {
 	my $self = shift;

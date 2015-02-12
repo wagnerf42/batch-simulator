@@ -10,9 +10,11 @@ use BinarySearchTree::Node;
 sub new {
 	my $class = shift;
 	my $sentinel = shift;
+	my $minimal_valid_key = shift;
 
 	my $self = {
-		root => new BinarySearchTree::Node($sentinel, undef)
+		root => new BinarySearchTree::Node($sentinel, undef),
+		minimal_valid_key => $minimal_valid_key
 	};
 
 	bless $self, $class;
@@ -33,17 +35,24 @@ sub find_node {
 
 sub nodes_loop {
 	my $self = shift;
-	my $start_content = shift;
-	my $end_content = shift;
+	my $start_key = shift;
+	$start_key = $self->{minimal_valid_key} unless defined $start_key;
+	my $end_key = shift;
 	my $routine = shift;
 
-	# If $start_content is not defined we cannot start from the sentinel
-	my $root = (defined $start_content) ? $self->{root} : $self->{root}->{children}->[1];
+	my @stack;
+	push @stack, [$self->{root}, LEFT];
+	push @stack, [$self->{root}, NONE];
+	push @stack, [$self->{root}, RIGHT];
 
-	my @content = $root->find_node_range($start_content, $end_content);
-	for my $content (@content) {
-		last if (my $return_code = &$routine($content)) == 0;
-	}
+	my $node = BinarySearchTree::Node::next_node_between($start_key, $end_key, 1, \@stack);
+	return unless defined $node;
+	my $continue;
+	do {
+		$continue = $routine->($node->get_content());
+		$node = BinarySearchTree::Node::next_node_between($start_key, $end_key, 0, \@stack) if $continue;
+	} while( defined $node and $continue );
+
 	return;
 }
 
