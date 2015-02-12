@@ -141,11 +141,11 @@ sub find_node_range {
 	while (@parents or defined $current_node) {
 		if (defined $current_node) {
 			push @parents, $current_node;
-			$current_node = ($current_node->{content} > $start_content) ? $current_node->{children}->[LEFT] : undef;
+			$current_node = (not defined $start_content or $current_node->{content} > $start_content) ? $current_node->{children}->[LEFT] : undef;
 		} else {
 			$current_node = pop @parents;
-			push @content, $current_node->{content} if ($current_node->{content} >= $start_content and $current_node->{content} <= $end_content);
-			$current_node = ($current_node->{content} < $end_content) ? $current_node->{children}->[RIGHT] : undef;
+			push @content, $current_node->{content} if ((not defined $start_content or $current_node->{content} >= $start_content) and (not defined $end_content or $current_node->{content} <= $end_content));
+			$current_node = (not defined $end_content or $current_node->{content} < $end_content) ? $current_node->{children}->[RIGHT] : undef;
 		}
 	}
 

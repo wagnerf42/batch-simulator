@@ -37,7 +37,10 @@ sub nodes_loop {
 	my $end_content = shift;
 	my $routine = shift;
 
-	my @content = $self->{root}->find_node_range($start_content, $end_content);
+	# If $start_content is not defined we cannot start from the sentinel
+	my $root = (defined $start_content) ? $self->{root} : $self->{root}->{children}->[1];
+
+	my @content = $root->find_node_range($start_content, $end_content);
 	for my $content (@content) {
 		last if (my $return_code = &$routine($content)) == 0;
 	}
