@@ -54,6 +54,7 @@ sub direction_of_unique_child {
 	}
 }
 
+#careful, the 'remove' routine can invalidate outside pointers
 sub remove {
 	my $self = shift;
 	my $father = $self->{father};
@@ -119,8 +120,7 @@ sub find_node {
 	my $key = shift;
 	my $current_node = $self;
 
-	while(defined $current_node)
-	{
+	while (defined $current_node) {
 		last if $current_node->{content} == $key;
 		my $direction = $current_node->get_direction_for($key);
 		$current_node = $current_node->{children}->[$direction];
@@ -137,21 +137,23 @@ sub nodes_loop {
 
 	my $current_node = $self;
 	my $continue = 1;
-	my @parents;
+
+	#we do a depth first exploration
+	#which is constrained by the start and end of the range
+	#since we do it iteratively we need to handle a stack ourselves
+	my @parents; #this is the stack, containing ancestors with right subtree explorations left to do
 
 	while ($continue and (@parents or defined $current_node)) {
 		if (defined $current_node) {
-			# if node is defined we go to the left if we can
-
+			#go left first
 			push @parents, $current_node;
-
 			$current_node = ($current_node->{content} > $start_key) ? $current_node->{children}->[LEFT] : undef;
 		} else {
-			# we collect the last unvisited father
+			#we returned from exploration of a left child
 			$current_node = pop @parents;
-			# we do routine with current_node if the content is on the range
+			#do content here
 			$continue = $routine->($current_node->{content}) if ($current_node->{content} >= $start_key and (not defined $end_key or $current_node->{content} <= $end_key));
-			# we go on the left if we can
+			#and continue with right subtree
 			$current_node = (not defined $end_key or $current_node->{content} < $end_key) ? $current_node->{children}->[RIGHT] : undef;
 		}
 	}
