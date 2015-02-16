@@ -12,6 +12,7 @@ use Time::HiRes qw(time);
 use Trace;
 use Job;
 use ExecutionProfile;
+use Profile;
 use Heap;
 use Event;
 
@@ -35,7 +36,6 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 
 	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm});
-
 	return $self;
 }
 
@@ -68,8 +68,11 @@ sub run_assign {
 		if ($events_type == SUBMISSION_EVENT) {
 			for my $event (@events) {
 				my $job = $event->payload();
+				print STDERR "assigning job $job\n";
 				$self->assign_job($job);
 				push @{$self->{reserved_jobs}}, $job;
+				print STDERR "assigned: $self->{execution_profile}\n";
+				$self->tycat();
 			}
 		}
 	}
@@ -167,15 +170,14 @@ sub start_job {
 
 sub assign_job {
 	my ($self, $job) = @_;
-	my ($chosen_profile, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
+	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
 
-	if (defined $chosen_profile) {
-		my $starting_time = $self->{execution_profile}->starting_time($chosen_profile);
-
+	if (defined $starting_time) {
 		$job->assign_to($starting_time, $chosen_processors);
 
+
 		# Update profiles
-		$self->{execution_profile}->add_job_at($chosen_profile, $job, $self->{current_time});
+		$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
 	}
 	return;
 }

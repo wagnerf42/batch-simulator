@@ -14,10 +14,12 @@ my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 $trace->fix_submit_times();
-$trace->write_to_file("$jobs_number-$cpus_number.swf");
+#$trace->write_to_file("$jobs_number-$cpus_number.swf");
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
-$schedule->run();
+$schedule->run_assign();
 
 $schedule->tycat("$cpus_number-$cluster_size.svg");
 #print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
+
+print STDERR "Done\n";
 

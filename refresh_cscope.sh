@@ -1,5 +1,5 @@
 #!/bin/sh
-INCLUDED_FILES="*.pl *.pm"
+INCLUDED_FILES="scripts/*.pl *.pm */*.pm"
 
 ls $INCLUDED_FILES > cscope.files
 cscope -b

@@ -32,10 +32,19 @@ sub add {
 	return $self->{root}->add($content);
 }
 
-sub find_node {
+sub remove {
+	my $self = shift;
+	my $content = shift;
+
+	my $node = $self->{root}->find_node($content);
+	$node->remove();
+	return;
+}
+
+sub find {
 	my $self = shift;
 	my $key = shift;
-	return $self->{root}->find_node($key);
+	return $self->{root}->find_node($key)->content();
 }
 
 sub nodes_loop {
@@ -45,7 +54,6 @@ sub nodes_loop {
 	my $routine = shift;
 
 	$start_key = $self->{min_valid_key} unless defined $start_key;
-
 	$self->{root}->nodes_loop($start_key, $end_key, $routine);
 	return;
 }

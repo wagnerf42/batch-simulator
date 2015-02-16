@@ -26,7 +26,8 @@ sub new {
 		reduction_algorithm => $reduction_algorithm
 	};
 
-	$self->{profile_tree} = BinarySearchTree->new(Profile->initial((defined($starting_time) ? $starting_time : 0), 0, $self->{processors_number} - 1));
+	$self->{profile_tree} = BinarySearchTree->new(-1, 0);
+	$self->{profile_tree}->add(Profile->initial((defined($starting_time) ? $starting_time : 0), 0, $self->{processors_number} - 1));
 
 	bless $self, $class;
 	return $self;
@@ -38,13 +39,14 @@ sub get_free_processors_for {
 	my $starting_time = shift;
 
 	my $left_duration = $job->requested_time();
-	my $profile = $self->{profile_tree}->find_content($starting_time);
+	my $profile = $self->{profile_tree}->find($starting_time);
 	my $candidate_processors = $profile->processors();
 	my $left_processors = new ProcessorRange($candidate_processors);
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my $profile = shift;
+			my $duration = $profile->duration();
 
 			# Stop if we have enough profiles
 			return 0 unless $left_duration > 0;
@@ -52,14 +54,12 @@ sub get_free_processors_for {
 			# Profiles must all be contiguous
 			return 0 unless $starting_time == $profile->starting_time();
 
-			my $duration = $profile->duration();
-			$starting_time += $duration if defined $duration;
-
 			$left_processors->intersection($profile->processors());
-			return if $left_processors->size() < $job->requested_cpus();
+			return 0 if $left_processors->size() < $job->requested_cpus();
 
-			if (defined $profile->duration()) {
-				$left_duration -= $profile->duration();
+			if (defined $duration) {
+				$left_duration -= $duration;
+				$starting_time += $duration;
 				return 1;
 			} else {
 				return 0;
@@ -67,7 +67,7 @@ sub get_free_processors_for {
 		});
 
 	# It is possible that not all processors were found
-	return unless $left_processors->size() == $job->requested_cpus();
+	return unless $left_processors->size() >= $job->requested_cpus();
 
 	my $reduction_function = $REDUCTION_FUNCTIONS[$self->{reduction_algorithm}];
 	$left_processors->$reduction_function($job->requested_cpus());
@@ -109,6 +109,7 @@ sub remove_job {
 
 			if ($profile_starting_time > $done_until_time) {
 				# Gap in the profile: create a new one
+				#This line can break the tree.
 				$self->{profile_tree}->add(new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $profile_starting_time - $done_until_time));
 				$done_until_time = $profile_starting_time;
 
@@ -116,6 +117,7 @@ sub remove_job {
 				# Profile starts before the beginning of the job
 				# This will never happen with this implementation
 				$self->{profile_tree}->add(new Profile($profile_starting_time, ProcessorRange->new($profile->processor_range()), $job_starting_time - $profile_starting_time));
+				#This line can break the tree.
 				$profile->starting_time($job_starting_time);
 				$profile->duration($profile_ending_time - $job_starting_time);
 				$profile_starting_time = $done_until_time;
@@ -156,21 +158,21 @@ sub add_job_at {
 	my $job = shift;
 	my $current_time = shift;
 
+	my @new_profiles;
+	my @profiles_to_remove;
+
 	$self->{profile_tree}->nodes_loop($starting_time, $starting_time + $job->requested_time(),
 		sub {
 			my $profile = shift;
-			$profile->add_job($job, $current_time);
+			push @new_profiles, $profile->add_job($job, $current_time);
+			push @profiles_to_remove, $profile;
 			return 1;
 		});
 
-	return;
-}
+	$self->{profile_tree}->remove($_) for (@profiles_to_remove);
+	$self->{profile_tree}->add($_) for @new_profiles;
 
-sub starting_time {
-	my $self = shift;
-	my $starting_time = shift;
-	my $profile = $self->{profile_tree}->find_node($starting_time);
-	return $profile->starting_time();
+	return;
 }
 
 sub could_start_job_at {
@@ -210,12 +212,17 @@ sub find_first_profile_for {
 	my $self = shift;
 	my $job = shift;
 	my $current_time = shift;
+
+	my $starting_time;
 	my $processors;
+
+	print STDERR "current time $current_time\n";
 
 	$self->{profile_tree}->nodes_loop($current_time, undef,
 		sub {
 			my $profile = shift;
 			if ($self->could_start_job_at($job, $profile->starting_time())) {
+				$starting_time = $profile->starting_time();
 				$processors = $self->get_free_processors_for($job, $profile->starting_time());
 				return 0 if $processors;
 			}
@@ -223,7 +230,7 @@ sub find_first_profile_for {
 			return 1;
 		});
 
-	return $processors if $processors;
+	return ($starting_time, $processors) if $processors;
 	return;
 }
 
@@ -231,29 +238,39 @@ sub set_current_time {
 	my $self = shift;
 	my $current_time = shift;
 
-	$self->{profile_tree}->nodes_loop($current_time, undef,
+	my $updated_profile;
+	my @removed_profiles;
+
+	$self->{profile_tree}->nodes_loop(undef, $current_time - 1,
 		sub {
 			my $profile = shift;
+
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
 
-			return 0 if $starting_time > $current_time;
-
 			if (defined $ending_time and $ending_time > $current_time) {
-				$profile->starting_time($current_time);
-				$profile->duration($ending_time - $current_time);
+				$updated_profile = [$profile, $current_time, $ending_time - $current_time];
 				return 0;
 			}
 
-			if (not defined $ending_time and $starting_time < $current_time) {
-				$profile->starting_time($current_time);
+			if (not defined $ending_time) {
+				$updated_profile = [$profile, $current_time, $profile->duration()];
 				return 0;
 			}
 
-			return 0 unless defined $ending_time;
+			push @removed_profiles, $profile;
 			return 1;
 		});
 
+	if (defined $updated_profile) {
+		my ($profile, $starting_time, $duration) = @$updated_profile;
+		$self->{profile_tree}->remove($profile);
+		$profile->starting_time($starting_time);
+		$profile->duration($duration);
+		$self->{profile_tree}->add($profile);
+	}
+
+	$self->{profile_tree}->remove($_) for @removed_profiles;
 	return;
 }
 
@@ -261,7 +278,30 @@ sub set_current_time {
 
 sub stringification {
 	my $self = shift;
-	return join(', ', @{$self->{profiles}});
+	my @profiles;
+
+	$self->{profile_tree}->nodes_loop(undef, undef,
+		sub {
+			my $profile = shift;
+			push @profiles, $profile;
+			return 1;
+		});
+
+	return join(', ', @profiles);
+}
+
+sub show {
+	my $self = shift;
+
+	print STDERR "showing tree:\n";
+
+	$self->{profile_tree}->nodes_loop(undef, undef,
+		sub {
+			my $profile = shift;
+			print STDERR "\tshowing $profile\n";
+			return 1;
+		});
+	return;
 }
 
 sub save_svg {

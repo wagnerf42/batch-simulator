@@ -2,6 +2,7 @@ package BinarySearchTree::Node;
 
 use Data::Dumper;
 use Scalar::Util qw(refaddr);
+use Carp;
 
 use warnings;
 use strict;
@@ -26,18 +27,17 @@ sub new {
 
 sub add {
 	my $self = shift;
-	my $key = shift;
-	my $current_node = $self;
+	my $content = shift;
 
-	my $next_direction = $current_node->get_direction_for($key);
+	my $current_node = $self;
+	my $next_direction = $current_node->get_direction_for($content);
 
 	while(defined $current_node->{children}->[$next_direction]) {
 		$current_node = $current_node->{children}->[$next_direction];
-		$next_direction = $current_node->get_direction_for($key);
+		$next_direction = $current_node->get_direction_for($content);
 	}
 
-	my $new_node = BinarySearchTree::Node->new($key);
-
+	my $new_node = BinarySearchTree::Node->new($content);
 	$current_node->{children}->[$next_direction] = $new_node;
 	$new_node->set_father($current_node,$next_direction);
 
@@ -210,6 +210,13 @@ sub save_svg {
 	system "dot -Tsvg -o$filename $dotfile";
 	close($fd);
 	return;
+}
+
+sub content {
+	my $self = shift;
+	my $content = shift;
+	$self->{content} = $content if defined $content;
+	return $self->{content};
 }
 
 1;
