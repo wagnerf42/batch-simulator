@@ -26,13 +26,13 @@ sub new {
 	return $self;
 }
 
-sub add {
+sub add_content {
 	my $self = shift;
 	my $content = shift;
 	return $self->{root}->add($content);
 }
 
-sub remove {
+sub remove_content {
 	my $self = shift;
 	my $content = shift;
 
@@ -41,7 +41,12 @@ sub remove {
 	return;
 }
 
-sub find {
+sub remove_node {
+	my $node = shift;
+	return $node->remove();
+}
+
+sub find_content {
 	my $self = shift;
 	my $key = shift;
 	return $self->{root}->find_node($key)->content();

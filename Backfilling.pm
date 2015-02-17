@@ -65,13 +65,34 @@ sub run_assign {
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
 
+		print STDERR "Current time: $events_timestamp\n";
+
 		if ($events_type == SUBMISSION_EVENT) {
+			print STDERR "Submission event\n";
 			for my $event (@events) {
 				my $job = $event->payload();
+				print STDERR "\tassigning job [$job]\n";
+				print STDERR "\texecution profile b: $self->{execution_profile}\n";
 				$self->assign_job($job);
+				print STDERR "\texecution profile a: $self->{execution_profile}\n";
 				push @{$self->{reserved_jobs}}, $job;
+
+			}
+		} else {
+			print STDERR "Job ending event\n";
+			for my $event (@events) {
+				my $job = $event->payload();
+				print STDERR "\tjob [$job]\n";
+				delete $self->{started_jobs}->{$job->job_number()};
+				print STDERR "\texecution profile b: $self->{execution_profile}\n";
+				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
+				print STDERR "\texecution profile a: $self->{execution_profile}\n";
+				$self->tycat();
+				die;
 			}
 		}
+
+		$self->start_jobs();
 	}
 }
 
@@ -108,7 +129,6 @@ sub run {
 				push @{$self->{reserved_jobs}}, $job;
 			}
 		} else {
-
 			for my $event (@events) {
 				my $job = $event->payload();
 				delete $self->{started_jobs}->{$job->job_number()};

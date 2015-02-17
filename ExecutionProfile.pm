@@ -27,7 +27,7 @@ sub new {
 	};
 
 	$self->{profile_tree} = BinarySearchTree->new(-1, 0);
-	$self->{profile_tree}->add(Profile->initial((defined($starting_time) ? $starting_time : 0), 0, $self->{processors_number} - 1));
+	$self->{profile_tree}->add_content(Profile->initial((defined($starting_time) ? $starting_time : 0), 0, $self->{processors_number} - 1));
 
 	bless $self, $class;
 	return $self;
@@ -39,7 +39,7 @@ sub get_free_processors_for {
 	my $starting_time = shift;
 
 	my $left_duration = $job->requested_time();
-	my $profile = $self->{profile_tree}->find($starting_time);
+	my $profile = $self->{profile_tree}->find_content($starting_time);
 	my $candidate_processors = $profile->processors();
 	my $left_processors = new ProcessorRange($candidate_processors);
 
@@ -97,9 +97,17 @@ sub remove_job {
 	my $job_ending_time = $job->submitted_ending_time();
 	my $done_until_time = $job_starting_time;
 
-	#print "\nremove $job between $job_starting_time and $job_ending_time: $self\n";
+	# Different changes to be made to the tree
+	my @profiles_to_add;
+	my @profiles_to_update;
+	my @profiles_to_remove;
+
+	#print STDERR "\nremove $job between $job_starting_time and $job_ending_time: $self\n";
 
 	# It is more complicated than this, compare with previous code
+	# One of the cases treated by this routine is when a profile starts before $job_starting_time
+	# and ends after that. In this case, we modified that profile so that it ended at
+	# $job_starting_time. That is no longer possible with this implementation.
 	$self->{profile_tree}->nodes_loop($job_starting_time, $job_ending_time,
 		sub {
 			my $profile = shift;
@@ -109,45 +117,58 @@ sub remove_job {
 
 			if ($profile_starting_time > $done_until_time) {
 				# Gap in the profile: create a new one
-				#This line can break the tree.
-				$self->{profile_tree}->add(new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $profile_starting_time - $done_until_time));
+				push @profiles_to_add, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $profile_starting_time - $done_until_time);
 				$done_until_time = $profile_starting_time;
 
 			} elsif ($profile_starting_time < $job->starting_time()) {
 				# Profile starts before the beginning of the job
 				# This will never happen with this implementation
-				$self->{profile_tree}->add(new Profile($profile_starting_time, ProcessorRange->new($profile->processor_range()), $job_starting_time - $profile_starting_time));
-				#This line can break the tree.
-				$profile->starting_time($job_starting_time);
-				$profile->duration($profile_ending_time - $job_starting_time);
+				push @profiles_to_add, new Profile($profile_starting_time, ProcessorRange->new($profile->processors()), $job_starting_time - $profile_starting_time);
+				push @profiles_to_update, [$profile, $job_starting_time, $profile_ending_time - $job_starting_time];
 				$profile_starting_time = $done_until_time;
 			}
 
 			if (defined $profile_ending_time and $profile_ending_time <= $job_ending_time) {
 				# Update profile
-				$profile->remove_job($job);
+				push @profiles_to_update, [$profile];
 
 			} else {
 				# Split profile in 2 at the end of the job
 				if (defined $profile_ending_time) {
-					$self->{profile_tree}->add(new Profile($job_ending_time, ProcessorRange->new($profile->processor_range()), $profile_ending_time - $job_ending_time));
+					push @profiles_to_add, new Profile($job_ending_time, ProcessorRange->new($profile->processors()), $profile_ending_time - $job_ending_time);
+					$done_until_time = $profile_ending_time;
 				} else {
-					$self->{profile_tree}->add(new Profile($job_ending_time, ProcessorRange->new($profile->processor_range())));
+					push @profiles_to_add, new Profile($job_ending_time, ProcessorRange->new($profile->processors()));
+					$done_until_time = $job_ending_time;
 				}
 
-				$self->{profile_tree}->add(new Profile($profile_starting_time, ProcessorRange->new($profile->processor_range()), $job_ending_time - $profile_starting_time));
-				$done_until_time = $profile_ending_time;
-
-				# Problem: the old code "forgets" about the current profile, in this case we would to remove it from the tree now
+				push @profiles_to_add, new Profile($profile_starting_time, ProcessorRange->new($profile->processors()), $job_ending_time - $profile_starting_time);
+				push @profiles_to_remove, $profile;
 			}
 
 			return 1;
 		});
 
+	push @profiles_to_add, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $job_ending_time - $done_until_time) if ($done_until_time < $job_ending_time);
 
-	if ($done_until_time < $job_ending_time) {
-		$self->{profile_tree}->add(new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $job_ending_time - $done_until_time));
+	# Now we make the changes to the BST: remove, update and then add
+	$self->{profile_tree}->remove_content($_) for (@profiles_to_remove);
+
+	for my $profile_to_update (@profiles_to_update) {
+		my ($profile, $starting_time, $duration) = @$profile_to_update;
+		$self->{profile_tree}->remove_content($profile);
+
+		if (defined $starting_time and defined $duration) {
+			$profile->starting_time($starting_time);
+			$profile->duration($duration);
+		} else {
+			$profile->remove_job($job);
+		}
+
+		$self->{profile_tree}->add_content($profile);
 	}
+
+	$self->{profile_tree}->add_content($_) for (@profiles_to_add);
 
 	return;
 }
@@ -169,8 +190,8 @@ sub add_job_at {
 			return 1;
 		});
 
-	$self->{profile_tree}->remove($_) for (@profiles_to_remove);
-	$self->{profile_tree}->add($_) for @new_profiles;
+	$self->{profile_tree}->remove_content($_) for (@profiles_to_remove);
+	$self->{profile_tree}->add_content($_) for @new_profiles;
 
 	return;
 }
@@ -262,10 +283,10 @@ sub set_current_time {
 
 	if (defined $updated_profile) {
 		my ($profile, $starting_time, $duration) = @$updated_profile;
-		$self->{profile_tree}->remove($profile);
+		$self->{profile_tree}->remove_content($profile);
 		$profile->starting_time($starting_time);
 		$profile->duration($duration);
-		$self->{profile_tree}->add($profile);
+		$self->{profile_tree}->add_content($profile);
 	}
 
 	$self->{profile_tree}->remove($_) for @removed_profiles;
