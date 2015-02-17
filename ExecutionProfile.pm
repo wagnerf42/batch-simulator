@@ -216,8 +216,6 @@ sub find_first_profile_for {
 	my $starting_time;
 	my $processors;
 
-	print STDERR "current time $current_time\n";
-
 	$self->{profile_tree}->nodes_loop($current_time, undef,
 		sub {
 			my $profile = shift;

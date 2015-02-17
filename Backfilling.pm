@@ -68,11 +68,8 @@ sub run_assign {
 		if ($events_type == SUBMISSION_EVENT) {
 			for my $event (@events) {
 				my $job = $event->payload();
-				print STDERR "assigning job $job\n";
 				$self->assign_job($job);
 				push @{$self->{reserved_jobs}}, $job;
-				print STDERR "assigned: $self->{execution_profile}\n";
-				$self->tycat();
 			}
 		}
 	}
