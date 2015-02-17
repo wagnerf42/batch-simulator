@@ -18,7 +18,7 @@ $trace->fix_submit_times();
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run_assign();
 
-$schedule->tycat("$cpus_number-$cluster_size.svg");
+#$schedule->tycat("$cpus_number-$cluster_size.svg");
 #print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
 
 print STDERR "Done\n";

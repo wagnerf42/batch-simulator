@@ -71,10 +71,10 @@ sub run_assign {
 			print STDERR "Submission event\n";
 			for my $event (@events) {
 				my $job = $event->payload();
-				print STDERR "\tassigning job [$job]\n";
-				print STDERR "\texecution profile b: $self->{execution_profile}\n";
+				#print STDERR "\tassigning job [$job]\n";
+				#print STDERR "\texecution profile b: $self->{execution_profile}\n";
 				$self->assign_job($job);
-				print STDERR "\texecution profile a: $self->{execution_profile}\n";
+				#print STDERR "\texecution profile a: $self->{execution_profile}\n";
 				push @{$self->{reserved_jobs}}, $job;
 
 			}
@@ -88,12 +88,12 @@ sub run_assign {
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
 				print STDERR "\texecution profile a: $self->{execution_profile}\n";
 				$self->tycat();
-				die;
 			}
 		}
 
 		$self->start_jobs();
 	}
+	return;
 }
 
 
