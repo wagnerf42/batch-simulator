@@ -102,26 +102,20 @@ sub remove_job {
 	my @profiles_to_update;
 	my @profiles_to_remove;
 
-	#print STDERR "\nremove $job between $job_starting_time and $job_ending_time: $self\n";
-	print STDERR "\tjob ending time $job_ending_time\n";
-
 	$self->{profile_tree}->nodes_loop($job_starting_time, $job_ending_time - 1,
 		sub {
 			my $profile = shift;
-			print STDERR "\t$profile\n";
 
 			my $profile_starting_time = $profile->starting_time();
 			my $profile_ending_time = $profile->ending_time();
 
 			if ($profile_starting_time > $done_until_time) {
-				print STDERR "\tcase1\n";
 				# Gap in the profile: create a new one
 				push @profiles_to_add, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $profile_starting_time - $done_until_time);
 				$done_until_time = $profile_starting_time;
 			}
 
 			if (defined $profile_ending_time and $profile_ending_time <= $job_ending_time) {
-				print STDERR "\tcase2\n";
 				# Update profile
 				push @profiles_to_update, $profile;
 				$done_until_time = $profile_ending_time;
@@ -129,16 +123,13 @@ sub remove_job {
 			} else {
 				# Split profile in 2 at the end of the job
 				if (defined $profile_ending_time) {
-					print STDERR "\tcase3\n";
 					push @profiles_to_add, new Profile($job_ending_time, ProcessorRange->new($profile->processors()), $profile_ending_time - $job_ending_time);
 					$done_until_time = $profile_ending_time;
 				} else {
-					print STDERR "\tcase4\n";
 					push @profiles_to_add, new Profile($job_ending_time, ProcessorRange->new($profile->processors()));
 					$done_until_time = $job_ending_time;
 				}
 
-				print STDERR "\tcase5\n";
 				push @profiles_to_add, new Profile($profile_starting_time, ProcessorRange->new($profile->processors()), $job_ending_time - $profile_starting_time);
 				push @profiles_to_remove, $profile;
 			}
@@ -147,13 +138,8 @@ sub remove_job {
 		});
 
 	if ($done_until_time < $job_ending_time) {
-		print STDERR "\tcase6\n";
 		push @profiles_to_add, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $job_ending_time - $done_until_time);
 	}
-
-	print "\tprofiles to add: @profiles_to_add\n";
-	print "\tprofiles to update: @profiles_to_update\n";
-	print "\tprofiles to remove: @profiles_to_remove\n";
 
 	# Now we make the changes to the BST: remove, update and then add
 	$self->{profile_tree}->remove_content($_) for (@profiles_to_remove);

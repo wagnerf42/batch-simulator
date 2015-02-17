@@ -39,64 +39,6 @@ sub new {
 	return $self;
 }
 
-# Simpler run routine that only assigns, used to test the new execution profile implementation
-sub run_assign {
-	my $self = shift;
-
-	# Jobs not started yet
-	$self->{reserved_jobs} = [];
-
-	# Jobs which started before current time
-	$self->{started_jobs} = {};
-	$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
-
-	# Add all jobs to the queue
-	$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
-
-	while ($self->{events}->not_empty()) {
-		# Events coming from the Heap will have same timestamp and type
-		my @events = $self->{events}->retrieve_all();
-		my $events_type = $events[0]->type();
-		my $events_timestamp = $events[0]->timestamp();
-
-		# Flag to see if any job ends before declared time
-		my $reassign_jobs = 0;
-
-		$self->{current_time} = $events_timestamp;
-		$self->{execution_profile}->set_current_time($events_timestamp);
-
-		print STDERR "Current time: $events_timestamp\n";
-
-		if ($events_type == SUBMISSION_EVENT) {
-			print STDERR "Submission event\n";
-			for my $event (@events) {
-				my $job = $event->payload();
-				#print STDERR "\tassigning job [$job]\n";
-				#print STDERR "\texecution profile b: $self->{execution_profile}\n";
-				$self->assign_job($job);
-				#print STDERR "\texecution profile a: $self->{execution_profile}\n";
-				push @{$self->{reserved_jobs}}, $job;
-
-			}
-		} else {
-			print STDERR "Job ending event\n";
-			for my $event (@events) {
-				my $job = $event->payload();
-				print STDERR "\tjob [$job]\n";
-				delete $self->{started_jobs}->{$job->job_number()};
-				print STDERR "\texecution profile b: $self->{execution_profile}\n";
-				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
-				print STDERR "\texecution profile a: $self->{execution_profile}\n";
-				$self->tycat();
-			}
-		}
-
-		$self->start_jobs();
-	}
-	return;
-}
-
-
 sub run {
 	my $self = shift;
 
@@ -116,9 +58,6 @@ sub run {
 		my $events_type = $events[0]->type();
 		my $events_timestamp = $events[0]->timestamp();
 
-		# Flag to see if any job ends before declared time
-		my $reassign_jobs = 0;
-
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
 
@@ -127,6 +66,7 @@ sub run {
 				my $job = $event->payload();
 				$self->assign_job($job);
 				push @{$self->{reserved_jobs}}, $job;
+
 			}
 		} else {
 			for my $event (@events) {
@@ -135,11 +75,9 @@ sub run {
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
 			}
 
-			$self->reassign_jobs();
-
-			#$self->tycat();
-			#$self->{execution_profile}->tycat();
+			#$self->reassign_jobs();
 		}
+
 		$self->start_jobs();
 	}
 	return;
