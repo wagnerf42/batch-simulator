@@ -67,9 +67,9 @@ sub add_job {
 	my $job = shift;
 	my $current_time = shift;
 
-	die unless defined $current_time;
+	confess unless defined $current_time;
 	confess if $self->{starting_time} >= $job->ending_time_estimation($current_time);
-	die if (defined $self->ending_time() and $self->ending_time() <= $job->starting_time());
+	confess if (defined $self->ending_time() and $self->ending_time() <= $job->starting_time());
 
 	return $self->split($job, $current_time);
 }

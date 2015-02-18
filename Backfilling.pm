@@ -61,10 +61,14 @@ sub run {
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
 
+		#print STDERR "Event $events_type: @events\n\tcurrent time: $events_timestamp\n";
+		#$self->tycat();
+
 		if ($events_type == SUBMISSION_EVENT) {
 			for my $event (@events) {
 				my $job = $event->payload();
 				$self->assign_job($job);
+				#print STDERR "\tep a assign: $self->{execution_profile}\n";
 				push @{$self->{reserved_jobs}}, $job;
 
 			}
@@ -72,13 +76,16 @@ sub run {
 			for my $event (@events) {
 				my $job = $event->payload();
 				delete $self->{started_jobs}->{$job->job_number()};
+				#print STDERR "\tep b remove: $self->{execution_profile}\n";
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
+				#print STDERR "\tep a remove: $self->{execution_profile}\n";
 			}
 
-			#$self->reassign_jobs();
+			$self->reassign_jobs();
 		}
 
 		$self->start_jobs();
+		#$self->tycat();
 	}
 	return;
 }
@@ -103,13 +110,10 @@ sub reassign_jobs {
 	my $self = shift;
 
 	for my $job (@{$self->{reserved_jobs}}) {
-		if ($self->{execution_profile}->processors_available_now($self->{current_time}) >= $job->requested_cpus()) {
-			# Maybe job can start now, assign it again
-			# TODO: these routines loop on the whole set of profiles
-			# both for removal and assigning
-			# but since assigning should just try first profile and current position
-			# we could do better : especially with a TREE for storing profiles
+		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
+			#print STDERR "\tep b remove2: $self->{execution_profile}\n";
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
+			#print STDERR "\tep a remove2: $self->{execution_profile}\n";
 			$self->assign_job($job);
 		}
 	}
@@ -134,6 +138,8 @@ sub assign_job {
 		# Update profiles
 		$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
 	}
+
+	#print STDERR "\tnew starting time: $starting_time\n";
 	return;
 }
 

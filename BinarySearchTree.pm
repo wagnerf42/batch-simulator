@@ -4,6 +4,7 @@ use warnings;
 use parent 'Displayable';
 
 use Data::Dumper qw(Dumper);
+use Carp;
 
 use BinarySearchTree::Node;
 
@@ -29,6 +30,10 @@ sub new {
 sub add_content {
 	my $self = shift;
 	my $content = shift;
+
+	# TODO Remove this check eventually
+	confess if $self->{root}->find_node($content);
+
 	return $self->{root}->add($content);
 }
 
@@ -49,7 +54,23 @@ sub remove_node {
 sub find_content {
 	my $self = shift;
 	my $key = shift;
-	return $self->{root}->find_node($key)->content();
+	my $node = $self->{root}->find_node($key);
+	return $node->content() if defined $node;
+	return;
+}
+
+sub find_previous_content {
+	my $self = shift;
+	my $key = shift;
+	my $previous_node = $self->{root}->find_previous_node($key);
+	return $previous_node->content() if defined $previous_node and $previous_node->content() != $self->{root}->content(); # it is possible that the sentinel is the previous content
+	return;
+}
+
+sub find_closest_content {
+	my $self = shift;
+	my $key = shift;
+	return $self->{root}->find_closest_node($key)->content();
 }
 
 sub nodes_loop {

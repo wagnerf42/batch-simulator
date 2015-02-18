@@ -8,9 +8,12 @@ use BinarySearchTree;
 use TestPackage;
 
 my $tree = BinarySearchTree->new(-1, 0);
-$tree->add(TestPackage->new($_)) for(qw(20 8 22 4 2 6 12 25 28 23 13 15));
-$tree->save_svg("tree.svg");
-#$tree->tycat();
+$tree->add_content(TestPackage->new($_)) for(qw(15 9 11));
+$tree->tycat();
+
+my $node = $tree->find_previous_content(10);
+print STDERR "$node\n";
+die;
 
 $tree->nodes_loop2(undef, undef,
 	sub {
