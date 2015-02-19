@@ -16,8 +16,9 @@ my $trace = Trace->new_from_swf($trace_file);
 #$trace->fix_submit_times();
 #$trace->write_to_file("$jobs_number-$cpus_number.swf");
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
-$schedule->run_assign();
+$schedule->run();
 
-$schedule->tycat("$cpus_number-$cluster_size.svg");
+#$schedule->tycat("$cpus_number-$cluster_size.svg");
+#$schedule->tycat();
 #print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
 

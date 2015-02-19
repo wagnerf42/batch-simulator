@@ -147,6 +147,7 @@ sub remove_job {
 				}
 
 				#print STDERR "\tremove: case 5\n";
+				$profile->remove_job($job);
 				push @profiles_to_add, new Profile($profile_starting_time, ProcessorRange->new($profile->processors()), $job_ending_time - $profile_starting_time);
 				push @profiles_to_remove, $profile;
 			}
@@ -214,7 +215,7 @@ sub could_start_job_at {
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my $profile = shift;
-			#print STDERR "\tcould_start: testing profile $profile\n";
+			#print STDERR "\t\tcould_start: testing profile $profile\n" if ($job->{job_number} == 28);
 
 			if ($starting_time != $profile->starting_time()) {
 				# Gap in the profile, can't use it to run the job
@@ -251,6 +252,7 @@ sub find_first_profile_for {
 			my $profile = shift;
 			#print STDERR "\tfind_first: testing profile $profile\n";
 			if ($self->could_start_job_at($job, $profile->starting_time())) {
+				#print STDERR "\tcan start job\n";
 				$starting_time = $profile->starting_time();
 				$processors = $self->get_free_processors_for($job, $profile->starting_time());
 				return 0 if $processors;
