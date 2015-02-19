@@ -19,6 +19,6 @@ my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
 
 #$schedule->tycat("$cpus_number-$cluster_size.svg");
-#$schedule->tycat();
+$schedule->tycat();
 #print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
 

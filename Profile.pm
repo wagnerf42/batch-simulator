@@ -123,7 +123,9 @@ sub is_fully_loaded {
 sub remove_used_processors {
 	my $self = shift;
 	my $job = shift;
-	$self->{processors}->remove($job->assigned_processors_ids());
+	my $assigned_processors_ids = $job->assigned_processors_ids();
+	confess unless defined $assigned_processors_ids;
+	$self->{processors}->remove($assigned_processors_ids);
 }
 
 sub starting_time {

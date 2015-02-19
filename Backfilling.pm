@@ -42,6 +42,8 @@ sub new {
 sub run {
 	my $self = shift;
 
+	my $debug = 0;
+
 	# Jobs not started yet
 	$self->{reserved_jobs} = [];
 
@@ -61,27 +63,26 @@ sub run {
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
 
-		#print STDERR "Event $events_type: @events\n\tcurrent time: $events_timestamp\n";
+		print STDERR "Event $events_type: @events\n\tcurrent time: $events_timestamp\n" if ($debug);
 
 		if ($events_type == SUBMISSION_EVENT) {
 			for my $event (@events) {
 				my $job = $event->payload();
 				$self->assign_job($job);
-				#print STDERR "\tep a assign: $self->{execution_profile}\n";
 				push @{$self->{reserved_jobs}}, $job;
 
 			}
 		} else {
 			for my $event (@events) {
 				my $job = $event->payload();
-				#print STDERR "\tfinishing job [$job]\n";
+				print STDERR "\tfinishing job [$job]\n" if ($debug);
 				#print STDERR "\tstart ep $self->{execution_profile}\n";
 				delete $self->{started_jobs}->{$job->job_number()};
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
 				#print STDERR "\tep a remove $self->{execution_profile}\n";
 			}
 
-			$self->reassign_jobs();
+			$self->reassign_jobs2();
 			#$self->tycat();
 		}
 
@@ -109,17 +110,33 @@ sub start_jobs {
 sub reassign_jobs {
 	my $self = shift;
 
-	#print STDERR "\tavailable cpus " . $self->{execution_profile}->processors_available_at($self->{current_time}) . "\n";
+	for my $job (@{$self->{reserved_jobs}}) {
+		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
+			$self->{execution_profile}->remove_job($job, $self->{current_time});
+			$self->assign_job($job);
+		}
+	}
+	return;
+}
+
+sub reassign_jobs2 {
+	my $self = shift;
+
+	my $debug = 1;
+
 
 	for my $job (@{$self->{reserved_jobs}}) {
-		#print STDERR "\treassigning job [$job]\n";
-		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
-			#print STDERR "\twill move job [$job] - $job->{starting_time}\n" if ($job->{job_number} == 28);
-			#print STDERR "\tep b remove $self->{execution_profile}\n" if ($job->{job_number} == 4);
-			$self->{execution_profile}->remove_job($job, $self->{current_time});
-			#print STDERR "\tep a remove $self->{execution_profile}\n" if ($job->{job_number} == 4);
-			$self->assign_job($job);
-			#print STDERR "\tep a assign $self->{execution_profile}\n" if ($job->{job_number} == 4);
+		#print STDERR "\tavailable_processors=" . $self->{execution_profile}->processors_available_at($self->{current_time}) . "\n";
+		#print STDERR "\ttrying [$job]\n";
+		$self->{execution_profile}->remove_job($job, $self->{current_time});
+		if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
+			#print STDERR "\tcould start\n";
+			my $processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
+			next unless defined $processors;
+			#print STDERR "\tprocessors=$processors\n";
+			$job->assign_to($self->{current_time}, $processors);
+		} else {
+			$self->{execution_profile}->add_job_at($job->starting_time(), $job, $self->{current_time});
 		}
 	}
 	return;
