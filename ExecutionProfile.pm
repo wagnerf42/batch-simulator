@@ -250,9 +250,7 @@ sub find_first_profile_for {
 	$self->{profile_tree}->nodes_loop($current_time, undef,
 		sub {
 			my $profile = shift;
-			#print STDERR "\tfind_first: testing profile $profile\n";
 			if ($self->could_start_job_at($job, $profile->starting_time())) {
-				#print STDERR "\tcan start job\n";
 				$starting_time = $profile->starting_time();
 				$processors = $self->get_free_processors_for($job, $profile->starting_time());
 				return 0 if $processors;

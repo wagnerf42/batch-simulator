@@ -42,8 +42,6 @@ sub new {
 sub run {
 	my $self = shift;
 
-	my $debug = 0;
-
 	# Jobs not started yet
 	$self->{reserved_jobs} = [];
 
@@ -63,8 +61,6 @@ sub run {
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
 
-		print STDERR "Event $events_type: @events\n\tcurrent time: $events_timestamp\n" if ($debug);
-
 		if ($events_type == SUBMISSION_EVENT) {
 			for my $event (@events) {
 				my $job = $event->payload();
@@ -74,15 +70,11 @@ sub run {
 		} else {
 			for my $event (@events) {
 				my $job = $event->payload();
-				print STDERR "\tfinishing job [$job]\n" if ($debug);
-				#print STDERR "\tstart ep $self->{execution_profile}\n";
 				delete $self->{started_jobs}->{$job->job_number()};
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
-				#print STDERR "\tep a remove $self->{execution_profile}\n";
 			}
 
-			$self->reassign_jobs2();
-			$self->tycat() if ($debug);
+			$self->reassign_jobs();
 		}
 
 		$self->start_jobs();
@@ -118,33 +110,8 @@ sub reassign_jobs {
 	return;
 }
 
-sub reassign_jobs2 {
-	my $self = shift;
-
-	my $debug = 0;
-
-	for my $job (@{$self->{reserved_jobs}}) {
-		print STDERR "\tavailable_processors=" . $self->{execution_profile}->processors_available_at($self->{current_time}) . "\n" if ($debug);
-		print STDERR "\ttrying [$job]\n" if ($debug);
-		next unless $self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus();
-		$self->{execution_profile}->remove_job($job, $self->{current_time});
-		if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
-			print STDERR "\tcould start\n" if ($debug);
-			my $processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
-			next unless defined $processors;
-			print STDERR "\tprocessors=$processors\n" if ($debug);
-			$job->assign_to($self->{current_time}, $processors);
-			$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
-		} else {
-			$self->{execution_profile}->add_job_at($job->starting_time(), $job, $self->{current_time});
-		}
-	}
-	return;
-}
-
 sub start_job {
 	my ($self, $job) = @_;
-	#print STDERR "\tstarting job [$job]\n";
 	$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
 	$self->{started_jobs}->{$job->job_number()} = $job;
 	return;
@@ -154,8 +121,6 @@ sub assign_job {
 	my ($self, $job) = @_;
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
 
-	#print STDERR "\tassign_job $starting_time - $chosen_processors\n";
-
 	if (defined $starting_time) {
 		$job->assign_to($starting_time, $chosen_processors);
 
@@ -164,7 +129,6 @@ sub assign_job {
 		$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
 	}
 
-	#print STDERR "\tnew starting time: $starting_time\n";
 	return;
 }
 
