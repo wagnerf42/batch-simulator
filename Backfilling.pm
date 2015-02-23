@@ -81,7 +81,7 @@ sub run {
 				#print STDERR "\tep a remove $self->{execution_profile}\n";
 			}
 
-			$self->reassign_jobs();
+			$self->reassign_jobs2();
 			$self->tycat() if ($debug);
 		}
 
@@ -126,6 +126,7 @@ sub reassign_jobs2 {
 	for my $job (@{$self->{reserved_jobs}}) {
 		print STDERR "\tavailable_processors=" . $self->{execution_profile}->processors_available_at($self->{current_time}) . "\n" if ($debug);
 		print STDERR "\ttrying [$job]\n" if ($debug);
+		next unless $self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus();
 		$self->{execution_profile}->remove_job($job, $self->{current_time});
 		if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
 			print STDERR "\tcould start\n" if ($debug);
