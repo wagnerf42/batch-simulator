@@ -1,7 +1,8 @@
-package BinarySearchTree::Node;
+package BinarySearchTree::Node2;
 
 use Data::Dumper;
 use Scalar::Util qw(refaddr);
+
 
 use warnings;
 use strict;
@@ -18,11 +19,72 @@ sub new {
 		key => shift,
 		content => shift,
 		children => [undef, undef], #left 0, right 1
-		father => shift
+		father => shift,
+		tree => undef
 	};
 
 	bless $self, $class;
+	return $self unless defined $self->{father}; #root nodes are not counted
+
+	if((ref $self->{key}) eq 'ARRAY') {
+		my @remaining_key = @{$self->{key}};
+		shift @remaining_key;
+		my $remaining_key;
+		my $sentinel;
+		if (@remaining_key == 1) {
+			$sentinel = -1;
+			$remaining_key = $remaining_key[0];
+		} else {
+			$sentinel = [ map {-1} @remaining_key ];
+			$remaining_key = \@remaining_key;
+		}
+		$self->{tree} = BinarySearchTree2::->new($sentinel);
+		$self->{tree}->add_content($remaining_key, 0);
+		$self->update_count($remaining_key, 1);	
+	}
+	
 	return $self;
+}
+
+sub get_tree {
+	my $self = shift;
+	return $self->{tree};
+}
+
+sub get_key {
+	my $self = shift;
+	return $self->{key};
+}
+
+sub update_count {
+	my $self = shift;
+	my $key = shift;
+	my $difference = shift;
+
+	while (defined $self) {
+		$self->add_to_count($key, $difference);
+		$self = $self->{father};
+	}
+}
+
+sub add_to_count {
+	my $self = shift;
+	my $key = shift;
+	my $difference = shift;
+
+	return unless defined $self->{tree};
+	my $node = $self->{tree}->find_node($key);
+
+	if(defined $node) { 
+		if(($node->{content} + $difference) != 0) {
+			$node->{content} += $difference;
+		} else {
+			$node->remove();
+		}
+	} else {
+		$self->{tree}->add_content($key, $difference);
+	}
+	return;
 }
 
 sub add {
@@ -38,11 +100,8 @@ sub add {
 		$next_direction = $current_node->get_direction_for($key);
 	}
 
-	my $new_node = BinarySearchTree::Node2->new($key, $content);
-
+	my $new_node = BinarySearchTree::Node2->new($key, $content, $current_node);
 	$current_node->{children}->[$next_direction] = $new_node;
-	$new_node->set_father($current_node,$next_direction);
-
 	return;
 }
 
@@ -104,6 +163,8 @@ sub set_father {
 	my $direction = shift;
 	$self->{father} = $father;
 	$father->{children}->[$direction] = $self;
+
+	return;
 }
 
 # Return the last children of the node given
@@ -176,6 +237,7 @@ sub children {
 sub get_direction_for {
 	my $self = shift;
 	my $key = shift;
+
 	if (ref $key eq 'ARRAY') {
 		return ($key->[0] < $self->{key}->[0]) ? LEFT : RIGHT;
 	} else {
@@ -205,7 +267,7 @@ sub dot_all_content {
 	$key = join(',', @{$key}) if ref($key) eq 'ARRAY';
 	my $content = $self->{content};
 
-	print $fd "$addr [label = $key:$content];\n";
+	print $fd "$addr [label = \"$key:$content\"];\n";
 
 	if (defined $self->{father}) {
 		my $addrf = refaddr $self->{father};
@@ -219,7 +281,9 @@ sub save_svg {
 	my $self = shift;
 	my $filename = shift;
 	my $dotfile = $filename;
+
 	$dotfile =~s/svg$/dot/;
+
 	open(my $fd, ">", "$dotfile")
 		or die "can't open $dotfile";
 
