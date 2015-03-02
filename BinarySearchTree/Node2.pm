@@ -124,6 +124,8 @@ sub remaining_key {
 		shift @rest_key;
 		if(@rest_key == 1) {
 			$remaining_key = $rest_key[0];
+		} else {
+			$remaining_key = \@rest_key;
 		}
 	} else {
 		return $self->{key};
@@ -149,12 +151,14 @@ sub remove {
 			#complex case : 2 children : exchange and remove 
 			my $direction = int rand(2);
 			my $last_child = $self->{children}->[$direction]->last_child(1 - $direction);
-			#update for the key remove
-			$self->update_count($remaining_key, -1);
 			$self->{key} = $last_child->{key};
 			$last_child->remove();
 			#update the new key
+			print STDERR Dumper($self->remaining_key());
 			$self->update_count($self->remaining_key(), 1);
+			#update for the key remove
+			print STDERR Dumper($remaining_key);
+			$self->update_count($remaining_key, -1);
 		}
 	} else {
 		#easy case : we have only one child
