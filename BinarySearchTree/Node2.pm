@@ -75,14 +75,14 @@ sub add_to_count {
 	return unless defined $self->{tree};
 	my $node = $self->{tree}->find_node($key);
 
-	if(defined $node) { 
+	if(defined $node) {
 		if(($node->{content} + $difference) != 0) {
 			$node->{content} += $difference;
 		} else {
 			$node->remove();
 		}
 	} else {
-		$self->{tree}->add_content($key, $difference);
+		$self->{tree}->add_content($key, $difference) if ($difference > 0);
 	}
 	return;
 }
@@ -115,25 +115,50 @@ sub direction_of_unique_child {
 	}
 }
 
+sub remaining_key {
+	my $self = shift;
+	my $remaining_key = undef;
+
+	if((ref $self->{key}) eq 'ARRAY') {
+		my @rest_key = @{$self->{key}};
+		shift @rest_key;
+		if(@rest_key == 1) {
+			$remaining_key = $rest_key[0];
+		}
+	} else {
+		return $self->{key};
+	}
+
+	return $remaining_key;
+}
+
 #careful, the 'remove' routine can invalidate outside pointers
 sub remove {
 	my $self = shift;
 	my $father = $self->{father};
+	my $remaining_key = $self->remaining_key();
 
 	my $unique_child_direction = $self->direction_of_unique_child();
 	if ($unique_child_direction == NONE) {
 		if ($self->children_number() == 0) {
 			# no children ! very easy case
+			$father->update_count($remaining_key, -1);
 			$father->{children}->[get_node_direction($father, $self)] = undef;
 		} else {
-			#complex case : 2 children : exchange and remove
+			#TODO : problem with the update of count
+			#complex case : 2 children : exchange and remove 
 			my $direction = int rand(2);
 			my $last_child = $self->{children}->[$direction]->last_child(1 - $direction);
-			$self->{content} = $last_child->{content};
+			#update for the key remove
+			$self->update_count($remaining_key, -1);
+			$self->{key} = $last_child->{key};
 			$last_child->remove();
+			#update the new key
+			$self->update_count($self->remaining_key(), 1);
 		}
 	} else {
 		#easy case : we have only one child
+		$father->update_count($remaining_key, -1);
 		$father->{children}->[get_node_direction($father, $self)] = $self->{children}->[$unique_child_direction];
 		$self->{children}->[$unique_child_direction]->{father} = $father;
 	}
@@ -209,7 +234,7 @@ sub nodes_loop {
 	while ($continue and (@parents or defined $current_node)) {
 		if (defined $current_node) {
 			#go left first
-			push @parents, $current_node;
+		#test
 			$current_node = ($current_node->{key} > $start_key) ? $current_node->{children}->[LEFT] : undef;
 		} else {
 			#we returned from exploration of a left child
@@ -248,7 +273,8 @@ sub get_direction_for {
 sub matches_key {
 	my $self = shift;
 	my $key = shift;
-	if (ref $key eq 'ARRAY') {
+
+	if (ref $key eq 'ARRAY' and $self->{key} != -1) {
 		my $size = @{$key};
 		my $matching = grep { $key->[$_] == $self->{key}->[$_] } (0..($size-1));
 		return ($matching == $size);
