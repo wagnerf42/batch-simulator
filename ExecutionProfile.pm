@@ -118,11 +118,23 @@ sub remove_job {
 
 		#put back
 		$self->{profile_tree}->add_content($first_profile);
+		$self->{profile_tree}->add_content($second_profile);
 		unshift @impacted_profiles, $second_profile;
 	}
 
 	if ($impacted_profiles[$#impacted_profiles]->ends_after($job_ending_time)) {
-		die 'TODO: cut profile at beginning';
+		#remove
+		my $second_profile = pop @impacted_profiles;
+		$self->{profile_tree}->remove_content($second_profile);
+
+		#split in two
+		my $first_profile = Profile->new($second_profile->starting_time(), $second_profile->processors()->copy_range(), $job_ending_time - $second_profile->starting_time());
+		$second_profile->starting_time($job_ending_time);
+
+		#put back
+		$self->{profile_tree}->add_content($first_profile);
+		$self->{profile_tree}->add_content($second_profile);
+		push @impacted_profiles, $first_profile;
 	}
 
 	my $previous_profile_ending_time = $impacted_profiles[0]->starting_time(); #used to keep track of time and detect gaps
