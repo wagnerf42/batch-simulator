@@ -89,95 +89,51 @@ sub processors_available_at {
 sub remove_job {
 	my $self = shift;
 	my $job = shift;
-	my $current_time = shift;
 
 	my $debug = 0;
 
 	return unless defined $job->starting_time(); #do not remove jobs which are not here anyway
 
-	# those are the timestamps that will affect profiles
-	my $job_starting_time = max($job->starting_time(), $current_time);
+	my $job_starting_time = $job->starting_time();
 	my $job_ending_time = $job->submitted_ending_time();
-	my $done_until_time = $job_starting_time;
 
-	print STDERR "\tjob $job_starting_time - $job_ending_time\n" if ($debug);
-
-	# Different changes to be made to the tree
-	my @profiles_to_add;
-	my @profiles_to_update;
-	my @profiles_to_remove;
-
-	# Get the previous node from the tree
-	my $previous_profile = $self->{profile_tree}->find_previous_content($job_starting_time);
-	if (defined $previous_profile and $previous_profile->ending_time() > $job_starting_time) {
-		$self->{profile_tree}->add_content(new Profile($job_starting_time, ProcessorRange->new($previous_profile->processors()), $previous_profile->ending_time() - $job_starting_time));
-		$previous_profile->duration($job_starting_time - $previous_profile->starting_time());
-	}
-
-	$self->{profile_tree}->nodes_loop($job_starting_time, $job_ending_time - 1,
+	my @impacted_profiles;
+	$self->{profile_tree}->nodes_loop($job_starting_time, $job_ending_time,
 		sub {
 			my $profile = shift;
-			print STDERR "\tremove: $profile\n" if ($debug);
-			print STDERR "\tdone until $done_until_time\n" if ($debug);
-
-			my $profile_starting_time = $profile->starting_time();
-			my $profile_ending_time = $profile->ending_time();
-
-			if ($profile_starting_time > $done_until_time) {
-				# Gap in the profile: create a new one
-				print STDERR "\tremove: case 1\n" if ($debug);
-				push @profiles_to_add, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $profile_starting_time - $done_until_time);
-				$done_until_time = $profile_starting_time;
-			}
-
-			if (defined $profile_ending_time and $profile_ending_time <= $job_ending_time) {
-				# Update profile
-				print STDERR "\tremove: case 2 $profile_ending_time\n" if ($debug);
-				push @profiles_to_update, $profile;
-				$done_until_time = $profile_ending_time;
-
-			} else {
-				# Split profile in 2 at the end of the job
-				if (defined $profile_ending_time) {
-					print STDERR "\tremove: case 3\n" if ($debug);
-					push @profiles_to_add, new Profile($job_ending_time, ProcessorRange->new($profile->processors()), $profile_ending_time - $job_ending_time);
-					$done_until_time = $profile_ending_time;
-				} else {
-					print STDERR "\tremove: case 4\n" if ($debug);
-					push @profiles_to_add, new Profile($job_ending_time, ProcessorRange->new($profile->processors()));
-					$done_until_time = $job_ending_time;
-				}
-
-				print STDERR "\tremove: case 5\n" if ($debug);
-				$profile->remove_job($job);
-				push @profiles_to_add, new Profile($profile_starting_time, ProcessorRange->new($profile->processors()), $job_ending_time - $profile_starting_time);
-				push @profiles_to_remove, $profile;
-			}
-
+			push @impacted_profiles, $profile;
 			return 1;
-		});
+		}
+	);
 
-	if ($done_until_time < $job_ending_time) {
-		print STDERR "\tremove: case 6\n" if ($debug);
-		push @profiles_to_add, new Profile($done_until_time, ProcessorRange->new($job->assigned_processors_ids()), $job_ending_time - $done_until_time);
+	if ($impacted_profiles[0]->starting_time() < $job_starting_time) {
+		#remove
+		my $first_profile = shift @impacted_profiles;
+		$self->{profile_tree}->remove_content($first_profile);
+
+		#split in two
+		my $first_profile_ending_time = $first_profile->ending_time();
+		$first_profile->duration($job_starting_time - $first_profile->starting_time());
+		my $second_profile = Profile->new($job_starting_time, $first_profile->processors()->copy_range(), $first_profile_ending_time - $job_starting_time);
+
+		#put back
+		$self->{profile_tree}->add_content($first_profile);
+		unshift @impacted_profiles, $second_profile;
 	}
 
-	print STDERR "\tprofiles: $self\n" if ($debug);
-	print STDERR "\tprofiles to remove: @profiles_to_remove\n" if ($debug);
-	print STDERR "\tprofiles to add @profiles_to_add\n" if ($debug);
-	print STDERR "\tprofiles to update @profiles_to_update\n" if ($debug);
-
-	# Now we make the changes to the BST: remove, update and then add
-	$self->{profile_tree}->remove_content($_) for (@profiles_to_remove);
-
-	for my $profile_to_update (@profiles_to_update) {
-		$self->{profile_tree}->remove_content($profile_to_update);
-		$profile_to_update->remove_job($job);
-		$self->{profile_tree}->add_content($profile_to_update);
+	if ($impacted_profiles[$#impacted_profiles]->ends_after($job_ending_time)) {
+		die 'TODO: cut profile at beginning';
 	}
 
-	$self->{profile_tree}->add_content($_) for (@profiles_to_add);
-	#print STDERR "\tprofiles final: $self\n" if ($debug);
+	my $previous_profile_ending_time = $impacted_profiles[0]->starting_time(); #used to keep track of time and detect gaps
+	for my $profile (@impacted_profiles) {
+		$profile->remove_job($job);
+		if ((my $duration = $profile->starting_time() - $previous_profile_ending_time) > 0) {
+			my $new_profile = Profile->new($previous_profile_ending_time, $job->assigned_processors_ids(), $duration);
+			$self->{profile_tree}->add_content($new_profile);
+		}
+	}
+
 	return;
 }
 
@@ -188,15 +144,17 @@ sub add_job_at {
 	my $current_time = shift;
 
 	my @profiles_to_update;
+	my $ending_time = $starting_time + $job->requested_time();
 
-	$self->{profile_tree}->nodes_loop($starting_time, $starting_time + $job->requested_time() - 1,
+	$self->{profile_tree}->nodes_loop($starting_time, $ending_time,
 		sub {
 			my $profile = shift;
+			return 0 if $profile->starting_time == $ending_time; #stop if reaching the last profile
 			push @profiles_to_update, $profile;
 			return 1;
 		});
 
-	for my $profile (@profiles_to_update) {
+	for my $profile (@profiles_to_update) { #TODO: do things in batch ?
 		$self->{profile_tree}->remove_content($profile);
 		my @new_profiles = $profile->add_job($job, $current_time);
 		$self->{profile_tree}->add_content($_) for (@new_profiles);
@@ -270,7 +228,8 @@ sub set_current_time {
 	my $updated_profile;
 	my @removed_profiles;
 
-	$self->{profile_tree}->nodes_loop(undef, $current_time - 1,
+	#TODO: change nodes loop prototype to reverse args ?
+	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
 			my $profile = shift;
 

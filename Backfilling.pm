@@ -124,7 +124,6 @@ sub assign_job {
 	if (defined $starting_time) {
 		$job->assign_to($starting_time, $chosen_processors);
 
-
 		# Update profiles
 		$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
 	}

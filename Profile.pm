@@ -6,12 +6,14 @@ use ProcessorRange;
 
 use strict;
 use warnings;
+use POSIX;
 use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 
 use List::Util qw(min);
 
 #a profile objects encodes a set of free processors at a given time
 
+#TODO: what is this stuff ?? needed anymore ??
 sub initial {
 	my $class = shift;
 	my $self = {};
@@ -140,6 +142,13 @@ sub ending_time {
 	return $self->{starting_time} + $self->{duration};
 }
 
+sub ends_after {
+	my $self = shift;
+	my $time = shift;
+	return 1 unless defined $self->{ending_time};
+	return ($self->{ending_time} > $time);
+}
+
 sub svg {
 	my ($self, $fh, $w_ratio, $h_ratio, $current_time, $index) = @_;
 
@@ -166,10 +175,21 @@ sub svg {
 sub three_way_comparison {
 	my $self = shift;
 	my $other = shift;
-	my $inverted = shift;
 
-	return $other <=> $self->{starting_time} if $inverted;
-	return $self->{starting_time} <=> $other;
+	#comparing a time and a profile
+	if ((ref $self eq '') or (ref $other eq '')) {
+		my $scalar = $self;
+		my $profile = $other;
+		($scalar, $profile) = ($profile, $scalar) if (ref $profile eq '');
+		return -1 if $scalar < $profile->{starting_time};
+		return 1 if $scalar > $profile->{ending_time};
+		return 0;
+	}
+
+	#comparing two profiles
+	my @times = map { (ref $_ eq 'Profile')?$_->{starting_time}:$_ } ($self, $other);
+	my @defined_times = map { (defined $_)?$_:DBL_MAX } @times;
+	return ($times[0] <=> $times[1]);
 }
 
 1;
