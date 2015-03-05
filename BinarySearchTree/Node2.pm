@@ -117,21 +117,30 @@ sub direction_of_unique_child {
 
 sub remaining_key {
 	my $self = shift;
-	my $remaining_key = undef;
 
 	if((ref $self->{key}) eq 'ARRAY') {
-		my @rest_key = @{$self->{key}};
-		shift @rest_key;
-		if(@rest_key == 1) {
-			$remaining_key = $rest_key[0];
+		my @left_key = @{$self->{key}};
+		shift @left_key;
+		if(@left_key == 1) {
+			return $left_key[0];
 		} else {
-			$remaining_key = \@rest_key;
+			return \@left_key;
 		}
 	} else {
 		return $self->{key};
 	}
+}
 
-	return $remaining_key;
+sub exchange_content {
+	my @nodes = @_;
+	my @keys = map { $_->remaining_key() } @nodes;
+	($nodes[1]->{content}, $nodes[0]->{content}) = map { $_->{content} } @nodes;
+	($nodes[1]->{key}, $nodes[0]->{key}) = map { $_->{key} } @nodes;
+	$nodes[0]->update_count($keys[1], 1);
+	$nodes[0]->update_count($keys[0], -1);
+	$nodes[1]->update_count($keys[0], 1);
+	$nodes[1]->update_count($keys[1], -1);
+	return;
 }
 
 #careful, the 'remove' routine can invalidate outside pointers
@@ -147,18 +156,11 @@ sub remove {
 			$father->update_count($remaining_key, -1);
 			$father->{children}->[get_node_direction($father, $self)] = undef;
 		} else {
-			#TODO : problem with the update of count
 			#complex case : 2 children : exchange and remove 
 			my $direction = int rand(2);
 			my $last_child = $self->{children}->[$direction]->last_child(1 - $direction);
-			$self->{key} = $last_child->{key};
+			$self->exchange_content($last_child);
 			$last_child->remove();
-			#update the new key
-			print STDERR Dumper($self->remaining_key());
-			$self->update_count($self->remaining_key(), 1);
-			#update for the key remove
-			print STDERR Dumper($remaining_key);
-			$self->update_count($remaining_key, -1);
 		}
 	} else {
 		#easy case : we have only one child
@@ -238,7 +240,6 @@ sub nodes_loop {
 	while ($continue and (@parents or defined $current_node)) {
 		if (defined $current_node) {
 			#go left first
-		#test
 			$current_node = ($current_node->{key} > $start_key) ? $current_node->{children}->[LEFT] : undef;
 		} else {
 			#we returned from exploration of a left child
