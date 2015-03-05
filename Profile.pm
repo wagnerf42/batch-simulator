@@ -13,28 +13,18 @@ use List::Util qw(min);
 
 #a profile objects encodes a set of free processors at a given time
 
-#TODO: what is this stuff ?? needed anymore ??
-sub initial {
-	my $class = shift;
-	my $self = {};
-	$self->{starting_time} = shift;
-	$self->{processors} = new ProcessorRange(@_);
-	$self->{duration} = undef;
-	bless $self, $class;
-	return $self;
-}
-
 sub new {
 	my $class = shift;
 	my $self = {};
 	$self->{starting_time} = shift;
 	my $ids = shift;
 	$self->{duration} = shift;
+	confess "negative profile duration $self->{duration}" if defined $self->{duration} and $self->{duration} <= 0;
 
 	if (ref $ids eq "ProcessorRange") {
 		$self->{processors} = $ids;
 	} else {
-		$self->{processors} = new ProcessorRange($ids);
+		$self->{processors} = ProcessorRange->new(@$ids);
 	}
 
 	bless $self, $class;
@@ -59,7 +49,10 @@ sub processors_ids {
 
 sub duration {
 	my $self = shift;
-	$self->{duration} = shift if @_;
+	if (@_) {
+		$self->{duration} = shift;
+		confess "negative profile duration $self->{duration}" if defined $self->{duration} and $self->{duration} <= 0;
+	}
 	return $self->{duration};
 }
 
@@ -145,8 +138,8 @@ sub ending_time {
 sub ends_after {
 	my $self = shift;
 	my $time = shift;
-	return 1 unless defined $self->{ending_time};
-	return ($self->{ending_time} > $time);
+	return 1 unless defined $self->{duration};
+	return ($self->{duration} + $self->{starting_time} > $time);
 }
 
 sub svg {
@@ -172,24 +165,32 @@ sub svg {
 	);
 }
 
+sub three_way_comparison_orig {
+	my $self = shift;
+	my $other = shift;
+	my $inverted = shift;
+
+	return $other <=> $self->{starting_time} if $inverted;
+	return $self->{starting_time} <=> $other;
+}
+
 sub three_way_comparison {
 	my $self = shift;
 	my $other = shift;
+	my $inverted = shift;
+
+	my $coef = ($inverted) ? -1 : 1;
+	my $ending_time = $self->{starting_time} + $self->{duration} if defined $self->{duration};
 
 	#comparing a time and a profile
-	if ((ref $self eq '') or (ref $other eq '')) {
-		my $scalar = $self;
-		my $profile = $other;
-		($scalar, $profile) = ($profile, $scalar) if (ref $profile eq '');
-		return -1 if $scalar < $profile->{starting_time};
-		return 1 if $scalar > $profile->{ending_time};
+	if (ref $other eq '') {
+		return -$coef if (defined $ending_time) and ($ending_time < $other);
+		return $coef if $self->{starting_time} > $other;
 		return 0;
 	}
 
 	#comparing two profiles
-	my @times = map { (ref $_ eq 'Profile')?$_->{starting_time}:$_ } ($self, $other);
-	my @defined_times = map { (defined $_)?$_:DBL_MAX } @times;
-	return ($times[0] <=> $times[1]);
+	return $self->{starting_time} <=> $other->{starting_time} if (ref $other eq 'Profile');
 }
 
 1;

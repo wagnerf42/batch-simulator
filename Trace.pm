@@ -28,7 +28,7 @@ sub new_from_swf {
 		next unless defined $fields[0];
 
 		# Status line
-		if ($fields[0] eq ';') {
+		if ($fields[0] =~/^;/) {
 			push @{$self->{status}}, [@fields];
 		}
 

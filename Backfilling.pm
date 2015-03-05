@@ -58,6 +58,8 @@ sub run {
 		my $events_type = $events[0]->type();
 		my $events_timestamp = $events[0]->timestamp();
 
+		print STDERR "EVENTS TYPE $events_type TIME $events_timestamp\n";
+
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
 
@@ -78,6 +80,9 @@ sub run {
 		}
 
 		$self->start_jobs();
+		$self->tycat();
+		$self->{execution_profile}->tycat();
+		print STDERR "\tep $self->{execution_profile}\n";
 	}
 	return;
 }
