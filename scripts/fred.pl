@@ -15,7 +15,7 @@ $trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 $trace->fix_submit_times();
 $trace->reset_jobs_numbers();
-$trace->write_to_file("$jobs_number-$cpus_number.swf");
+#$trace->write_to_file("$jobs_number-$cpus_number.swf");
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
 $schedule->tycat();
