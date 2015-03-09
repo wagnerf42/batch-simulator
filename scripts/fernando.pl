@@ -20,8 +20,8 @@ my $trace = Trace->new_from_swf($trace_file);
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
 
-$schedule->tycat("$cpus_number-$cluster_size.svg");
-#$schedule->tycat();
+#$schedule->tycat("$cpus_number-$cluster_size.svg");
+$schedule->tycat();
 #print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
 print STDERR "Done\n";
 

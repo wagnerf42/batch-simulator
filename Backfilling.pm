@@ -58,7 +58,7 @@ sub run {
 		my $events_type = $events[0]->type();
 		my $events_timestamp = $events[0]->timestamp();
 
-		print STDERR "EVENTS TYPE $events_type TIME $events_timestamp\n";
+		#print STDERR "EVENTS TYPE $events_type TIME $events_timestamp\n";
 
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
@@ -67,6 +67,7 @@ sub run {
 			for my $event (@events) {
 				my $job = $event->payload();
 				$self->assign_job($job);
+				die "job $job is not assigned" unless defined $job->starting_time();
 				push @{$self->{reserved_jobs}}, $job;
 			}
 		} else {
@@ -80,9 +81,6 @@ sub run {
 		}
 
 		$self->start_jobs();
-		$self->tycat();
-		$self->{execution_profile}->tycat();
-		print STDERR "\tep $self->{execution_profile}\n";
 	}
 	return;
 }
@@ -124,14 +122,10 @@ sub start_job {
 
 sub assign_job {
 	my ($self, $job) = @_;
+
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
-
-	if (defined $starting_time) {
-		$job->assign_to($starting_time, $chosen_processors);
-
-		# Update profiles
-		$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
-	}
+	$job->assign_to($starting_time, $chosen_processors);
+	$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
 
 	return;
 }

@@ -74,6 +74,9 @@ sub find_closest_content {
 	return $self->{root}->find_closest_node($key)->content();
 }
 
+##CAREFUL WITH THIS SPICY STUFF
+##it does everything touching the given times
+##TODO: have two separate loops ?? strict and loose ??
 sub nodes_loop {
 	my $self = shift;
 	my $start_key = shift;

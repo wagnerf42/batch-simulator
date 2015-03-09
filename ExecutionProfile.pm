@@ -43,9 +43,10 @@ sub get_free_processors_for {
 	my $candidate_processors = $profile->processors();
 	my $left_processors = new ProcessorRange($candidate_processors);
 
-	$self->{profile_tree}->nodes_loop($starting_time, undef,
+	$self->{profile_tree}->nodes_loop($starting_time, undef
 		sub {
 			my $profile = shift;
+			return 1 unless $profile->ends_after($starting_time);
 			my $duration = $profile->duration();
 
 			# Stop if we have enough profiles
@@ -86,6 +87,7 @@ sub processors_available_at {
 	return 0;
 }
 
+#TODO: read again and try to organize in something better to read (subroutines)
 sub remove_job {
 	my $self = shift;
 	my $job = shift;
@@ -100,11 +102,16 @@ sub remove_job {
 	$self->{profile_tree}->nodes_loop($starting_time, $job_ending_time,
 		sub {
 			my $profile = shift;
-			push @impacted_profiles, $profile unless $profile->starting_time() == $job_ending_time;
+
+			return 1 if $profile->starting_time() == $job_ending_time;
+			return 1 if $profile->ending_time() == $starting_time;
+
+			push @impacted_profiles, $profile ;
 			return 1;
 		}
 	);
 
+	# No impacted profiles
 	unless (@impacted_profiles) {
 		#we end earlier than expected and all resources were taken
 		my $start = max($current_time, $starting_time); #avoid starting in the past
@@ -113,6 +120,7 @@ sub remove_job {
 		return;
 	}
 
+	# Gap at the first profile
 	if ($impacted_profiles[0]->starting_time() < $starting_time) {
 		#remove
 		my $first_profile = shift @impacted_profiles;
@@ -129,6 +137,7 @@ sub remove_job {
 		unshift @impacted_profiles, $second_profile;
 	}
 
+	# Gap at the last profile
 	if ($impacted_profiles[$#impacted_profiles]->ends_after($job_ending_time)) {
 		#remove
 		my $first_profile = pop @impacted_profiles;
@@ -150,8 +159,8 @@ sub remove_job {
 		push @impacted_profiles, $first_profile;
 	}
 
+	# Update profiles
 	my $previous_profile_ending_time = max($starting_time, $current_time);
-
 	for my $profile (@impacted_profiles) {
 		$profile->remove_job($job);
 		my $duration = $profile->starting_time() - $previous_profile_ending_time;
@@ -160,6 +169,13 @@ sub remove_job {
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		$previous_profile_ending_time = $profile->ending_time();
+	}
+
+	# Gap at the end
+	my $duration = $job_ending_time - $previous_profile_ending_time;
+	if ($duration > 0) {
+		my $new_profile = Profile->new($previous_profile_ending_time, $job->assigned_processors_ids()->copy_range(), $duration);
+		$self->{profile_tree}->add_content($new_profile);
 	}
 
 	return;
@@ -174,16 +190,15 @@ sub add_job_at {
 	my @profiles_to_update;
 	my $ending_time = $starting_time + $job->requested_time();
 
-
 	$self->{profile_tree}->nodes_loop($starting_time, $ending_time,
 		sub {
 			my $profile = shift;
+			return 1 unless $profile->ends_after($starting_time);
 			return 0 if $profile->starting_time == $ending_time; #stop if reaching the last profile
 			push @profiles_to_update, $profile;
 			return 1;
 		});
 
-	#TODO: do things in batch ?
 	for my $profile (@profiles_to_update) { 
 		$self->{profile_tree}->remove_content($profile);
 		my @new_profiles = $profile->add_job($job, $current_time);
@@ -204,6 +219,7 @@ sub could_start_job_at {
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my $profile = shift;
+			return 1 unless $profile->ends_after($starting_time);
 
 			if ($starting_time != $profile->starting_time()) {
 				# Gap in the profile, can't use it to run the job
@@ -238,6 +254,7 @@ sub find_first_profile_for {
 	$self->{profile_tree}->nodes_loop($current_time, undef,
 		sub {
 			my $profile = shift;
+			return 1 unless $profile->ends_after($current_time);
 			if ($self->could_start_job_at($job, $profile->starting_time())) {
 				$starting_time = $profile->starting_time();
 				$processors = $self->get_free_processors_for($job, $profile->starting_time());
@@ -260,10 +277,11 @@ sub set_current_time {
 
 	#TODO: change nodes loop prototype to reverse args ?
 
-	$self->{profile_tree}->nodes_loop(undef, $current_time - 1,
+	$self->{profile_tree}->nodes_loop(undef, $current_time,
 		sub {
 			my $profile = shift;
 
+			return 0 if $profile->starting_time() == $current_time;
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
 

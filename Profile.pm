@@ -64,7 +64,7 @@ sub add_job {
 
 	confess unless defined $current_time;
 	confess if $self->{starting_time} >= $job->ending_time_estimation($current_time);
-	confess if (defined $self->ending_time() and $self->ending_time() <= $job->starting_time());
+	confess "putting job starting at ".$job->starting_time()." on profile $self" if (defined $self->ending_time() and $self->ending_time() <= $job->starting_time());
 
 	return $self->split($job, $current_time);
 }
