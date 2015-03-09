@@ -7,8 +7,6 @@ use Data::Dumper qw(Dumper);
 use Trace;
 use Backfilling;
 
-use TestPackage;
-
 my ($trace_file, $cpus_number) = @ARGV;
 my $cluster_size = 16;
 

@@ -74,9 +74,6 @@ sub find_closest_content {
 	return $self->{root}->find_closest_node($key)->content();
 }
 
-##CAREFUL WITH THIS SPICY STUFF
-##it does everything touching the given times
-##TODO: have two separate loops ?? strict and loose ??
 sub nodes_loop {
 	my $self = shift;
 	my $start_key = shift;
@@ -84,7 +81,20 @@ sub nodes_loop {
 	my $routine = shift;
 
 	$start_key = $self->{min_valid_key} unless defined $start_key;
+
 	$self->{root}->nodes_loop($start_key, $end_key, $routine);
+	return;
+}
+
+sub nodes_loop_with_compare_routine {
+	my $self = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+	my $compare_routine = shift;
+	my $content_routine = shift;
+
+	$start_key = $self->{min_valid_key} unless defined $start_key;
+	$self->{root}->nodes_loop_with_compare_routine($start_key, $end_key, $content_routine, $compare_routine);
 	return;
 }
 

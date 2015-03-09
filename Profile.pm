@@ -165,7 +165,7 @@ sub svg {
 	);
 }
 
-sub three_way_comparison_orig {
+sub three_way_comparison {
 	my $self = shift;
 	my $other = shift;
 	my $inverted = shift;
@@ -174,23 +174,19 @@ sub three_way_comparison_orig {
 	return $self->{starting_time} <=> $other;
 }
 
-sub three_way_comparison {
+sub loose_comparison {
 	my $self = shift;
 	my $other = shift;
-	my $inverted = shift;
 
-	my $coef = ($inverted) ? -1 : 1;
-	my $ending_time = $self->{starting_time} + $self->{duration} if defined $self->{duration};
+	# Comparing two integers
+	return $self <=> $other unless (ref $self eq 'Profile');
 
-	#comparing a time and a profile
-	if (ref $other eq '') {
-		return -$coef if (defined $ending_time) and ($ending_time < $other);
-		return $coef if $self->{starting_time} > $other;
-		return 0;
-	}
+	# Comparing self and a integer
+	my $ending_time = $self->ending_time();
 
-	#comparing two profiles
-	return $self->{starting_time} <=> $other->{starting_time} if (ref $other eq 'Profile');
+	return -1 if (defined $ending_time) and ($ending_time < $other);
+	return 1 if $self->{starting_time} > $other;
+	return 0;
 }
 
 1;

@@ -43,10 +43,9 @@ sub get_free_processors_for {
 	my $candidate_processors = $profile->processors();
 	my $left_processors = new ProcessorRange($candidate_processors);
 
-	$self->{profile_tree}->nodes_loop($starting_time, undef
+	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my $profile = shift;
-			return 1 unless $profile->ends_after($starting_time);
 			my $duration = $profile->duration();
 
 			# Stop if we have enough profiles
@@ -87,7 +86,6 @@ sub processors_available_at {
 	return 0;
 }
 
-#TODO: read again and try to organize in something better to read (subroutines)
 sub remove_job {
 	my $self = shift;
 	my $job = shift;
@@ -99,10 +97,11 @@ sub remove_job {
 	my $job_ending_time = $job->submitted_ending_time();
 
 	my @impacted_profiles;
-	$self->{profile_tree}->nodes_loop($starting_time, $job_ending_time,
+	$self->{profile_tree}->nodes_loop_with_compare_routine($starting_time, $job_ending_time, \&Profile::loose_comparison,
 		sub {
 			my $profile = shift;
 
+			#TODO Check if these two conditionals are really necessary
 			return 1 if $profile->starting_time() == $job_ending_time;
 			return 1 if $profile->ending_time() == $starting_time;
 
@@ -193,8 +192,9 @@ sub add_job_at {
 	$self->{profile_tree}->nodes_loop($starting_time, $ending_time,
 		sub {
 			my $profile = shift;
-			return 1 unless $profile->ends_after($starting_time);
-			return 0 if $profile->starting_time == $ending_time; #stop if reaching the last profile
+
+			return 0 if $profile->starting_time == $ending_time;
+
 			push @profiles_to_update, $profile;
 			return 1;
 		});
@@ -219,7 +219,6 @@ sub could_start_job_at {
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my $profile = shift;
-			return 1 unless $profile->ends_after($starting_time);
 
 			if ($starting_time != $profile->starting_time()) {
 				# Gap in the profile, can't use it to run the job
@@ -254,7 +253,7 @@ sub find_first_profile_for {
 	$self->{profile_tree}->nodes_loop($current_time, undef,
 		sub {
 			my $profile = shift;
-			return 1 unless $profile->ends_after($current_time);
+
 			if ($self->could_start_job_at($job, $profile->starting_time())) {
 				$starting_time = $profile->starting_time();
 				$processors = $self->get_free_processors_for($job, $profile->starting_time());
@@ -275,13 +274,12 @@ sub set_current_time {
 	my $updated_profile;
 	my @removed_profiles;
 
-	#TODO: change nodes loop prototype to reverse args ?
-
 	$self->{profile_tree}->nodes_loop(undef, $current_time,
 		sub {
 			my $profile = shift;
 
 			return 0 if $profile->starting_time() == $current_time;
+
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
 
@@ -328,12 +326,9 @@ sub stringification {
 sub show {
 	my $self = shift;
 
-	print STDERR "showing tree:\n";
-
 	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
 			my $profile = shift;
-			print STDERR "\tshowing $profile\n";
 			return 1;
 		});
 	return;
