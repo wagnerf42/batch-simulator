@@ -219,12 +219,14 @@ sub svg {
 			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
 		}
 	);
+	return;
 }
 
-sub reset {
-	my ($self) = @_;
+sub unassign {
+	my $self = shift;
 	delete $self->{starting_time};
 	delete $self->{assigned_processors_ids};
+	return;
 }
 
 sub used_clusters {

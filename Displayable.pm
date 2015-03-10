@@ -15,6 +15,7 @@ sub tycat {
 	$self->save_svg($filename);
 	`tycat $filename`;
 	$file_count++;
+	return;
 }
 
 1;

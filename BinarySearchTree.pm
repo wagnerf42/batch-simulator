@@ -8,18 +8,12 @@ use Carp;
 
 use BinarySearchTree::Node;
 
-use constant {
-	LEFT => 0,
-	RIGHT => 1,
-	NONE => 2
-};
-
 sub new {
 	my $class = shift;
 	my $sentinel = shift;
 
 	my $self = {
-		root => new BinarySearchTree::Node($sentinel, undef),
+		root => BinarySearchTree::Node->new($sentinel, undef),
 		min_valid_key => shift
 	};
 

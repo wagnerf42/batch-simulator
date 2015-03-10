@@ -3,16 +3,10 @@ use parent 'Schedule';
 use strict;
 use warnings;
 
-use Data::Dumper qw(Dumper);
-use List::Util qw(max sum);
-use Exporter qw(import);
 use Carp;
-use Time::HiRes qw(time);
+use Exporter qw(import);
 
-use Trace;
-use Job;
 use ExecutionProfile;
-use Profile;
 use Heap;
 use Event;
 
@@ -35,7 +29,7 @@ sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = new ExecutionProfile($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm});
+	$self->{execution_profile} = ExecutionProfile->new($self->{num_processors}, $self->{cluster_size}, $self->{reduction_algorithm});
 	return $self;
 }
 
@@ -57,8 +51,6 @@ sub run {
 		my @events = $self->{events}->retrieve_all();
 		my $events_type = $events[0]->type();
 		my $events_timestamp = $events[0]->timestamp();
-
-		#print STDERR "EVENTS TYPE $events_type TIME $events_timestamp\n";
 
 		$self->{current_time} = $events_timestamp;
 		$self->{execution_profile}->set_current_time($events_timestamp);
@@ -114,14 +106,16 @@ sub reassign_jobs {
 }
 
 sub start_job {
-	my ($self, $job) = @_;
+	my $self = shift;
+	my $job = shift;
 	$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
 	$self->{started_jobs}->{$job->job_number()} = $job;
 	return;
 }
 
 sub assign_job {
-	my ($self, $job) = @_;
+	my $self = shift;
+	my $job = shift;
 
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
 	$job->assign_to($starting_time, $chosen_processors);

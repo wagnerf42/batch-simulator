@@ -66,7 +66,7 @@ sub add_job {
 	confess if $self->{starting_time} >= $job->ending_time_estimation($current_time);
 	confess "putting job starting at ".$job->starting_time()." on profile $self" if (defined $self->ending_time() and $self->ending_time() <= $job->starting_time());
 
-	return $self->split($job, $current_time);
+	return $self->split_by_job($job, $current_time);
 }
 
 #free some processors by canceling a job
@@ -79,7 +79,7 @@ sub remove_job {
 
 #TODO : not very pretty ?
 #TODO : documentation
-sub split {
+sub split_by_job {
 	my $self = shift;
 	my $job = shift;
 	my $current_time = shift;
@@ -94,8 +94,9 @@ sub split {
 		$middle_end = $job->ending_time_estimation($current_time);
 	}
 
-	my $middle_duration = $middle_end - $middle_start if defined $middle_end;
-	my $middle_profile = new Profile($middle_start, new ProcessorRange($self->{processors}), $middle_duration);
+	my $middle_duration;
+	$middle_duration = $middle_end - $middle_start if defined $middle_end;
+	my $middle_profile = Profile->new($middle_start, $self->{processors}->copy_range(), $middle_duration);
 	$middle_profile->remove_used_processors($job);
 	push @profiles, $middle_profile unless $middle_profile->is_fully_loaded();
 
@@ -104,7 +105,7 @@ sub split {
 		if (defined $self->{duration}) {
 			$end_duration = $self->ending_time() - $job->ending_time_estimation($current_time);
 		}
-		my $end_profile = new Profile($job->ending_time_estimation($current_time), new ProcessorRange($self->{processors}), $end_duration);
+		my $end_profile = Profile->new($job->ending_time_estimation($current_time), $self->{processors}->copy_range(), $end_duration);
 		push @profiles, $end_profile;
 	}
 	return @profiles;
@@ -121,6 +122,7 @@ sub remove_used_processors {
 	my $assigned_processors_ids = $job->assigned_processors_ids();
 	confess unless defined $assigned_processors_ids;
 	$self->{processors}->remove($assigned_processors_ids);
+	return;
 }
 
 sub starting_time {
@@ -163,6 +165,7 @@ sub svg {
 			return 1;
 		}
 	);
+	return;
 }
 
 my $comparison_function = 'default';
@@ -173,10 +176,12 @@ my %comparison_functions = (
 
 sub set_comparison_function {
 	$comparison_function = shift;
+	return;
 }
 
 sub three_way_comparison {
-	return $comparison_functions{$comparison_function}->(@_);
+	my ($self, $other, $inverted) = @_;
+	return $comparison_functions{$comparison_function}->($self, $other, $inverted);
 }
 
 sub starting_times_comparison {

@@ -212,9 +212,10 @@ sub remove_large_jobs {
 	$self->{jobs} = [@left_jobs];
 }
 
-sub reset {
-	my ($self) = @_;
-	$_->reset() for @{$self->{jobs}};
+sub unassign_jobs {
+	my $self = shift;
+	$_->unassign() for @{$self->{jobs}};
+	return;
 }
 
 sub load {

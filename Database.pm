@@ -97,6 +97,7 @@ sub prepare_tables {
 		PRIMARY KEY (id),
 		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE
 	)");
+	return;
 }
 
 sub get_max_id {
@@ -137,8 +138,8 @@ sub add_instance {
 
 sub update_execution_run_time {
 	my ($self, $execution_id, $run_time) = @_;
-
 	$self->{dbh}->do("UPDATE executions SET run_time = '$run_time' WHERE id = '$execution_id'");
+	return;
 }
 
 sub add_trace {

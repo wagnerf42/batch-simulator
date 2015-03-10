@@ -4,6 +4,7 @@ use warnings;
 
 use List::Util qw(max sum);
 use Time::HiRes qw(time);
+use parent 'Displayable';
 
 sub new {
 	my ($class, $trace, $processors_number, $cluster_size, $reduction_algorithm) = @_;
@@ -23,7 +24,7 @@ sub new {
 	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
 
 	# Make sure the trace is clean
-	$self->{trace}->reset();
+	$self->{trace}->unassign_jobs();
 
 	bless $self, $class;
 	return $self;
@@ -41,6 +42,7 @@ sub run {
 	}
 
 	$self->{run_time} = time() - $start_time;
+	return;
 }
 
 sub run_time {
@@ -117,7 +119,7 @@ sub save_svg {
 	my $time = $self->{current_time};
 	$time = 0 unless defined $time;
 
-	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
+	open(my $filehandle, '>', "$svg_filename") or die "unable to open $svg_filename";
 
 	my $cmax = $self->cmax_estimation($time);
 	$cmax = 1 unless defined $cmax;
@@ -132,22 +134,7 @@ sub save_svg {
 
 	print $filehandle "</svg>\n";
 	close $filehandle;
-}
-
-my $file_count = 0;
-sub tycat {
-	my $self = shift;
-	my $filename = shift;
-	#print STDERR "tycat $file_count\n";
-
-	my $user = $ENV{"USER"};
-	my $dir = "/tmp/$user";
-	mkdir $dir unless -f $dir;
-
-	$filename = "$dir/$file_count.svg" unless defined $filename;
-	$self->save_svg($filename);
-	`tycat $filename`;
-	$file_count++;
+	return;
 }
 
 1;
