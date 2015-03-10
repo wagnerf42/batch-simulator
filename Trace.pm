@@ -45,13 +45,17 @@ sub new_from_swf {
 
 sub keep_first_jobs {
 	my ($self, $jobs_number) = @_;
-	#@{$self->{jobs} = splice(@{$self->{jobs}}, 0, $jobs_number);
-	@{$self->{jobs}} = @{$self->{jobs}}[0..($jobs_number-1)];
+	my $end = $jobs_number - 1;
+	my $last_available = $#{$self->{jobs}};
+	$end = $last_available if $last_available < $end;
+	@{$self->{jobs}} = @{$self->{jobs}}[0..$end];
+	return;
 }
 
 sub reset_requested_times {
-	my ($self) = @_;
+	my $self = shift;
 	$_->{requested_time} = $_->{run_time} for @{$self->{jobs}};
+	return;
 }
 
 sub fix_submit_times {
@@ -59,6 +63,7 @@ sub fix_submit_times {
 	my $start = $self->{jobs}->[0]->submit_time();
 	return unless defined $start;
 	$_->submit_time($_->submit_time() - $start) for @{$self->{jobs}};
+	return;
 }
 
 sub new_block_from_trace {
@@ -163,12 +168,15 @@ sub reset_submit_times {
 	$_->submit_time(0) for (@{$self->{jobs}});
 }
 
+#renumbers all jobs starting from 1
 sub reset_jobs_numbers {
-	my ($self) = @_;
-
-	for my $i (0..$#{$self->{jobs}}) {
-		$self->{jobs}[$i]->job_number($i + 1);
+	my $self = shift;
+	my $id = 1;
+	for my $job (@{$self->{jobs}}) {
+		$job->job_number($id);
+		$id++;
 	}
+	return;
 }
 
 sub write_to_file {
