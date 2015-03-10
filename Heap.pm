@@ -71,7 +71,7 @@ sub not_empty {
 	return defined $self->{elements}->[1];
 }
 
-sub next {
+sub next_element {
 	my ($self) = @_;
 	return $self->{elements}->[1];
 }

@@ -20,9 +20,9 @@ sub new_from_swf {
 		status => []
 	};
 
-	open (FILE, $self->{file}) or die "unable to open $self->{file}";
+	open (my $file, '<', $self->{file}) or die "unable to open $self->{file}";
 
-	while (defined(my $line = <FILE>) and (not defined $jobs_number or @{$self->{jobs}} < $jobs_number)) {
+	while (defined(my $line = <$file>) and (not defined $jobs_number or @{$self->{jobs}} < $jobs_number)) {
 		my @fields = split(' ', $line);
 
 		next unless defined $fields[0];
@@ -34,10 +34,11 @@ sub new_from_swf {
 
 		# Job line
 		elsif ($fields[0] ne ' ') {
-			my $job = new Job(@fields);
+			my $job = Job->new(@fields);
 			push @{$self->{jobs}}, $job;
 		}
 	}
+	close($file);
 
 	bless $self, $class;
 	return $self;
@@ -164,8 +165,9 @@ sub copy {
 
 
 sub reset_submit_times {
-	my ($self) = @_;
+	my $self = shift;
 	$_->submit_time(0) for (@{$self->{jobs}});
+	return;
 }
 
 #renumbers all jobs starting from 1
@@ -182,11 +184,13 @@ sub reset_jobs_numbers {
 sub write_to_file {
 	my ($self, $trace_file_name) = @_;
 
-	open(my $filehandle, "> $trace_file_name") or die "unable to open $trace_file_name";
+	open(my $filehandle, '>', "$trace_file_name") or die "unable to open $trace_file_name";
 
 	for my $job (@{$self->{jobs}}) {
 		print $filehandle "$job\n";
 	}
+	close($filehandle);
+	return;
 }
 
 sub needed_cpus {
@@ -210,6 +214,7 @@ sub remove_large_jobs {
 	die unless defined $limit;
 	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
 	$self->{jobs} = [@left_jobs];
+	return;
 }
 
 sub unassign_jobs {
