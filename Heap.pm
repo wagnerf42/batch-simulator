@@ -92,6 +92,7 @@ sub add {
 	push @{$self->{elements}}, $element;
 
 	$self->_move_last_up();
+	return;
 }
 
 sub _move_last_up {
@@ -106,6 +107,7 @@ sub _move_last_up {
 		$current_position = $father;
 		$father = int $father / 2;
 	}
+	return;
 }
 
 sub _move_first_down {
@@ -118,12 +120,15 @@ sub _move_first_down {
 		$current_position = $min_child_index;
 		$min_child_index = $self->_find_min_child($current_position);
 	}
+	return;
 }
 
 sub _exchange {
 	my $self = shift;
-	my ($a, $b) = @_;
+	my $a = shift;
+	my $b = shift;
 	($self->{elements}->[$a], $self->{elements}->[$b]) = ($self->{elements}->[$b], $self->{elements}->[$a]);
+	return;
 }
 
 sub _find_min_child {

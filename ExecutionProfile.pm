@@ -10,6 +10,7 @@ use Data::Dumper;
 use Profile;
 use ProcessorRange;
 use BinarySearchTree;
+use parent 'Displayable';
 
 use overload '""' => \&stringification;
 
@@ -41,7 +42,7 @@ sub get_free_processors_for {
 	my $left_duration = $job->requested_time();
 	my $profile = $self->{profile_tree}->find_content($starting_time);
 	my $candidate_processors = $profile->processors();
-	my $left_processors = new ProcessorRange($candidate_processors);
+	my $left_processors = $candidate_processors->copy_range();
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
@@ -139,7 +140,7 @@ sub remove_job {
 	}
 
 	# Gap at the last profile
-	if ($impacted_profiles[$#impacted_profiles]->ends_after($job_ending_time)) {
+	if ($impacted_profiles[-1]->ends_after($job_ending_time)) {
 		#remove
 		my $first_profile = pop @impacted_profiles;
 		$self->{profile_tree}->remove_content($first_profile);
@@ -349,10 +350,10 @@ sub save_svg {
 		}
 	);
 
-	my $last_starting_time = $profiles[$#profiles]->starting_time();
+	my $last_starting_time = $profiles[-1]->starting_time();
 	return if $last_starting_time == 0;
 
-	open(my $filehandle, "> $svg_filename") or die "unable to open $svg_filename";
+	open(my $filehandle, '>', "$svg_filename") or die "unable to open $svg_filename";
 
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
 	my $w_ratio = 800/$last_starting_time;
@@ -368,23 +369,7 @@ sub save_svg {
 
 	print $filehandle "</svg>\n";
 	close $filehandle;
-}
-
-my $file_count = 0;
-sub tycat {
-	my $self = shift;
-	my $current_time = shift;
-	my $filename = shift;
-	#print STDERR "ep tycat $file_count\n";
-
-	my $user = $ENV{"USER"};
-	my $dir = "/tmp/$user";
-	mkdir $dir unless -f $dir;
-
-	$filename = "$dir/$file_count" . "a.svg" unless defined $filename;
-	$self->save_svg($filename, $current_time);
-	`tycat $filename` if -f $filename;
-	$file_count++;
+	return;
 }
 
 1;
