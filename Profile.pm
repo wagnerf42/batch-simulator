@@ -165,16 +165,30 @@ sub svg {
 	);
 }
 
+my $comparison_function = 'default';
+my %comparison_functions = (
+	'default' => \&starting_times_comparison,
+	'all_times' => \&all_times_comparison
+);
+
+sub set_comparison_function {
+	$comparison_function = shift;
+}
+
 sub three_way_comparison {
+	return $comparison_functions{$comparison_function}->(@_);
+}
+
+sub starting_times_comparison {
 	my $self = shift;
 	my $other = shift;
 	my $inverted = shift;
-
 	return $other <=> $self->{starting_time} if $inverted;
 	return $self->{starting_time} <=> $other;
 }
 
-sub loose_comparison {
+#TODO: why is there no 'inverted' here ???
+sub all_times_comparison {
 	my $self = shift;
 	my $other = shift;
 

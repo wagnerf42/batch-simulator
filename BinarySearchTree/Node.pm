@@ -176,38 +176,6 @@ sub find_previous_node {
 	return;
 }
 
-sub nodes_loop_with_compare_routine {
-	my $self = shift;
-	my $start_key = shift;
-	my $end_key = shift;
-	my $content_routine = shift;
-	my $compare_routine = shift;
-
-	my $current_node = $self;
-	my $continue = 1;
-
-	#we do a depth first exploration
-	#which is constrained by the start and end of the range
-	#since we do it iteratively we need to handle a stack ourselves
-	my @parents; #this is the stack, containing ancestors with right subtree explorations left to do
-
-	while ($continue and (@parents or defined $current_node)) {
-		if (defined $current_node) {
-			#go left first
-			push @parents, $current_node;
-			$current_node = ($compare_routine->($current_node->{content}, $start_key) == 1) ? $current_node->{children}->[LEFT] : undef;
-		} else {
-			#we returned from exploration of a left child
-			$current_node = pop @parents;
-			#do content here
-			$continue = $content_routine->($current_node->{content}) if ($compare_routine->($current_node->{content}, $start_key) >= 0) and (not defined $end_key or $compare_routine->($current_node->{content}, $end_key) <= 0);
-			#and continue with right subtree
-			$current_node = (not defined $end_key or $compare_routine->($current_node->{content}, $end_key == -1)) ? $current_node->{children}->[RIGHT] : undef;
-		}
-	}
-	return;
-}
-
 sub nodes_loop {
 	my $self = shift;
 	my $start_key = shift;

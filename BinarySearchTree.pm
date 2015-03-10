@@ -86,18 +86,6 @@ sub nodes_loop {
 	return;
 }
 
-sub nodes_loop_with_compare_routine {
-	my $self = shift;
-	my $start_key = shift;
-	my $end_key = shift;
-	my $compare_routine = shift;
-	my $content_routine = shift;
-
-	$start_key = $self->{min_valid_key} unless defined $start_key;
-	$self->{root}->nodes_loop_with_compare_routine($start_key, $end_key, $content_routine, $compare_routine);
-	return;
-}
-
 sub save_svg {
 	my $self = shift;
 	my $filename = shift;

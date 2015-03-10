@@ -97,7 +97,8 @@ sub remove_job {
 	my $job_ending_time = $job->submitted_ending_time();
 
 	my @impacted_profiles;
-	$self->{profile_tree}->nodes_loop_with_compare_routine($starting_time, $job_ending_time, \&Profile::loose_comparison,
+	Profile::set_comparison_function('all_times');
+	$self->{profile_tree}->nodes_loop($starting_time, $job_ending_time,
 		sub {
 			my $profile = shift;
 
@@ -109,6 +110,7 @@ sub remove_job {
 			return 1;
 		}
 	);
+	Profile::set_comparison_function('default');
 
 	# No impacted profiles
 	unless (@impacted_profiles) {
