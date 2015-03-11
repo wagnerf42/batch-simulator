@@ -70,6 +70,7 @@ sub run {
 			}
 
 			$self->reassign_jobs();
+			#$self->reassign_jobs_two_positions();
 		}
 
 		$self->start_jobs();
@@ -83,7 +84,8 @@ sub start_jobs {
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
-			$self->start_job($job);
+			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
+			$self->{started_jobs}->{$job->job_number()} = $job;
 		} else {
 			push @remaining_reserved_jobs, $job;
 		}
@@ -93,14 +95,11 @@ sub start_jobs {
 	return;
 }
 
-sub reassign_jobs2 {
+sub reassign_jobs_two_positions {
 	my $self = shift;
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
-			# For debugging
-			$self->{reassigned_jobs}++;
-
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 
@@ -112,9 +111,6 @@ sub reassign_jobs2 {
 			}
 
 			if ($new_processors) {
-				# For debugging
-				$self->{really_reassigned_jobs}++;
-
 				$job->assign_to($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
 			} else {
@@ -134,14 +130,6 @@ sub reassign_jobs {
 			$self->assign_job($job);
 		}
 	}
-	return;
-}
-
-sub start_job {
-	my $self = shift;
-	my $job = shift;
-	$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
-	$self->{started_jobs}->{$job->job_number()} = $job;
 	return;
 }
 
