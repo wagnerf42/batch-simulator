@@ -222,13 +222,6 @@ sub svg {
 	return;
 }
 
-sub unassign {
-	my $self = shift;
-	delete $self->{starting_time};
-	delete $self->{assigned_processors_ids};
-	return;
-}
-
 sub used_clusters {
 	my $self = shift;
 	my $cluster_size = shift;

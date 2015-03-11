@@ -180,7 +180,9 @@ sub set_comparison_function {
 }
 
 sub three_way_comparison {
-	my ($self, $other, $inverted) = @_;
+	my $self = shift;
+	my $other = shift;
+	my $inverted = shift;
 	return $comparison_functions{$comparison_function}->($self, $other, $inverted);
 }
 
@@ -192,20 +194,23 @@ sub starting_times_comparison {
 	return $self->{starting_time} <=> $other;
 }
 
-#TODO: why is there no 'inverted' here ???
 sub all_times_comparison {
 	my $self = shift;
 	my $other = shift;
+	my $inverted = shift;
 
-	# Comparing two integers
-	return $self <=> $other unless (ref $self eq 'Profile');
-
-	# Comparing self and a integer
+	my $coef = ($inverted) ? -1 : 1;
 	my $ending_time = $self->ending_time();
 
-	return -1 if (defined $ending_time) and ($ending_time < $other);
-	return 1 if $self->{starting_time} > $other;
-	return 0;
+	if (ref $other eq '') {
+		return -$coef if (defined $ending_time) and ($ending_time < $other);
+		return $coef if $self->{starting_time} > $other;
+		return 0;
+	}
+
+	return $self->{starting_time} <=> $other->{starting_time} if (ref $other eq 'Profile');
+
+	die 'comparison not implemented';
 }
 
 1;

@@ -12,15 +12,17 @@ use Job;
 use Database;
 
 sub new_from_swf {
-	my ($class, $file, $jobs_number) = @_;
+	my $class = shift;
+	my $filename = shift;
+	my $jobs_number = shift;
 
 	my $self = {
-		file => $file,
+		filename => $filename,
 		jobs => [],
 		status => []
 	};
 
-	open (my $file, '<', $self->{file}) or die "unable to open $self->{file}";
+	open (my $file, '<', $self->{filename}) or die "unable to open $self->{filename}";
 
 	while (defined(my $line = <$file>) and (not defined $jobs_number or @{$self->{jobs}} < $jobs_number)) {
 		my @fields = split(' ', $line);
@@ -45,7 +47,9 @@ sub new_from_swf {
 }
 
 sub keep_first_jobs {
-	my ($self, $jobs_number) = @_;
+	my $self = shift;
+	my $jobs_number = shift;
+
 	my $end = $jobs_number - 1;
 	my $last_available = $#{$self->{jobs}};
 	$end = $last_available if $last_available < $end;
@@ -68,7 +72,10 @@ sub fix_submit_times {
 }
 
 sub new_block_from_trace {
-	my ($class, $trace, $size) = @_;
+	my $class = shift;
+	my $trace = shift;
+	my $size = shift;
+
 	my $start_point = int(rand(scalar @{$trace->jobs()} - $size + 1));
 	my $end_point = $start_point + $size - 1;
 	my @selected_jobs = @{$trace->jobs()}[$start_point..$end_point];
@@ -82,7 +89,9 @@ sub new_block_from_trace {
 }
 
 sub new_from_trace {
-	my ($class, $trace, $size) = @_;
+	my $class = shift;
+	my $trace = shift;
+	my $size = shift;
 
 	die 'empty trace' unless defined $trace->{jobs}->[0];
 
@@ -97,7 +106,8 @@ sub new_from_trace {
 }
 
 sub copy_from_trace {
-	my ($class, $trace) = @_;
+	my $class = shift;
+	my $trace = shift;
 
 	my $self = {
 		jobs => []
@@ -114,7 +124,8 @@ sub copy_from_trace {
 
 
 sub new_from_database {
-	my ($class, $trace_id) = @_;
+	my $class = shift;
+	my $trace_id = shift;
 
 	my $self = {
 		jobs => [],
@@ -154,7 +165,9 @@ sub new_from_database {
 }
 
 sub copy {
-	my ($class, $original) = @_;
+	my $class = shift;
+	my $original = shift;
+
 	my $self = {
 		jobs => []
 	};
@@ -182,7 +195,8 @@ sub reset_jobs_numbers {
 }
 
 sub write_to_file {
-	my ($self, $trace_file_name) = @_;
+	my $self = shift;
+	my $trace_file_name = shift;
 
 	open(my $filehandle, '>', "$trace_file_name") or die "unable to open $trace_file_name";
 
@@ -194,23 +208,26 @@ sub write_to_file {
 }
 
 sub needed_cpus {
-	my ($self) = @_;
+	my $self = shift;
 	return max map {$_->requested_cpus()} @{$self->{jobs}};
 }
 
 sub jobs {
-	my ($self, $jobs) = @_;
+	my $self = shift;
+	my $jobs = shift;
 	$self->{jobs} = $jobs if defined $jobs;
 	return $self->{jobs};
 }
 
 sub job {
-	my ($self, $job_number) = @_;
+	my $self = shift;
+	my $job_number = shift;
 	return $self->{jobs}->[$job_number];
 }
 
 sub remove_large_jobs {
-	my ($self, $limit) = @_;
+	my $self = shift;
+	my $limit = shift;
 	die unless defined $limit;
 	my @left_jobs = grep {$_->requested_cpus() <= $limit} @{$self->{jobs}};
 	$self->{jobs} = [@left_jobs];
@@ -224,7 +241,8 @@ sub unassign_jobs {
 }
 
 sub load {
-	my ($self, $processors_number) = @_;
+	my $self = shift;
+	my $processors_number = shift;
 
 	my $jobs_number = scalar @{$self->{jobs}};
 
