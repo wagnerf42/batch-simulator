@@ -69,10 +69,8 @@ sub write_results_to_file {
 	open (my $file, '>', $results_file_name) or die "unable to open $results_file_name";
 
 	for my $jobs_number_index (0..$#jobs_numbers) {
-		print $file "$results[$jobs_number_index * @cpus_numbers]";
-
 		for my $cpus_number_index (0..$#cpus_numbers) {
-			print $file " $results[$jobs_number_index * @cpus_numbers + $cpus_number_index]";
+			print $file "$jobs_number_index $cpus_number_index $results[$jobs_number_index * @cpus_numbers + $cpus_number_index]\n";
 		}
 		print $file "\n";
 	}
