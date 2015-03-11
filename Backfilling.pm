@@ -5,6 +5,7 @@ use warnings;
 
 use Carp;
 use Exporter qw(import);
+use Time::HiRes qw(time);
 
 use ExecutionProfile;
 use Heap;
@@ -46,6 +47,9 @@ sub run {
 	# Add all jobs to the queue
 	$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
 
+	# Time measure
+	$self->{schedule_time} = time();
+
 	while ($self->{events}->not_empty()) {
 		# Events coming from the Heap will have same timestamp and type
 		my @events = $self->{events}->retrieve_all();
@@ -69,12 +73,15 @@ sub run {
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
 			}
 
-			$self->reassign_jobs();
-			#$self->reassign_jobs_two_positions();
+			#$self->reassign_jobs();
+			$self->reassign_jobs_two_positions();
 		}
 
 		$self->start_jobs();
 	}
+
+	# Time measure
+	$self->{schedule_time} = time() - $self->{schedule_time};
 	return;
 }
 

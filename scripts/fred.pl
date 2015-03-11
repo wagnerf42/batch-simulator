@@ -18,9 +18,8 @@ $trace->reset_jobs_numbers();
 #$trace->write_to_file("$jobs_number-$cpus_number.swf");
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
-$schedule->tycat();
+#$schedule->tycat();
 
-#print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
+print "$jobs_number $cpus_number " . $schedule->{schedule_time} . "\n";
 
-print STDERR "Done\n";
 
