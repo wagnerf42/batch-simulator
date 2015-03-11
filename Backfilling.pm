@@ -93,6 +93,38 @@ sub start_jobs {
 	return;
 }
 
+sub reassign_jobs2 {
+	my $self = shift;
+
+	for my $job (@{$self->{reserved_jobs}}) {
+		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
+			# For debugging
+			$self->{reassigned_jobs}++;
+
+			my $job_starting_time = $job->starting_time();
+			my $assigned_processors = $job->assigned_processors_ids();
+
+			$self->{execution_profile}->remove_job($job, $self->{current_time});
+
+			my $new_processors;
+			if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
+				$new_processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
+			}
+
+			if ($new_processors) {
+				# For debugging
+				$self->{really_reassigned_jobs}++;
+
+				$job->assign_to($self->{current_time}, $new_processors);
+				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
+			} else {
+				$self->{execution_profile}->add_job_at($job_starting_time, $job, $self->{current_time});
+			}
+		}
+	}
+	return;
+}
+
 sub reassign_jobs {
 	my $self = shift;
 
