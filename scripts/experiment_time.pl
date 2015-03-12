@@ -11,13 +11,12 @@ use Trace;
 use Backfilling;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my @jobs_numbers = (100, 100, 100);
-my @cpus_numbers = (50, 50, 50, 50);
-#my @jobs_numbers = (100, 200);
-#my @cpus_numbers = (10, 20);
+my @jobs_numbers = (100, 200, 300, 400, 500);
+my @cpus_numbers = (10, 20, 30, 40, 50, 100, 200, 300);
 my $cluster_size = 16;
-my $threads_number = 4;
-my $results_file_name = 'experiment/experiment_time1/experiment3.out';
+my $threads_number = 6;
+my $backfilling_variant = BASIC;
+my $results_file_name = 'experiment/experiment_time1/experiment4.out';
 
 $SIG{INT} = \&catch_signal;
 
@@ -65,7 +64,7 @@ sub run_instance {
 		$trace->fix_submit_times();
 		$trace->reset_jobs_numbers();
 
-		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
+		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $backfilling_variant);
 		$schedule->run();
 
 		$results->[$jobs_number_index * @cpus_numbers + $cpus_number_index] = $schedule->{schedule_time};
@@ -80,7 +79,8 @@ sub write_results_to_file {
 
 	for my $jobs_number_index (0..$#jobs_numbers) {
 		for my $cpus_number_index (0..$#cpus_numbers) {
-			print $file "$jobs_numbers[$jobs_number_index] $cpus_numbers[$cpus_number_index] $results->[$jobs_number_index * @cpus_numbers + $cpus_number_index]\n";
+			my $temp = $results->[$jobs_number_index * @cpus_numbers + $cpus_number_index];
+			print $file "$jobs_numbers[$jobs_number_index] $cpus_numbers[$cpus_number_index] " . (defined $temp ? $temp : '?') . "\n";
 		}
 		print $file "\n";
 	}

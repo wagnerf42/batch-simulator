@@ -98,7 +98,12 @@ sub split_by_job {
 	$middle_duration = $middle_end - $middle_start if defined $middle_end;
 	my $middle_profile = Profile->new($middle_start, $self->{processors}->copy_range(), $middle_duration);
 	$middle_profile->remove_used_processors($job);
-	push @profiles, $middle_profile unless $middle_profile->is_fully_loaded();
+
+	if ($middle_profile->is_fully_loaded()) {
+		$middle_profile->processors()->free_allocated_memory();
+	} else {
+		push @profiles, $middle_profile;
+	}
 
 	if ((not defined $self->ending_time()) or ($job->ending_time_estimation($current_time) < $self->ending_time())) {
 		my $end_duration;

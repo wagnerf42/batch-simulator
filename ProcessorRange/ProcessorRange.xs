@@ -27,7 +27,7 @@ static vector* vector_new() {
 	v->allocated_size = VECTOR_DEFAULT_SIZE;
 	v->count = 0;
 	allocations_number++;
-	//fprintf(stderr, "alloc:%d\n", allocations_number);
+	fprintf(stderr, "alloc:%d\n", allocations_number);
 	return v;
 }
 
@@ -39,7 +39,7 @@ static void vector_free(vector *v) {
 	Safefree(v->values);
 	Safefree(v);
 	allocations_number--;
-	//fprintf(stderr, "free:%d\n", allocations_number);
+	fprintf(stderr, "free:%d\n", allocations_number);
 }
 
 static void vector_push(vector *v, unsigned int e) {
