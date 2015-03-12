@@ -69,7 +69,7 @@ sub get_free_processors_for {
 		});
 
 	# It is possible that not all processors were found
-	if (($left_processors->size() <= $job->requested_cpus()) or ($left_duration)) {
+	if (($left_processors->size() <= $job->requested_cpus()) or ($left_duration > 0)) {
 		$left_processors->free_allocated_memory();
 		return;
 	}

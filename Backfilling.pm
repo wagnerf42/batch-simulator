@@ -63,7 +63,6 @@ sub run {
 			for my $event (@events) {
 				my $job = $event->payload();
 				$self->assign_job($job);
-				die "job $job is not assigned" unless defined $job->starting_time();
 				push @{$self->{reserved_jobs}}, $job;
 			}
 		} else {
@@ -73,7 +72,6 @@ sub run {
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
 			}
 
-			#$self->reassign_jobs();
 			$self->reassign_jobs_two_positions();
 		}
 
