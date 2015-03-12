@@ -213,4 +213,10 @@ sub all_times_comparison {
 	die 'comparison not implemented';
 }
 
+sub DESTROY {
+	my $self = shift;
+	$self->{processors}->free_allocated_memory() if defined $self->{processors};
+	return;
+}
+
 1;

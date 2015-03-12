@@ -68,13 +68,18 @@ sub get_free_processors_for {
 		});
 
 	# It is possible that not all processors were found
-	return unless $left_processors->size() >= $job->requested_cpus();
+	if ($left_processors->size() <= $job->requested_cpus()) {
+		$left_processors->free_allocated_memory();
+		return;
+	}
 
 	my $reduction_function = $REDUCTION_FUNCTIONS[$self->{reduction_algorithm}];
 	$left_processors->$reduction_function($job->requested_cpus());
 
-	return if $left_processors->is_empty();
-	die if $left_processors->size() < $job->requested_cpus();
+	if ($left_processors->is_empty()) {
+		$left_processors->free_allocated_memory();
+		return;
+	}
 
 	return $left_processors;
 }
@@ -202,7 +207,7 @@ sub add_job_at {
 			return 1;
 		});
 
-	for my $profile (@profiles_to_update) { 
+	for my $profile (@profiles_to_update) {
 		$self->{profile_tree}->remove_content($profile);
 		my @new_profiles = $profile->add_job($job, $current_time);
 		$self->{profile_tree}->add_content($_) for (@new_profiles);

@@ -11,16 +11,18 @@ use Trace;
 use Backfilling;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-#my @jobs_numbers = (100, 200, 300, 400, 500);
-#my @cpus_numbers = (10, 20, 30, 40, 50, 100);
-my @jobs_numbers = (10, 20, 30, 40);
-my @cpus_numbers = (10, 20, 30, 40);
+my @jobs_numbers = (100, 100, 100);
+my @cpus_numbers = (50, 50, 50, 50);
+#my @jobs_numbers = (100, 200);
+#my @cpus_numbers = (10, 20);
 my $cluster_size = 16;
 my $threads_number = 4;
-my $results_file_name = 'experiment/experiment_time1/experiment2.out';
+my $results_file_name = 'experiment/experiment_time1/experiment3.out';
 
-my @results = (0) x (@jobs_numbers * @cpus_numbers);
-share(@results);
+$SIG{INT} = \&catch_signal;
+
+my $results = [];
+share($results);
 
 print STDERR "Creating queue\n";
 my $q = Thread::Queue->new();
@@ -35,19 +37,27 @@ print STDERR "Creating threads\n";
 my @threads = map {threads->create(\&run_instance, $_)} (0..($threads_number - 1));
 
 print STDERR "Waiting for threads to finish\n";
-$_->join() for (@threads);
+while ((my $running_threads = threads->list()) > 0) {
+	my @joinable_threads = threads->list(threads::joinable);
+	$_->join() for (@joinable_threads);
+	sleep(5);
+}
 
 print STDERR "Writing results to file\n";
 write_results_to_file();
 
 print STDERR "Done\n";
-die;
 
 sub run_instance {
 	my $id = shift;
 
-	while (defined(my $instance = $q->dequeue())) {
+	# Exit the thread if a signal is received
+	$SIG{INT} = sub { print STDERR "Killing thread $id\n"; threads->exit(); };
+
+	while (defined(my $instance = $q->dequeue_nb())) {
 		my ($jobs_number, $jobs_number_index, $cpus_number, $cpus_number_index) = @$instance;
+
+		print STDERR "Thread $id running ($jobs_number, $cpus_number)\n";
 
 		my $trace = Trace->new_from_swf($trace_file);
 		$trace->remove_large_jobs($cpus_number);
@@ -58,7 +68,7 @@ sub run_instance {
 		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
 		$schedule->run();
 
-		$results[$jobs_number_index * @cpus_numbers + $cpus_number_index] = $schedule->{schedule_time};
+		$results->[$jobs_number_index * @cpus_numbers + $cpus_number_index] = $schedule->{schedule_time};
 	}
 
 	print STDERR "Thread $id finished\n";
@@ -70,12 +80,19 @@ sub write_results_to_file {
 
 	for my $jobs_number_index (0..$#jobs_numbers) {
 		for my $cpus_number_index (0..$#cpus_numbers) {
-			print $file "$jobs_number_index $cpus_number_index $results[$jobs_number_index * @cpus_numbers + $cpus_number_index]\n";
+			print $file "$jobs_numbers[$jobs_number_index] $cpus_numbers[$cpus_number_index] $results->[$jobs_number_index * @cpus_numbers + $cpus_number_index]\n";
 		}
 		print $file "\n";
 	}
 
 	close($file);
+	return;
+}
+
+sub catch_signal {
+	my $signame = shift;
+	print STDERR "Received SIG$signame signal\n";
+	$_->kill('INT')->detach() for @threads;
 	return;
 }
 
