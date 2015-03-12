@@ -81,6 +81,8 @@ sub remove {
 	my $other = shift;
 	my $inverted_other = $other->invert($self->get_last());
 	$self->intersection($inverted_other);
+	$inverted_other->free_allocated_memory();
+	return;
 }
 
 #compute a list of paired (start,end) ranges

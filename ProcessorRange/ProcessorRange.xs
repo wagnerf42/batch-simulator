@@ -6,7 +6,7 @@
 
 #include "ppport.h"
 
-#define VECTOR_DEFAULT_SIZE 100
+#define VECTOR_DEFAULT_SIZE 8
 
 typedef struct _vector {
 	unsigned int *values;
@@ -19,15 +19,12 @@ typedef struct _processor_range {
 	unsigned int processors_number;
 } processor_range;
 
-unsigned allocations_number = 0;
 static vector* vector_new() {
 	vector *v;
 	Newx(v, 1, vector);
 	Newx(v->values, VECTOR_DEFAULT_SIZE, unsigned int);
 	v->allocated_size = VECTOR_DEFAULT_SIZE;
 	v->count = 0;
-	allocations_number++;
-	fprintf(stderr, "alloc:%d\n", allocations_number);
 	return v;
 }
 
@@ -38,8 +35,6 @@ static vector_remove_all(vector *v) {
 static void vector_free(vector *v) {
 	Safefree(v->values);
 	Safefree(v);
-	allocations_number--;
-	fprintf(stderr, "free:%d\n", allocations_number);
 }
 
 static void vector_push(vector *v, unsigned int e) {

@@ -63,12 +63,13 @@ sub get_free_processors_for {
 				$starting_time += $duration;
 				return 1;
 			} else {
+				$left_duration = 0;
 				return 0;
 			}
 		});
 
 	# It is possible that not all processors were found
-	if ($left_processors->size() <= $job->requested_cpus()) {
+	if (($left_processors->size() <= $job->requested_cpus()) or ($left_duration)) {
 		$left_processors->free_allocated_memory();
 		return;
 	}
@@ -136,6 +137,7 @@ sub remove_job {
 		#split in two
 		my $first_profile_ending_time = $first_profile->ending_time();
 		$first_profile->duration($starting_time - $first_profile->starting_time());
+
 		my $second_profile = Profile->new($starting_time, $first_profile->processors()->copy_range(), $first_profile_ending_time - $starting_time);
 
 		#put back
@@ -158,6 +160,7 @@ sub remove_job {
 		if (defined $profile_end) {
 			$duration = $profile_end - $job_ending_time;
 		}
+
 		$second_profile = Profile->new($job_ending_time, $first_profile->processors()->copy_range(), $duration);
 
 		#put back
