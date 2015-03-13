@@ -2,6 +2,7 @@ package Profile;
 
 use Carp;
 
+use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 use ProcessorRange;
 
 use strict;

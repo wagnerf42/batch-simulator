@@ -8,7 +8,10 @@ use Carp;
 use Data::Dumper;
 
 use Profile;
+
+use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 use ProcessorRange;
+
 use BinarySearchTree;
 use parent 'Displayable';
 
