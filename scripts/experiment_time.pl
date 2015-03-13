@@ -11,10 +11,10 @@ use Trace;
 use Backfilling;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my @jobs_numbers = (100, 200, 300, 400, 500);
-my @cpus_numbers = (10, 20, 30, 40, 50, 100, 200, 300, 400, 500);
+my @jobs_numbers = (600, 700, 800, 900);
+my @cpus_numbers = (700);
 my $cluster_size = 16;
-my $threads_number = 6;
+my $threads_number = 2;
 my $backfilling_variant = BASIC;
 my $results_file_name = 'experiment/experiment_time1/experiment-11';
 
