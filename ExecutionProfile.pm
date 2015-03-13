@@ -363,26 +363,10 @@ sub find_first_profile_for {
 	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
 			my $profile = shift;
-			# Gap in the list of profiles
-			if (defined $previous_ending_time and $previous_ending_time != $profile->starting_time()) {
-				@included_profiles = ();
-			}
-			$previous_ending_time = $profile->ending_time();
 
-			push @included_profiles, $profile;
-
-			# Not enough processors to continue
-			if ($profile->processors()->size() < $job->requested_cpus()) {
-				@included_profiles = ();
-			}
-
-			while (@included_profiles and (not defined $included_profiles[-1]->ending_time() or $included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() >= $job->requested_time())) {
-				my $start_profile = shift @included_profiles;
-				$starting_time = $start_profile->starting_time();
-				$processors = $self->get_free_processors_for($job, $start_profile->starting_time());
-				return 0 if $processors;
-			}
-
+			$starting_time = $profile->starting_time();
+			$processors = $self->get_free_processors_for($job, $profile->starting_time());
+			return 0 if $processors;
 			return 1;
 		});
 
