@@ -63,6 +63,7 @@ sub run {
 			for my $event (@events) {
 				my $job = $event->payload();
 				$self->assign_job($job);
+				die "job $job is not assigned" unless defined $job->starting_time();
 				push @{$self->{reserved_jobs}}, $job;
 			}
 		} else {

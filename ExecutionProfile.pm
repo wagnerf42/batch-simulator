@@ -41,8 +41,7 @@ sub get_free_processors_for {
 
 	my $left_duration = $job->requested_time();
 	my $profile = $self->{profile_tree}->find_content($starting_time);
-	my $candidate_processors = $profile->processors();
-	my $left_processors = $candidate_processors->copy_range();
+	my $left_processors = $profile->processors()->copy_range();
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
@@ -69,7 +68,7 @@ sub get_free_processors_for {
 		});
 
 	# It is possible that not all processors were found
-	if (($left_processors->size() <= $job->requested_cpus()) or ($left_duration > 0)) {
+	if (($left_processors->size() < $job->requested_cpus()) or ($left_duration > 0)) {
 		$left_processors->free_allocated_memory();
 		return;
 	}
@@ -264,7 +263,6 @@ sub find_first_profile_for {
 	$self->{profile_tree}->nodes_loop($current_time, undef,
 		sub {
 			my $profile = shift;
-
 			if ($self->could_start_job_at($job, $profile->starting_time())) {
 				$starting_time = $profile->starting_time();
 				$processors = $self->get_free_processors_for($job, $profile->starting_time());
