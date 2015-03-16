@@ -12,17 +12,42 @@ use constant {
 	NONE => 2
 };
 
-
 sub new {
 	my $class = shift;
 	my $self = {
 		content => shift,
 		children => [undef, undef], #left 0, right 1
-		father => shift
+		father => shift,
+		priority => shift
 	};
+
+	$self->{priority} = rand() unless defined $self->{priority};
 
 	bless $self, $class;
 	return $self;
+}
+
+sub rotate {
+	my $self = shift;
+	my $father = $self->{father};
+	my $direction = other_direction($father->get_node_direction($self));
+	my $grand_father = $father->{father};
+	my $gf_f_direction = $grand_father->get_node_direction($father);
+	$self->set_father($grand_father, $gf_f_direction);
+
+	if (defined $self->{children}->[$direction]) {
+		$self->{children}->[$direction]->set_father($father, other_direction($direction));
+	} else {
+		$father->{children}->[other_direction($direction)] = undef;
+	}
+
+	$father->set_father($self, $direction);
+	return;
+}
+
+sub other_direction {
+	my $direction = shift;
+	return (1-$direction);
 }
 
 sub compute_statistics {
@@ -53,7 +78,16 @@ sub add {
 	my $new_node = BinarySearchTree::Node->new($content);
 	$current_node->{children}->[$next_direction] = $new_node;
 	$new_node->set_father($current_node,$next_direction);
+	$new_node->balance();
 
+	return;
+}
+
+sub balance {
+	my $self = shift;
+	while ($self->{priority} > $self->{father}->{priority}) {
+		$self->rotate();
+	}
 	return;
 }
 
@@ -80,9 +114,10 @@ sub remove {
 		} else {
 			#complex case : 2 children : exchange and remove
 			my $direction = int rand(2);
-			my $last_child = $self->{children}->[$direction]->last_child(1 - $direction);
+			my $last_child = $self->{children}->[$direction]->last_child(other_direction($direction));
 			$self->{content} = $last_child->{content};
 			$last_child->remove();
+			$self->balance();
 		}
 	} else {
 		#easy case : we have only one child
@@ -127,17 +162,6 @@ sub last_child {
 	return $node;
 }
 
-# Returns the next ancestor of a certain node in a direction
-sub next_ancestor {
-	my $node = shift;
-	my $direction = shift;
-
-	while (defined $node->{father}) {
-		return $node->{father} if (defined $node->{father}->{children}->[$direction] and $node == $node->{father}->{children}->[$direction]);
-		$node = $node->{father};
-	}
-}
-
 # Return the node of the key if he exist
 sub find_node {
 	my $self = shift;
@@ -151,42 +175,6 @@ sub find_node {
 	}
 
 	return $current_node;
-}
-
-sub find_closest_node {
-	my $self = shift;
-	my $key = shift;
-	my $current_node = $self;
-
-	while (defined $current_node) {
-		last if $current_node->{content} == $key;
-
-		my $direction = $current_node->get_direction_for($key);
-		last unless defined $current_node->{children}->[$direction];
-		$current_node = $current_node->{children}->[$direction];
-	}
-
-	return $current_node;
-}
-
-sub find_previous_node {
-	my $self = shift;
-	my $key = shift;
-
-	my $current_node = $self->find_closest_node($key);
-	return unless defined $current_node; # we need a place to start
-	return $current_node if $current_node->{content} < $key; # nothing to be done if $node < $key
-
-	# Case 1: the node has a left subtree
-	return last_child($current_node->{children}->[LEFT], RIGHT) if (defined $current_node->{children}->[LEFT]);
-
-	# Case 2: the node is a right child
-	return $current_node->{father} if (defined $current_node->{father}->{children}->[RIGHT] and $current_node == $current_node->{father}->{children}->[RIGHT]);
-
-	# Case 3: the node is a left child
-	return next_ancestor($current_node->{father}, RIGHT);
-
-	return;
 }
 
 sub nodes_loop {
@@ -245,7 +233,7 @@ sub dot_all_content {
 	my $addr = refaddr $self;
 	my $content = $self->{content};
 
-	print $fd "$addr [label = \"$content\"];\n";
+	print $fd "$addr [label = \"$content ($self->{priority})\"];\n";
 
 	if (defined $self->{father}) {
 		my $addrf = refaddr $self->{father};

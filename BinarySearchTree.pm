@@ -7,13 +7,14 @@ use Data::Dumper qw(Dumper);
 use Carp;
 
 use BinarySearchTree::Node;
+use POSIX;
 
 sub new {
 	my $class = shift;
 	my $sentinel = shift;
 
 	my $self = {
-		root => BinarySearchTree::Node->new($sentinel, undef),
+		root => BinarySearchTree::Node->new($sentinel, undef, DBL_MAX),
 		min_valid_key => shift
 	};
 
@@ -61,20 +62,6 @@ sub find_content {
 	my $node = $self->{root}->find_node($key);
 	return $node->content() if defined $node;
 	return;
-}
-
-sub find_previous_content {
-	my $self = shift;
-	my $key = shift;
-	my $previous_node = $self->{root}->find_previous_node($key);
-	return $previous_node->content() if defined $previous_node and $previous_node->content() != $self->{root}->content(); # it is possible that the sentinel is the previous content
-	return;
-}
-
-sub find_closest_content {
-	my $self = shift;
-	my $key = shift;
-	return $self->{root}->find_closest_node($key)->content();
 }
 
 sub nodes_loop {
