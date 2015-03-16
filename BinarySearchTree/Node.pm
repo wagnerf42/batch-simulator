@@ -27,6 +27,20 @@ sub new {
 	return $self;
 }
 
+sub compute_statistics {
+	my $self = shift;
+	my $height = 0;
+	my $number_of_nodes = 1;
+	for my $child ($self->children()) {
+		my ($sub_height, $sub_number_of_nodes) = $child->compute_statistics();
+		$number_of_nodes += $sub_number_of_nodes;
+		$height = ($height>$sub_height)?$height:$sub_height;
+	}
+	$height++;
+	return ($height, $number_of_nodes);
+}
+
+
 sub rotate {
 	my $self = shift;
 	my $father = $self->{father};
