@@ -5,7 +5,6 @@ use warnings;
 use Data::Dumper qw(Dumper);
 
 use BinarySearchTree2;
-use TestPackage;
 
 my $tree = BinarySearchTree2->new([-1, -1, -1]);
 
@@ -15,11 +14,11 @@ my @arr = ([5, 2], [4, 2], [7, 1], [6, 3], [2, 1], [8, 5], [9, 1], [3,3], [12, 2
 
 $tree->add_content($_,1) for(@arr);
 
-$tree->tycat();
+#$tree->tycat();
 
-print STDERR "Remove\n";
+#print STDERR "Remove\n";
 #$tree->remove_content([2,3,8]);
-$tree->remove_content([7,1]);
+#$tree->remove_content([7,1]);
 
 $tree->tycat();
 $tree->display_subtrees();

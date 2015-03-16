@@ -40,9 +40,9 @@ sub new {
 		}
 		$self->{tree} = BinarySearchTree2::->new($sentinel);
 		$self->{tree}->add_content($remaining_key, 0);
-		$self->update_count($remaining_key, 1);	
+		$self->update_count($remaining_key, 1);
 	}
-	
+
 	return $self;
 }
 
@@ -156,7 +156,7 @@ sub remove {
 			$father->update_count($remaining_key, -1);
 			$father->{children}->[get_node_direction($father, $self)] = undef;
 		} else {
-			#complex case : 2 children : exchange and remove 
+			#complex case : 2 children : exchange and remove
 			my $direction = int rand(2);
 			my $last_child = $self->{children}->[$direction]->last_child(1 - $direction);
 			$self->exchange_content($last_child);
@@ -215,12 +215,43 @@ sub find_node {
 	my $current_node = $self;
 
 	while (defined $current_node) {
-		last if $current_node->matches_key($key);
+		last if $current_node->matches_size_key($key);
 		my $direction = $current_node->get_direction_for($key);
 		$current_node = $current_node->{children}->[$direction];
 	}
 
 	return $current_node;
+}
+
+#return if we have one node on the node tree who match with our range
+sub contains_something_between {
+	my $self = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+	my $found_someone = 0;
+
+	$self->{tree}->nodes_loop($start_key, $end_key,
+		sub {
+			$found_someone = 1;
+			return 0;
+		});
+	return $found_someone;
+}
+
+sub might_contain_something_between {
+	my $self = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+
+	return unless ref $start_key eq 'ARRAY';
+
+	$start_key = [ shift @$start_key ];
+	$end_key = [ shift @$end_key ];
+	($start_key) = @$start_key if @$start_key == 1;
+	($end_key) = @$end_key if @$end_key == 1;
+
+	return $self->contains_something_between($start_key, $end_key);
+
 }
 
 sub nodes_loop {
@@ -240,14 +271,31 @@ sub nodes_loop {
 	while ($continue and (@parents or defined $current_node)) {
 		if (defined $current_node) {
 			#go left first
-			$current_node = ($current_node->{key} > $start_key) ? $current_node->{children}->[LEFT] : undef;
+
+			if ($current_node->{key} > $start_key) {
+				my $left_child = $self->{children}->[LEFT];
+				if (defined $left_child) {
+					$current_node = ($left_child->might_contain_something_between($start_key, $end_key)) ? $left_child : undef;
+				}
+			} else {
+				$current_node = undef;
+			}
+
 		} else {
 			#we returned from exploration of a left child
 			$current_node = pop @parents;
 			#do content here
-			$continue = $routine->($current_node->{key}) if ($current_node->{key} >= $start_key and (not defined $end_key or $current_node->{key} <= $end_key));
+			$continue = $routine->($current_node) if ($current_node->matches_key($start_key, $end_key));
 			#and continue with right subtree
-			$current_node = (not defined $end_key or $current_node->{key} < $end_key) ? $current_node->{children}->[RIGHT] : undef;
+
+			if (not defined $end_key or $current_node->{key} < $end_key) {
+				my $right_child = $self->{children}->[RIGHT];
+				if (defined $right_child) {
+					$current_node = (right_child->might_contain_something_between($start_key, $end_key)) ? $right_child : undef;
+				}
+			} else {
+				$current_node = undef;
+			}
 		}
 	}
 	return;
@@ -275,7 +323,7 @@ sub get_direction_for {
 	}
 }
 
-sub matches_key {
+sub matches_size_key {
 	my $self = shift;
 	my $key = shift;
 
@@ -286,6 +334,25 @@ sub matches_key {
 	} else {
 		return ($key == $self->{key});
 	}
+}
+
+sub matches_key {
+	my $self = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+
+	if (ref $start_key eq 'ARRAY' and $self->{key} != -1) {
+		my $size = @{$start_key};
+		for my $i (0 .. $size) {
+			if ($self->{key}->[$i] > $start_key->[$i] || $self->{key}->[$i] < $end_key->[$i]) {
+				return 0;
+			}
+		}
+		return 1;
+	} else {
+		return ($self->{key} >= $start_key && $self->{key} <= $end_key);
+	}
+	return 0;
 }
 
 # Write information of the tree on a file
