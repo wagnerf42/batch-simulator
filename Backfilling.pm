@@ -67,7 +67,6 @@ sub run {
 				push @{$self->{reserved_jobs}}, $job;
 			}
 		} else {
-			$self->{execution_profile}->{profile_tree}->display_statistics();
 			for my $event (@events) {
 				my $job = $event->payload();
 				delete $self->{started_jobs}->{$job->job_number()};
