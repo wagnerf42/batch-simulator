@@ -27,20 +27,6 @@ sub new {
 	return $self;
 }
 
-sub compute_statistics {
-	my $self = shift;
-	my $height = 0;
-	my $number_of_nodes = 1;
-	for my $child ($self->children()) {
-		my ($sub_height, $sub_number_of_nodes) = $child->compute_statistics();
-		$number_of_nodes += $sub_number_of_nodes;
-		$height = ($height>$sub_height)?$height:$sub_height;
-	}
-	$height++;
-	return ($height, $number_of_nodes);
-}
-
-
 sub rotate {
 	my $self = shift;
 	my $father = $self->{father};
@@ -185,14 +171,9 @@ sub nodes_loop {
 	my $routine = shift;
 
 	my $current_node = $self;
-	my $continue = 1;
+	my @parents;
 
-	#we do a depth first exploration
-	#which is constrained by the start and end of the range
-	#since we do it iteratively we need to handle a stack ourselves
-	my @parents; #this is the stack, containing ancestors with right subtree explorations left to do
-
-	while ($continue and (@parents or defined $current_node)) {
+	while (@parents or defined $current_node) {
 		if (defined $current_node) {
 			#go left first
 			push @parents, $current_node;
@@ -200,8 +181,12 @@ sub nodes_loop {
 		} else {
 			#we returned from exploration of a left child
 			$current_node = pop @parents;
+
 			#do content here
-			$continue = $routine->($current_node->{content}) if ($current_node->{content} >= $start_key and (not defined $end_key or $current_node->{content} <= $end_key));
+			if ($current_node->{content} >= $start_key and (not defined $end_key or $current_node->{content} <= $end_key)) {
+				return unless $routine->($current_node->{content});
+			}
+
 			#and continue with right subtree
 			$current_node = (not defined $end_key or $current_node->{content} < $end_key) ? $current_node->{children}->[RIGHT] : undef;
 		}

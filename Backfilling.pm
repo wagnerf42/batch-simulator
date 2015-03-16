@@ -143,7 +143,7 @@ sub assign_job {
 	my $self = shift;
 	my $job = shift;
 
-	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job, $self->{current_time});
+	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 	$job->assign_to($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
 

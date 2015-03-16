@@ -42,15 +42,6 @@ sub remove_content {
 	return;
 }
 
-sub display_statistics {
-	my $self = shift;
-	my ($height, $nodes_number) = $self->{root}->compute_statistics();
-	my $min_height = log($nodes_number) / log(2);
-	my $ratio = $height / $min_height;
-	print STDERR "height is $height, we have $nodes_number nodes ; we need at least a hight $min_height but we are $ratio times more\n";
-	return;
-}
-
 sub remove_node {
 	my $node = shift;
 	return $node->remove();

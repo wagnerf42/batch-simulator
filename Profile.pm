@@ -192,6 +192,10 @@ sub starting_times_comparison {
 	my $self = shift;
 	my $other = shift;
 	my $inverted = shift;
+
+	# Save two calls to the comparison functions if $other is a Profile
+	$other = $other->starting_time() if (ref $other eq 'Profile');
+
 	return $other <=> $self->{starting_time} if $inverted;
 	return $self->{starting_time} <=> $other;
 }
