@@ -12,6 +12,8 @@ sub new {
 	my $processors_number = shift;
 	my $cluster_size = shift;
 	my $reduction_algorithm = shift;
+	my $uses_external_simulator = shift;
+	$uses_external_simulator = 0 unless defined $uses_external_simulator;
 
 	my $self = {
 		trace => $trace,
@@ -20,18 +22,26 @@ sub new {
 		reduction_algorithm => $reduction_algorithm,
 		contiguous_jobs_number => 0,
 		local_jobs_number => 0,
-		cmax => 0
+		cmax => 0,
+		uses_external_simulator => $uses_external_simulator
 	};
 
+	unless ($self->uses_external_simulator()) {
+		die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
+		# Make sure the trace is clean
+		$self->{trace}->unassign_jobs();
+	} else {
+		$self->{events} = EventQueue->new();
+	}
 
-	die "bad trace $self->{trace}" unless ref $self->{trace} eq 'Trace';
-	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
-
-	# Make sure the trace is clean
-	$self->{trace}->unassign_jobs();
 
 	bless $self, $class;
 	return $self;
+}
+
+sub uses_external_simulator {
+	my $self = shift;
+	return $self->{uses_external_simulator};
 }
 
 sub run {

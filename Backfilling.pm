@@ -80,10 +80,12 @@ sub run {
 
 	# Jobs which started before current time
 	$self->{started_jobs} = {};
-	$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
-
-	# Add all jobs to the queue
-	$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
+	unless ($self->uses_external_simulator()) {
+		#we have a trace file, add all corresponding events
+		$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
+		# Add all jobs to the queue
+		$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
+	}
 
 	# Time measure
 	$self->{schedule_time} = time();
@@ -91,27 +93,35 @@ sub run {
 	while ($self->{events}->not_empty()) {
 		# Events coming from the Heap will have same timestamp and type
 		my @events = $self->{events}->retrieve_all();
-		my $events_type = $events[0]->type();
-		my $events_timestamp = $events[0]->timestamp();
 
-		$self->{current_time} = $events_timestamp;
-		$self->{execution_profile}->set_current_time($events_timestamp);
-
-		if ($events_type == SUBMISSION_EVENT) {
-			for my $event (@events) {
-				my $job = $event->payload();
-				$self->assign_job($job);
-				die "job $job is not assigned" unless defined $job->starting_time();
-				push @{$self->{reserved_jobs}}, $job;
-			}
+		if ($self->uses_external_simulator()) {
+			$self->{current_time} = $self->{events}->current_time();
 		} else {
-			for my $event (@events) {
-				my $job = $event->payload();
-				delete $self->{started_jobs}->{$job->job_number()};
-				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
-			}
+			my $events_timestamp = $events[0]->timestamp();
+			$self->{current_time} = $events_timestamp;
+		}
+		$self->{execution_profile}->set_current_time($self->{current_time});
 
+		my @typed_events;
+		push @{$typed_events[$_->type()]}, $_ for @events;
+
+		#first process all jobs ending events
+		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
+			my $job = $event->payload();
+			delete $self->{started_jobs}->{$job->job_number()};
+			$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
+		}
+
+		if (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 			$self->reassign_jobs_two_positions();
+		}
+
+		#then all submissions events
+		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
+			my $job = $event->payload();
+			$self->assign_job($job);
+			die "job $job is not assigned" unless defined $job->starting_time();
+			push @{$self->{reserved_jobs}}, $job;
 		}
 
 		$self->start_jobs();
@@ -139,16 +149,23 @@ sub start_jobs {
 	my $self = shift;
 	my @remaining_reserved_jobs;
 
+	my @newly_started_jobs;
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
-			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
+			unless ($self->uses_external_simulator()) {
+				$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
+			}
 			$self->{started_jobs}->{$job->job_number()} = $job;
+			push @newly_started_jobs, $job;
 		} else {
 			push @remaining_reserved_jobs, $job;
 		}
 	}
 
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
+	if ($self->uses_external_simulator()) {
+		$self->{events}->set_started_jobs(\@newly_started_jobs);
+	}
 	return;
 }
 
