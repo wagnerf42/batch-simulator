@@ -30,7 +30,7 @@ sub new {
 	return $self;
 }
 
-=item retireve()
+=item retrieve()
 
 Returns the smallest object or scalar stored in the heap.
 
