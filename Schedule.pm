@@ -7,7 +7,11 @@ use Time::HiRes qw(time);
 use parent 'Displayable';
 
 sub new {
-	my ($class, $trace, $processors_number, $cluster_size, $reduction_algorithm) = @_;
+	my $class = shift;
+	my $trace = shift;
+	my $processors_number = shift;
+	my $cluster_size = shift;
+	my $reduction_algorithm = shift;
 
 	my $self = {
 		trace => $trace,

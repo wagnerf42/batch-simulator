@@ -117,7 +117,7 @@ sub starts_after {
 
 sub ending_time_estimation {
 	my ($self, $time) = @_;
-	return unless defined $self->{starting_time};
+
 	my $real_end_time = $self->{starting_time} + $self->{run_time};
 	return $real_end_time if $real_end_time <= $time;
 	return $self->{starting_time} + $self->{requested_time};

@@ -127,17 +127,7 @@ sub reassign_jobs_two_positions {
 	return;
 }
 
-sub reassign_jobs {
-	my $self = shift;
 
-	for my $job (@{$self->{reserved_jobs}}) {
-		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
-			$self->{execution_profile}->remove_job($job, $self->{current_time});
-			$self->assign_job($job);
-		}
-	}
-	return;
-}
 
 sub assign_job {
 	my $self = shift;

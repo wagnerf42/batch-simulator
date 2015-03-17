@@ -102,11 +102,6 @@ sub remove_job {
 	$self->{profile_tree}->nodes_loop($starting_time, $job_ending_time,
 		sub {
 			my $profile = shift;
-
-			# Profiles that are included in the list but don't really impact the job
-			return 1 if $profile->starting_time() == $job_ending_time;
-			return 1 if $profile->ending_time() == $starting_time;
-
 			push @impacted_profiles, $profile ;
 			return 1;
 		}
@@ -212,11 +207,19 @@ sub remove_job {
 	return;
 }
 
+=item add_job_at(starting_time, job)
+
+Adds a job to the execution profile at the time starting_time.
+
+This routine finds all the profiles that are impacted by the addition of the
+job and updates them, removing available CPUs.
+
+=cut
+
 sub add_job_at {
 	my $self = shift;
 	my $starting_time = shift;
 	my $job = shift;
-	my $current_time = shift;
 
 	my @profiles_to_update;
 	my $ending_time = $starting_time + $job->requested_time();
@@ -225,6 +228,7 @@ sub add_job_at {
 		sub {
 			my $profile = shift;
 
+			# Avoid including a profile that starts at $ending_time
 			return 0 if $profile->starting_time == $ending_time;
 
 			push @profiles_to_update, $profile;
@@ -252,8 +256,8 @@ sub could_start_job_at {
 		sub {
 			my $profile = shift;
 
+			# Gap in the profile, can't use it to run the job
 			if ($starting_time != $profile->starting_time()) {
-				# Gap in the profile, can't use it to run the job
 				$min_processors = 0;
 				return 0;
 			}
