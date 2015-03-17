@@ -9,7 +9,6 @@ use Storable qw(dclone);
 use POSIX qw(ceil floor);
 
 use Job;
-use Database;
 
 sub new_from_swf {
 	my $class = shift;
