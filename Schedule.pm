@@ -1,6 +1,7 @@
 package Schedule;
 use strict;
 use warnings;
+use EventQueue;
 
 use List::Util qw(max sum);
 use Time::HiRes qw(time);
@@ -8,31 +9,35 @@ use parent 'Displayable';
 
 sub new {
 	my $class = shift;
-	my $trace = shift;
-	my $processors_number = shift;
-	my $cluster_size = shift;
-	my $reduction_algorithm = shift;
-
-	my $uses_external_simulator = shift;
-	$uses_external_simulator = 0 unless defined $uses_external_simulator;
 
 	my $self = {
-		trace => $trace,
-		processors_number => $processors_number,
-		cluster_size => $cluster_size,
-		reduction_algorithm => $reduction_algorithm,
+		trace => shift,
+		processors_number => shift,
+		cluster_size => shift,
+		reduction_algorithm => shift,
 		cmax => 0,
-		uses_external_simulator => $uses_external_simulator
+		uses_external_simulator => 0
 	};
 
-	unless ($self->{uses_external_simulator}) {
-		die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
-		$self->{trace}->unassign_jobs(); # make sure the trace is clean
-	} else {
-		$self->{events} = EventQueue->new();
-		$self->{processors_number} = $self->{events}->processors_number();
-		$self->{cluster_size} = $self->{events}->cluster_size();
-	}
+	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
+	$self->{trace}->unassign_jobs(); # make sure the trace is clean
+
+	bless $self, $class;
+	return $self;
+}
+
+sub new_simulation {
+	my $class = shift;
+
+	my $self = {
+		cluster_size => shift,
+		reduction_algorithm => shift,
+		cmax => 0,
+		uses_external_simulator => 1
+	};
+
+	$self->{events} = EventQueue->new(shift);
+	$self->{processors_number} = $self->{events}->cpu_number();
 
 	bless $self, $class;
 	return $self;

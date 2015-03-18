@@ -34,7 +34,7 @@ Backfilling - Implementation of the Backfilling algorithm
 
 =over 12
 
-=item new(trace, num_processors, cluster_size, reduction_algorithm)
+=item new(trace, processors_number, cluster_size, reduction_algorithm)
 
 Creates a new Backfilling object.
 
@@ -49,6 +49,13 @@ sub new {
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
 	return $self;
+}
+
+sub new_simulation {
+	my $class = shift;
+	my $self = $class->SUPER::new_simulation(@_);
+
+	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
 }
 
 =item run()
@@ -106,6 +113,7 @@ sub run {
 			my $job = $event->payload();
 			delete $self->{started_jobs}->{$job->job_number()};
 			$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
+			$job->run_time($self->{current_time}-$job->starting_time());
 		}
 
 		# Reassign all reserved jobs if any job finished

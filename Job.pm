@@ -63,11 +63,13 @@ sub new {
 		print STDERR "warning : invalid job $self->{job_number} : allocated cpus does not match requested cpus ; replacing wrong values\n";
 		$self->{allocated_cpus} = $self->{requested_cpus};
 	}
-	if ($self->{requested_time} < $self->{run_time}) {
+
+	if (defined($self->{run_time}) and $self->{requested_time} < $self->{run_time}) {
 		#print STDERR "warning : invalid job $self->{job_number} : requested time is less than runtime\n";
 		$self->{run_time} = $self->{requested_time};
 	}
-	die 'invalid job' unless $self->{requested_time} > 0 and $self->{run_time} > 0;
+
+	die 'invalid job' unless $self->{requested_time} > 0 and (not defined $self->{run_time} or $self->{run_time} > 0);
 
 	bless $self, $class;
 	return $self;
