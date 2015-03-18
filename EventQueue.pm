@@ -27,13 +27,15 @@ sub new {
 	my $class = shift;
 
 	my $self = {
-		json_file => shift
+		json_file => shift,
+		profile_number => shift
 	};
 
 	die "bad json_file $self->{json_file}" unless -f $self->{json_file};
 
 	$self->{json} = json_decode(read_file($self->{json_file}));
 
+	# Get information about the jobs
 	for my $job (@{$self->{json}->{jobs}}) {
 		my $id = $job->{id};
 
@@ -53,6 +55,12 @@ sub new {
 		);
 	}
 
+	# Get the number of CPUs and maybe cluster size
+	my $profile = $self->{json}->{profiles}->[$self->{profile_number}];
+	$self->{processors_number} = $profile->{cpu};
+	$self->{cluster_size} = $profile->{cluster_size};
+
+	# Generate the UNIX socket
 	$self->{server_socket} = IO::Socket::UNIX->new(
 		Type => SOCK_STREAM(),
 		Local => '/tmp/bat_socket',
@@ -152,6 +160,16 @@ sub retrieve_all {
 
 	die "no events received" unless @incoming_events;
 	return @incoming_events;
+}
+
+sub processors_number {
+	my $self = shift;
+	return $self->{processors_number};
+}
+
+sub cluster_size {
+	my $self = shift;
+	return $self->{cluster_size};
 }
 
 1;

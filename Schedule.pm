@@ -18,23 +18,21 @@ sub new {
 
 	my $self = {
 		trace => $trace,
-		num_processors => $processors_number,
+		processors_number => $processors_number,
 		cluster_size => $cluster_size,
 		reduction_algorithm => $reduction_algorithm,
-		contiguous_jobs_number => 0,
-		local_jobs_number => 0,
 		cmax => 0,
 		uses_external_simulator => $uses_external_simulator
 	};
 
 	unless ($self->{uses_external_simulator}) {
-		die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
-		# Make sure the trace is clean
-		$self->{trace}->unassign_jobs();
+		die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
+		$self->{trace}->unassign_jobs(); # make sure the trace is clean
 	} else {
 		$self->{events} = EventQueue->new();
+		$self->{processors_number} = $self->{events}->processors_number();
+		$self->{cluster_size} = $self->{events}->cluster_size();
 	}
-
 
 	bless $self, $class;
 	return $self;
@@ -49,7 +47,7 @@ sub run {
 	my ($self) = @_;
 	my $start_time = time();
 
-	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
+	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
 
 	for my $job (@{$self->{trace}->jobs()}) {
 		$self->assign_job($job);
@@ -97,7 +95,7 @@ sub cmax_estimation {
 
 sub contiguous_jobs_number {
 	my ($self) = @_;
-	return scalar grep {$_->get_processor_range()->contiguous($self->{num_processors})} @{$self->{trace}->jobs()};
+	return scalar grep {$_->get_processor_range()->contiguous($self->{processors_number})} @{$self->{trace}->jobs()};
 }
 
 sub local_jobs_number {
@@ -140,7 +138,7 @@ sub save_svg {
 	$cmax = 1 unless defined $cmax;
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
 	my $w_ratio = 800/$cmax;
-	my $h_ratio = 600/$self->{num_processors};
+	my $h_ratio = 600/$self->{processors_number};
 
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
