@@ -12,6 +12,7 @@ sub new {
 	my $processors_number = shift;
 	my $cluster_size = shift;
 	my $reduction_algorithm = shift;
+
 	my $uses_external_simulator = shift;
 	$uses_external_simulator = 0 unless defined $uses_external_simulator;
 
@@ -26,7 +27,7 @@ sub new {
 		uses_external_simulator => $uses_external_simulator
 	};
 
-	unless ($self->uses_external_simulator()) {
+	unless ($self->{uses_external_simulator}) {
 		die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
 		# Make sure the trace is clean
 		$self->{trace}->unassign_jobs();

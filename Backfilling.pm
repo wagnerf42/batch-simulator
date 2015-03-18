@@ -75,48 +75,45 @@ original position.
 sub run {
 	my $self = shift;
 
-	# Jobs not started yet
-	$self->{reserved_jobs} = [];
+	$self->{reserved_jobs} = []; # jobs not started yet
+	$self->{started_jobs} = {}; # jobs that have already started
 
-	# Jobs which started before current time
-	$self->{started_jobs} = {};
 	unless ($self->uses_external_simulator()) {
-		#we have a trace file, add all corresponding events
 		$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
-		# Add all jobs to the queue
 		$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
 	}
 
-	# Time measure
-	$self->{schedule_time} = time();
+	$self->{schedule_time} = time(); # time measure
 
 	while ($self->{events}->not_empty()) {
-		# Events coming from the Heap will have same timestamp and type
 		my @events = $self->{events}->retrieve_all();
+
+		print STDERR "events @events\n";
 
 		if ($self->uses_external_simulator()) {
 			$self->{current_time} = $self->{events}->current_time();
 		} else {
-			my $events_timestamp = $events[0]->timestamp();
+			my $events_timestamp = $events[0]->timestamp(); # events coming from the heap will have the same time and type
 			$self->{current_time} = $events_timestamp;
 		}
 		$self->{execution_profile}->set_current_time($self->{current_time});
 
 		my @typed_events;
-		push @{$typed_events[$_->type()]}, $_ for @events;
+		push @{$typed_events[$_->type()]}, $_ for @events; # 2 lists, one for each event type
 
-		#first process all jobs ending events
+		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 			my $job = $event->payload();
 			delete $self->{started_jobs}->{$job->job_number()};
 			$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
 		}
 
+		# Reassign all reserved jobs if any job finished
 		if (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 			$self->reassign_jobs_two_positions();
 		}
 
-		#then all submissions events
+		# Submission events
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
 			$self->assign_job($job);
