@@ -6,6 +6,22 @@ use List::Util qw(max sum);
 use Time::HiRes qw(time);
 use parent 'Displayable';
 
+=head1 NAME
+
+Schedule - Basic class for schedule algorithms
+
+This class doesn't have all the logic for the schedule algorithm (i.e. it doesn't
+implement the assign_job routine). Instead, another class must inherit from it and
+complete the implementation (i.e. backfilling algorithm).
+
+=over 12
+
+=item new(trace, processors_number, cluster_size, reduction_algorithm)
+
+Creates a new Schedule object.
+
+=cut
+
 sub new {
 	my $class = shift;
 	my $trace = shift;
@@ -44,18 +60,19 @@ sub uses_external_simulator {
 	return $self->{uses_external_simulator};
 }
 
+=item run()
+
+Runs the basic schedule algorithm, calling the assign_job routine from the child class.
+
+=cut
+
 sub run {
 	my ($self) = @_;
-	my $start_time = time();
 
 	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
 
-	for my $job (@{$self->{trace}->jobs()}) {
-		$self->assign_job($job);
-		$job->schedule_time(time() - $start_time);
-	}
+	$self->assign_job($_) for @{$self->{trace}->jobs()};
 
-	$self->{run_time} = time() - $start_time;
 	return;
 }
 
