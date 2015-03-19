@@ -1,17 +1,17 @@
 package ExecutionProfile;
+use parent 'Displayable';
 
 use strict;
 use warnings;
 
 use List::Util qw(min max);
-use Carp;
 use Log::Log4perl qw(get_logger);
 
-use Profile;
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
+
+use Profile;
 use ProcessorRange;
 use BinarySearchTree;
-use parent 'Displayable';
 
 use overload '""' => \&stringification;
 
@@ -44,7 +44,7 @@ sub new {
 	};
 
 	$self->{profile_tree} = BinarySearchTree->new(-1, 0);
-	$self->{profile_tree}->add_content(Profile->new((defined($starting_time) ? $starting_time : 0), [0, $self->{processors_number} - 1]));
+	$self->{profile_tree}->add_content(Profile->new((defined($starting_time) ? $starting_time : 0), undef, [0, $self->{processors_number} - 1]));
 
 	bless $self, $class;
 	return $self;
@@ -64,7 +64,6 @@ sub get_free_processors_for {
 	my $self = shift;
 	my $job = shift;
 	my $starting_time = shift;
-
 	my $profile = $self->{profile_tree}->find_content($starting_time);
 	my $left_processors = $profile->processors()->copy_range();
 	my $duration = 0;
@@ -112,10 +111,9 @@ Returns the number of available processors at the time starting_time.
 sub processors_available_at {
 	my $self = shift;
 	my $starting_time = shift;
-
 	my $profile = $self->{profile_tree}->find_content($starting_time);
-	return $profile->processors()->size() if defined $profile;
 
+	return $profile->processors()->size() if defined $profile;
 	return 0;
 }
 
@@ -150,7 +148,6 @@ sub remove_job {
 	my $self = shift;
 	my $job = shift;
 	my $current_time = shift;
-
 	my $logger = get_logger('ExecutionProfile::remove_job');
 
 	return unless defined $job->starting_time(); #do not remove jobs which are not here anyway
@@ -181,7 +178,7 @@ sub remove_job {
 
 		# Only remove if it is still there
 		if ($job_ending_time - $start > 0) {
-			my $new_profile = Profile->new($start, $job->assigned_processors_ids()->copy_range(), $job_ending_time - $start);
+			my $new_profile = Profile->new($start, $job_ending_time - $start, $job->assigned_processors_ids()->copy_range());
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		return;
@@ -199,7 +196,7 @@ sub remove_job {
 		my $first_profile_ending_time = $first_profile->ending_time();
 		$first_profile->duration($starting_time - $first_profile->starting_time());
 
-		my $second_profile = Profile->new($starting_time, $first_profile->processors()->copy_range(), $first_profile_ending_time - $starting_time);
+		my $second_profile = Profile->new($starting_time, $first_profile_ending_time - $starting_time, $first_profile->processors()->copy_range());
 
 		#put back
 		$self->{profile_tree}->add_content($first_profile);
@@ -221,7 +218,7 @@ sub remove_job {
 
 		my $duration;
 		$duration = $profile_end - $job_ending_time if (defined $profile_end);
-		my $second_profile = Profile->new($job_ending_time, $first_profile->processors()->copy_range(), $duration);
+		my $second_profile = Profile->new($job_ending_time, $duration, $first_profile->processors()->copy_range());
 
 		#put back
 		$self->{profile_tree}->add_content($first_profile);
@@ -237,7 +234,7 @@ sub remove_job {
 
 		my $duration = $profile->starting_time() - $previous_profile_ending_time;
 		if ($duration > 0) {
-			my $new_profile = Profile->new($previous_profile_ending_time, $job->assigned_processors_ids()->copy_range(), $duration);
+			my $new_profile = Profile->new($previous_profile_ending_time, $duration, $job->assigned_processors_ids()->copy_range());
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		$previous_profile_ending_time = $profile->ending_time();
@@ -247,7 +244,7 @@ sub remove_job {
 	my $duration = $job_ending_time - $previous_profile_ending_time;
 	if ($duration > 0) {
 		$logger->debug("gap at the end: $job_ending_time - $previous_profile_ending_time = " . ($job_ending_time - $previous_profile_ending_time));
-		my $new_profile = Profile->new($previous_profile_ending_time, $job->assigned_processors_ids()->copy_range(), $duration);
+		my $new_profile = Profile->new($previous_profile_ending_time, $duration, $job->assigned_processors_ids()->copy_range());
 		$self->{profile_tree}->add_content($new_profile);
 	}
 
@@ -267,7 +264,6 @@ sub add_job_at {
 	my $self = shift;
 	my $starting_time = shift;
 	my $job = shift;
-
 	my @profiles_to_update;
 	my $ending_time = $starting_time + $job->requested_time();
 
@@ -307,7 +303,6 @@ sub could_start_job_at {
 	my $self = shift;
 	my $job = shift;
 	my $starting_time = shift;
-
 	my $min_processors = $job->requested_cpus();
 	my $job_ending_time = $starting_time + $job->requested_time();
 
@@ -406,7 +401,6 @@ profiles that started before the current time but end after.
 sub set_current_time {
 	my $self = shift;
 	my $current_time = shift;
-
 	my $updated_profile;
 	my @removed_profiles;
 
@@ -442,6 +436,7 @@ sub set_current_time {
 	}
 
 	$self->{profile_tree}->remove_content($_) for @removed_profiles;
+
 	return;
 }
 
@@ -467,6 +462,7 @@ sub show {
 			my $profile = shift;
 			return 1;
 		});
+
 	return;
 }
 
@@ -480,8 +476,7 @@ sub save_svg {
 			my $profile = shift;
 			push @profiles, $profile;
 			return 1;
-		}
-	);
+		});
 
 	my $last_starting_time = $profiles[-1]->starting_time();
 	return if $last_starting_time == 0;

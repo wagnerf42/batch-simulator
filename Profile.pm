@@ -3,23 +3,29 @@ package Profile;
 use strict;
 use warnings;
 
-use Carp;
 use POSIX;
 use List::Util qw(min);
+use Log::Log4perl qw(get_logger);
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
+
 use ProcessorRange;
 
 use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 
 sub new {
 	my $class = shift;
-	my $self = {};
-	$self->{starting_time} = shift;
+	my $starting_time = shift;
+	my $duration = shift;
 	my $ids = shift;
-	$self->{duration} = shift;
+	my $logger = get_logger('Profile::new');
 
-	confess "negative profile duration $self->{duration}" if defined $self->{duration} and $self->{duration} <= 0;
+	my $self = {
+		starting_time => $starting_time,
+		duration => $duration
+	};
+
+	$logger->logconfess("invalid profile duration $self->{duration}") if defined $self->{duration} and $self->{duration} <= 0;
 
 	$self->{processors} = (ref $ids eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
 
@@ -71,13 +77,13 @@ sub split_by_job {
 
 	my $middle_start = $self->{starting_time};
 	my $middle_end = (defined $self->{duration}) ? min($self->ending_time(), $job->submitted_ending_time()) : $job->submitted_ending_time();
-	my $middle_profile = Profile->new($middle_start, $self->{processors}->copy_range(), $middle_end - $middle_start);
+	my $middle_profile = Profile->new($middle_start, $middle_end - $middle_start, $self->{processors}->copy_range());
 	$middle_profile->remove_used_processors($job);
 	push @profiles, $middle_profile unless $middle_profile->is_fully_loaded();
 
 	unless (defined $self->ending_time() and $job->submitted_ending_time() >= $self->ending_time()) {
 		my $end_duration = $self->ending_time() - $job->submitted_ending_time() if defined $self->{duration};
-		my $end_profile = Profile->new($job->submitted_ending_time(), $self->{processors}->copy_range(), $end_duration);
+		my $end_profile = Profile->new($job->submitted_ending_time(), $end_duration, $self->{processors}->copy_range());
 		push @profiles, $end_profile;
 	}
 	return @profiles;
@@ -91,11 +97,10 @@ sub is_fully_loaded {
 sub remove_used_processors {
 	my $self = shift;
 	my $job = shift;
-
 	my $assigned_processors_ids = $job->assigned_processors_ids();
-	confess unless defined $assigned_processors_ids;
 
 	$self->{processors}->remove($assigned_processors_ids);
+
 	return;
 }
 

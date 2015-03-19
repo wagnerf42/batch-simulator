@@ -3,7 +3,6 @@ use parent 'Schedule';
 use strict;
 use warnings;
 
-use Carp;
 use Exporter qw(import);
 use Time::HiRes qw(time);
 use Log::Log4perl qw(get_logger);
@@ -50,6 +49,7 @@ sub new {
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
 	$self->{current_time} = 0;
+
 	return $self;
 }
 
@@ -59,6 +59,7 @@ sub new_simulation {
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
 	$self->{current_time} = 0;
+
 	return $self;
 }
 
@@ -85,7 +86,6 @@ original position.
 
 sub run {
 	my $self = shift;
-
 	my $logger = get_logger('Backfilling::run');
 
 	$self->{reserved_jobs} = []; # jobs not started yet
@@ -152,6 +152,7 @@ sub run {
 
 	# Time measure
 	$self->{schedule_time} = time() - $self->{schedule_time};
+
 	return;
 }
 
@@ -170,11 +171,10 @@ can't start now is found.
 
 sub start_jobs {
 	my $self = shift;
-
 	my @remaining_reserved_jobs;
 	my $logger = get_logger('Backfilling::start_jobs');
-
 	my @newly_started_jobs;
+
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
 			$logger->debug("job " . $job->job_number() . " starting");
@@ -190,6 +190,7 @@ sub start_jobs {
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
 	$logger->debug("jobs to be started: @newly_started_jobs");
 	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->uses_external_simulator());
+
 	return;
 }
 
@@ -205,7 +206,6 @@ is not possible, the job is returned to it's original position.
 
 sub reassign_jobs_two_positions {
 	my $self = shift;
-
 	my $logger = get_logger('Backfilling::reassign_jobs_two_positions');
 
 	for my $job (@{$self->{reserved_jobs}}) {
@@ -231,6 +231,7 @@ sub reassign_jobs_two_positions {
 			}
 		}
 	}
+
 	return;
 }
 
@@ -247,10 +248,9 @@ been submitted but haven't started yet.
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
-
 	my $logger = get_logger('Backfilling::assign_job');
-
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
+
 	$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
 	$job->assign_to($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
