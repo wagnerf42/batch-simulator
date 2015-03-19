@@ -115,9 +115,9 @@ sub mean_stretch {
 	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
 }
 
-sub cmax_estimation {
-	my ($self, $time) = @_;
-	return max map {$_->ending_time_estimation($time)} (grep {defined $_->starting_time()} (@{$self->{trace}->jobs()}));
+sub cmax {
+	my ($self) = @_;
+	return max map {$_->submitted_ending_time()} (grep {defined $_->starting_time()} (@{$self->{trace}->jobs()}));
 }
 
 sub contiguous_jobs_number {
@@ -161,7 +161,7 @@ sub save_svg {
 
 	open(my $filehandle, '>', "$svg_filename") or die "unable to open $svg_filename";
 
-	my $cmax = $self->cmax_estimation($time);
+	my $cmax = $self->cmax();
 	$cmax = 1 unless defined $cmax;
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
 	my $w_ratio = 800/$cmax;
