@@ -5,13 +5,11 @@ use warnings;
 
 use List::Util qw(min max);
 use Carp;
-use Data::Dumper;
+use Log::Log4perl qw(get_logger);
 
 use Profile;
-
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 use ProcessorRange;
-
 use BinarySearchTree;
 use parent 'Displayable';
 
@@ -153,10 +151,14 @@ sub remove_job {
 	my $job = shift;
 	my $current_time = shift;
 
+	my $logger = get_logger('ExecutionProfile::remove_job');
+
 	return unless defined $job->starting_time(); #do not remove jobs which are not here anyway
 
 	my $starting_time = $job->starting_time();
 	my $job_ending_time = $job->submitted_ending_time();
+
+	$logger->debug("removing job " . $job->job_number() . " at [$starting_time, $job_ending_time]");
 
 	my @impacted_profiles;
 	Profile::set_comparison_function('all_times');
@@ -169,10 +171,15 @@ sub remove_job {
 	);
 	Profile::set_comparison_function('default');
 
+	#$logger->debug("impacted profiles: @impacted_profiles") if $logger->is_debug();
+
 	# No impacted profiles
 	unless (@impacted_profiles) {
 		my $start = max($current_time, $starting_time); #avoid starting in the past
-		#only remove if it is still there
+
+		$logger->debug('no impacted profiles');
+
+		# Only remove if it is still there
 		if ($job_ending_time - $start > 0) {
 			my $new_profile = Profile->new($start, $job->assigned_processors_ids()->copy_range(), $job_ending_time - $start);
 			$self->{profile_tree}->add_content($new_profile);
@@ -182,6 +189,8 @@ sub remove_job {
 
 	# Gap at the first profile
 	if ($impacted_profiles[0]->starting_time() < $starting_time) {
+		$logger->debug('gap at the first profile');
+
 		#remove
 		my $first_profile = shift @impacted_profiles;
 		$self->{profile_tree}->remove_content($first_profile);
@@ -200,6 +209,8 @@ sub remove_job {
 
 	# Gap at the last profile
 	if ($impacted_profiles[-1]->ends_after($job_ending_time)) {
+		$logger->debug('gap at the last profile');
+
 		#remove
 		my $first_profile = pop @impacted_profiles;
 		$self->{profile_tree}->remove_content($first_profile);
@@ -207,13 +218,10 @@ sub remove_job {
 		#split in two
 		my $profile_end = $first_profile->ending_time();
 		$first_profile->duration($job_ending_time - $first_profile->starting_time());
-		my $second_profile;
-		my $duration;
-		if (defined $profile_end) {
-			$duration = $profile_end - $job_ending_time;
-		}
 
-		$second_profile = Profile->new($job_ending_time, $first_profile->processors()->copy_range(), $duration);
+		my $duration;
+		$duration = $profile_end - $job_ending_time if (defined $profile_end);
+		my $second_profile = Profile->new($job_ending_time, $first_profile->processors()->copy_range(), $duration);
 
 		#put back
 		$self->{profile_tree}->add_content($first_profile);
@@ -224,7 +232,9 @@ sub remove_job {
 	# Update profiles
 	my $previous_profile_ending_time = max($starting_time, $current_time);
 	for my $profile (@impacted_profiles) {
+		$logger->debug("updating profile $profile");
 		$profile->remove_job($job);
+
 		my $duration = $profile->starting_time() - $previous_profile_ending_time;
 		if ($duration > 0) {
 			my $new_profile = Profile->new($previous_profile_ending_time, $job->assigned_processors_ids()->copy_range(), $duration);
@@ -236,37 +246,10 @@ sub remove_job {
 	# Gap at the end
 	my $duration = $job_ending_time - $previous_profile_ending_time;
 	if ($duration > 0) {
+		$logger->debug("gap at the end: $job_ending_time - $previous_profile_ending_time = " . ($job_ending_time - $previous_profile_ending_time));
 		my $new_profile = Profile->new($previous_profile_ending_time, $job->assigned_processors_ids()->copy_range(), $duration);
 		$self->{profile_tree}->add_content($new_profile);
 	}
-
-	# Try to fuse identical profiles
-#	for my $time ($starting_time, $job_ending_time) {
-#		my @profiles;
-#		Profile::set_comparison_function('all_times');
-#		$self->{profile_tree}->nodes_loop($time, $time,
-#			sub {
-#				my $profile = shift;
-#				push @profiles, $profile;
-#				return 1;
-#			}
-#		);
-#		Profile::set_comparison_function('default');
-#		if (@profiles > 1) {
-#			my @processors = map {$_->processors()} @profiles;
-#			my $intersection = $processors[0]->intersection($processors[1]);
-#			if ($intersection->size() == $processors[0]->size()) {
-#				#they are the same, fuse
-#				$self->{profile_tree}->remove_content($profiles[1]);
-#				if (defined $profiles[1]->ending_time()) {
-#					$profiles[0]->duration($profiles[1]->ending_time()-$profiles[0]->starting_time());
-#				} else {
-#					$profiles[0]->duration(undef);
-#				}
-#			}
-#			$intersection->free_allocated_memory();
-#		}
-#	}
 
 	return;
 }

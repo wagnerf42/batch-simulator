@@ -1,10 +1,12 @@
 package Job;
+
 use strict;
 use warnings;
+
 use List::Util qw(min);
-use Data::Dumper qw(Dumper);
 use POSIX;
 use Carp;
+use Log::Log4perl;
 
 use overload '""' => \&stringification;
 
@@ -121,6 +123,8 @@ sub starts_after {
 
 sub ending_time_estimation {
 	my ($self, $time) = @_;
+
+	confess unless defined $self->{starting_time};
 
 	my $real_end_time = $self->{starting_time} + $self->{run_time};
 	return $real_end_time if $real_end_time <= $time;

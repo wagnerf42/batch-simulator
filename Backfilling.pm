@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 use Exporter qw(import);
 use Time::HiRes qw(time);
+use Log::Log4perl qw(get_logger);
 
 use ExecutionProfile;
 use Heap;
@@ -48,6 +49,7 @@ sub new {
 	my $self = $class->SUPER::new(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
+	$self->{current_time} = 0;
 	return $self;
 }
 
@@ -56,6 +58,7 @@ sub new_simulation {
 	my $self = $class->SUPER::new_simulation(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
+	$self->{current_time} = 0;
 	return $self;
 }
 
@@ -83,6 +86,8 @@ original position.
 sub run {
 	my $self = shift;
 
+	my $logger = get_logger('Backfilling::run');
+
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
 
@@ -96,7 +101,8 @@ sub run {
 	while ($self->{events}->not_empty()) {
 		my @events = $self->{events}->retrieve_all();
 
-		print STDERR "events @events\n";
+		$logger->debug("events @events");
+		$logger->debug("current time is $self->{current_time}");
 
 		if ($self->uses_external_simulator()) {
 			$self->{current_time} = $self->{events}->current_time();
@@ -112,7 +118,9 @@ sub run {
 		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 			my $job = $event->payload();
+
 			delete $self->{started_jobs}->{$job->job_number()};
+
 			if ($self->uses_external_simulator()) {
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
 				$job->run_time($self->{current_time}-$job->starting_time());
@@ -123,6 +131,7 @@ sub run {
 
 		# Reassign all reserved jobs if any job finished
 		if (@{$typed_events[JOB_COMPLETED_EVENT]}) {
+			$logger->debug('reassigning jobs');
 			$self->reassign_jobs_two_positions();
 		}
 
@@ -133,13 +142,12 @@ sub run {
 				$self->{trace}->add_job($job);
 			}
 			$self->assign_job($job);
-			die "job $job is not assigned" unless defined $job->starting_time();
+			$logger->error_die("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
 		$self->start_jobs();
-		$self->{execution_profile}->tycat();
-		$self->tycat();
+		$self->tycat() if $logger->is_debug();
 	}
 
 	# Time measure
@@ -162,14 +170,16 @@ can't start now is found.
 
 sub start_jobs {
 	my $self = shift;
+
 	my @remaining_reserved_jobs;
+	my $logger = get_logger('Backfilling::start_jobs');
 
 	my @newly_started_jobs;
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
-			unless ($self->uses_external_simulator()) {
-				$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job));
-			}
+			$logger->debug("job " . $job->job_number() . " starting");
+
+			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job)) unless ($self->uses_external_simulator());
 			$self->{started_jobs}->{$job->job_number()} = $job;
 			push @newly_started_jobs, $job;
 		} else {
@@ -178,9 +188,7 @@ sub start_jobs {
 	}
 
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
-	if ($self->uses_external_simulator()) {
-		$self->{events}->set_started_jobs(\@newly_started_jobs);
-	}
+	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->uses_external_simulator());
 	return;
 }
 
@@ -197,19 +205,24 @@ is not possible, the job is returned to it's original position.
 sub reassign_jobs_two_positions {
 	my $self = shift;
 
+	my $logger = get_logger('Backfilling::reassign_jobs_two_positions');
+
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 
+			$logger->debug("enough processors for job " . $job->job_number());
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
 
 			my $new_processors;
 			if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
+				$logger->debug("could start job " . $job->job_number());
 				$new_processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
 			}
 
 			if ($new_processors) {
+				$logger->debug("assigning job " . $job->job_number());
 				$job->assign_to($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
 			} else {
@@ -234,7 +247,10 @@ sub assign_job {
 	my $self = shift;
 	my $job = shift;
 
+	my $logger = get_logger('Backfilling::assign_job');
+
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
+	$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
 	$job->assign_to($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
 

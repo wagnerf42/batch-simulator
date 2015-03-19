@@ -96,7 +96,7 @@ sub mean_stretch {
 
 sub cmax_estimation {
 	my ($self, $time) = @_;
-	return max map {$_->ending_time_estimation($time)} @{$self->{trace}->jobs()};
+	return max map {$_->ending_time_estimation($time)} (grep {defined $_->starting_time()} (@{$self->{trace}->jobs()}));
 }
 
 sub contiguous_jobs_number {
