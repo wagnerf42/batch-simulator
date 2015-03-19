@@ -58,7 +58,7 @@ sub new_simulation {
 	$self->{events} = EventQueue->new(shift);
 	$self->{processors_number} = $self->{events}->cpu_number();
 
-	$self->{cluster_size} = $self->{num_processors} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{num_processors});
+	$self->{cluster_size} = $self->{processors_number} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{processors_number});
 
 	bless $self, $class;
 	return $self;

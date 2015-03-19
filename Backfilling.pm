@@ -188,6 +188,7 @@ sub start_jobs {
 	}
 
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
+	$logger->debug("jobs to be started: @newly_started_jobs");
 	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->uses_external_simulator());
 	return;
 }

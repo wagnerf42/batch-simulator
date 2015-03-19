@@ -16,7 +16,7 @@ sub stringification {
 	my $self = shift;
 
 	return join(' ',
-		map {(defined $_)?$_:' '} (
+		map {(defined $_) ? $_ : '?'} (
 			$self->{job_number},
 			$self->{submit_time},
 			$self->{wait_time},
@@ -41,6 +41,7 @@ sub stringification {
 
 sub new {
 	my $class = shift;
+	my $logger = get_logger('Job::new');
 
 	my $self = {
 		job_number => shift, #1
@@ -63,17 +64,8 @@ sub new {
 		think_time_prec_job => shift, #18
 	};
 
-	unless ($self->{allocated_cpus} == $self->{requested_cpus}) {
-		print STDERR "warning : invalid job $self->{job_number} : allocated cpus does not match requested cpus ; replacing wrong values\n";
-		$self->{allocated_cpus} = $self->{requested_cpus};
-	}
-
-	if (defined($self->{run_time}) and $self->{requested_time} < $self->{run_time}) {
-		#print STDERR "warning : invalid job $self->{job_number} : requested time is less than runtime\n";
-		$self->{run_time} = $self->{requested_time};
-	}
-
-	die 'invalid job' unless $self->{requested_time} > 0 and (not defined $self->{run_time} or $self->{run_time} > 0);
+	$self->{allocated_cpus} = $self->{requested_cpus} if ($self->{allocated_cpus} != $self->{requested_cpus});
+	$self->{run_time} = $self->{requested_time} if (defined($self->{run_time}) and $self->{requested_time} < $self->{run_time});
 
 	bless $self, $class;
 	return $self;
