@@ -10,6 +10,19 @@ use POSIX qw(ceil floor);
 
 use Job;
 
+sub new {
+	my $class = shift;
+	my $self = { jobs => [] };
+	bless $self, $class;
+	return $self;
+}
+
+sub add_job {
+	my $self = shift;
+	push @{$self->{jobs}}, shift;
+	return;
+}
+
 sub new_from_swf {
 	my $class = shift;
 	my $filename = shift;

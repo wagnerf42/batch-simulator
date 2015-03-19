@@ -42,7 +42,7 @@ sub new {
 			$job->{id}, # job number
 			undef,
 			undef,
-			undef,
+			$job->{walltime}, #it is a lie but temporary
 			$job->{res}, # allocated CPUs
 			undef,
 			undef,
@@ -55,6 +55,7 @@ sub new {
 	}
 
 	# Generate the UNIX socket
+	unlink('/tmp/bat_socket');
 	$self->{server_socket} = IO::Socket::UNIX->new(
 		Type => SOCK_STREAM(),
 		Local => '/tmp/bat_socket',
@@ -103,11 +104,11 @@ sub set_started_jobs {
 	my $self = shift;
 	my $jobs = shift;
 
-	my $message = "0:$self->{current_time}|$self->{current_time}:J:";
+	my $message = "0:$self->{current_simulator_time}|$self->{current_simulator_time}:J:";
 	my @jobs_messages = map {$_->job_number().'='.join(',', $_->assigned_processors_ids()->processors_ids())} @{$jobs};
 	$message .= join(';', @jobs_messages);
 
-	my $message_size = pack('N', length($message));
+	my $message_size = pack('L', length($message));
 	$self->{socket}->send($message_size);
 	$self->{socket}->send($message);
 	return;
@@ -134,10 +135,10 @@ sub retrieve_all {
 	my $self = shift;
 
 	my $packed_size = $self->recv(4);
-	my $size = unpack('N', $packed_size);
+	my $size = unpack('L', $packed_size);
 	my $message_content = $self->recv($size);
 
-	my @fields = split('|', $message_content);
+	my @fields = split('\|', $message_content);
 	my $check = shift @fields;
 
 	die "error checking head of message : $check" unless $check=~/^0:(\d+(\.\d+)?)$/;
@@ -148,10 +149,11 @@ sub retrieve_all {
 		die "invalid message $field" unless $field=~/^(\d+(\.\d+)?):([SC]):(\d+)/;
 
 		my $timestamp = $1;
-		my $type = $2;
+		my $type = $3;
 		$type = ($type eq 'C') ? 0 : 1;
-		my $job_id = $3;
+		my $job_id = $4;
 
+		die "no job for id $job_id in $self->{json}" unless defined $self->{jobs}->{$job_id};
 		push @incoming_events, Event->new($type, $timestamp, $self->{jobs}->{$job_id});
 	}
 
@@ -173,7 +175,7 @@ sub recv {
 	my $tmp;
 
 	while (length($message_content) < $size) {
-		$self->{socket}->recv($tmp, $size - length($message_content)) or die 'recv';
+		defined $self->{socket}->recv($tmp, $size - length($message_content)) or die 'recv';
 		$message_content .= $tmp;
 	}
 

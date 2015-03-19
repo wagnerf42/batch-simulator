@@ -56,6 +56,7 @@ sub new_simulation {
 	my $self = $class->SUPER::new_simulation(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
+	return $self;
 }
 
 =item run()
@@ -112,8 +113,12 @@ sub run {
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 			my $job = $event->payload();
 			delete $self->{started_jobs}->{$job->job_number()};
-			$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
-			$job->run_time($self->{current_time}-$job->starting_time());
+			if ($self->uses_external_simulator()) {
+				$self->{execution_profile}->remove_job($job, $self->{current_time});
+				$job->run_time($self->{current_time}-$job->starting_time());
+			} else {
+				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
+			}
 		}
 
 		# Reassign all reserved jobs if any job finished
@@ -124,12 +129,17 @@ sub run {
 		# Submission events
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
+			if ($self->uses_external_simulator()) {
+				$self->{trace}->add_job($job);
+			}
 			$self->assign_job($job);
 			die "job $job is not assigned" unless defined $job->starting_time();
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
 		$self->start_jobs();
+		$self->{execution_profile}->tycat();
+		$self->tycat();
 	}
 
 	# Time measure

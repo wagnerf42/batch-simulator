@@ -36,6 +36,7 @@ sub new_simulation {
 		uses_external_simulator => 1
 	};
 
+	$self->{trace} = Trace->new();
 	$self->{events} = EventQueue->new(shift);
 	$self->{processors_number} = $self->{events}->cpu_number();
 

@@ -172,8 +172,11 @@ sub remove_job {
 	# No impacted profiles
 	unless (@impacted_profiles) {
 		my $start = max($current_time, $starting_time); #avoid starting in the past
-		my $new_profile = Profile->new($start, $job->assigned_processors_ids()->copy_range(), $job_ending_time - $start);
-		$self->{profile_tree}->add_content($new_profile);
+		#only remove if it is still there
+		if ($job_ending_time - $start > 0) {
+			my $new_profile = Profile->new($start, $job->assigned_processors_ids()->copy_range(), $job_ending_time - $start);
+			$self->{profile_tree}->add_content($new_profile);
+		}
 		return;
 	}
 
