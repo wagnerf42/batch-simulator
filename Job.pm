@@ -1,10 +1,12 @@
 package Job;
+
 use strict;
 use warnings;
+
 use List::Util qw(min);
-use Data::Dumper qw(Dumper);
 use POSIX;
 use Carp;
+use Log::Log4perl;
 
 use overload '""' => \&stringification;
 
@@ -14,24 +16,26 @@ sub stringification {
 	my $self = shift;
 
 	return join(' ',
-		$self->{job_number},
-		$self->{submit_time},
-		$self->{wait_time},
-		$self->{run_time},
-		$self->{allocated_cpus},
-		$self->{avg_cpu_time},
-		$self->{used_mem},
-		$self->{requested_cpus},
-		$self->{requested_time},
-		$self->{requested_mem},
-		$self->{status},
-		$self->{uid},
-		$self->{gid},
-		$self->{exec_number},
-		$self->{queue_number},
-		$self->{partition_number},
-		$self->{prec_job_number},
-		$self->{think_time_prec_job}
+		map {(defined $_)?$_:' '} (
+			$self->{job_number},
+			$self->{submit_time},
+			$self->{wait_time},
+			$self->{run_time},
+			$self->{allocated_cpus},
+			$self->{avg_cpu_time},
+			$self->{used_mem},
+			$self->{requested_cpus},
+			$self->{requested_time},
+			$self->{requested_mem},
+			$self->{status},
+			$self->{uid},
+			$self->{gid},
+			$self->{exec_number},
+			$self->{queue_number},
+			$self->{partition_number},
+			$self->{prec_job_number},
+			$self->{think_time_prec_job}
+		)
 	);
 }
 
@@ -63,11 +67,13 @@ sub new {
 		print STDERR "warning : invalid job $self->{job_number} : allocated cpus does not match requested cpus ; replacing wrong values\n";
 		$self->{allocated_cpus} = $self->{requested_cpus};
 	}
-	if ($self->{requested_time} < $self->{run_time}) {
+
+	if (defined($self->{run_time}) and $self->{requested_time} < $self->{run_time}) {
 		#print STDERR "warning : invalid job $self->{job_number} : requested time is less than runtime\n";
 		$self->{run_time} = $self->{requested_time};
 	}
-	die 'invalid job' unless $self->{requested_time} > 0 and $self->{run_time} > 0;
+
+	die 'invalid job' unless $self->{requested_time} > 0 and (not defined $self->{run_time} or $self->{run_time} > 0);
 
 	bless $self, $class;
 	return $self;
@@ -117,6 +123,8 @@ sub starts_after {
 
 sub ending_time_estimation {
 	my ($self, $time) = @_;
+
+	confess unless defined $self->{starting_time};
 
 	my $real_end_time = $self->{starting_time} + $self->{run_time};
 	return $real_end_time if $real_end_time <= $time;

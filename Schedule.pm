@@ -1,6 +1,7 @@
 package Schedule;
 use strict;
 use warnings;
+use EventQueue;
 
 use List::Util qw(max sum);
 use Time::HiRes qw(time);
@@ -24,32 +25,36 @@ Creates a new Schedule object.
 
 sub new {
 	my $class = shift;
-	my $trace = shift;
-	my $processors_number = shift;
-	my $cluster_size = shift;
-	my $reduction_algorithm = shift;
-	my $uses_external_simulator = shift;
-	$uses_external_simulator = 0 unless defined $uses_external_simulator;
 
 	my $self = {
-		trace => $trace,
-		num_processors => $processors_number,
-		cluster_size => $cluster_size,
-		reduction_algorithm => $reduction_algorithm,
-		contiguous_jobs_number => 0,
-		local_jobs_number => 0,
+		trace => shift,
+		processors_number => shift,
+		cluster_size => shift,
+		reduction_algorithm => shift,
 		cmax => 0,
-		uses_external_simulator => $uses_external_simulator
+		uses_external_simulator => 0
 	};
 
-	unless ($self->uses_external_simulator()) {
-		die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
-		# Make sure the trace is clean
-		$self->{trace}->unassign_jobs();
-	} else {
-		$self->{events} = EventQueue->new();
-	}
+	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
+	$self->{trace}->unassign_jobs(); # make sure the trace is clean
 
+	bless $self, $class;
+	return $self;
+}
+
+sub new_simulation {
+	my $class = shift;
+
+	my $self = {
+		cluster_size => shift,
+		reduction_algorithm => shift,
+		cmax => 0,
+		uses_external_simulator => 1
+	};
+
+	$self->{trace} = Trace->new();
+	$self->{events} = EventQueue->new(shift);
+	$self->{processors_number} = $self->{events}->cpu_number();
 
 	bless $self, $class;
 	return $self;
@@ -69,7 +74,7 @@ Runs the basic schedule algorithm, calling the assign_job routine from the child
 sub run {
 	my ($self) = @_;
 
-	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
+	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
 
 	$self->assign_job($_) for @{$self->{trace}->jobs()};
 
@@ -108,12 +113,12 @@ sub mean_stretch {
 
 sub cmax_estimation {
 	my ($self, $time) = @_;
-	return max map {$_->ending_time_estimation($time)} @{$self->{trace}->jobs()};
+	return max map {$_->ending_time_estimation($time)} (grep {defined $_->starting_time()} (@{$self->{trace}->jobs()}));
 }
 
 sub contiguous_jobs_number {
 	my ($self) = @_;
-	return scalar grep {$_->get_processor_range()->contiguous($self->{num_processors})} @{$self->{trace}->jobs()};
+	return scalar grep {$_->get_processor_range()->contiguous($self->{processors_number})} @{$self->{trace}->jobs()};
 }
 
 sub local_jobs_number {
@@ -156,7 +161,7 @@ sub save_svg {
 	$cmax = 1 unless defined $cmax;
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
 	my $w_ratio = 800/$cmax;
-	my $h_ratio = 600/$self->{num_processors};
+	my $h_ratio = 600/$self->{processors_number};
 
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
