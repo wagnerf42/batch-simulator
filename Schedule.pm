@@ -38,6 +38,8 @@ sub new {
 	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
 	$self->{trace}->unassign_jobs(); # make sure the trace is clean
 
+	$self->{cluster_size} = $self->{num_processors} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{num_processors});
+
 	bless $self, $class;
 	return $self;
 }
@@ -55,6 +57,8 @@ sub new_simulation {
 	$self->{trace} = Trace->new();
 	$self->{events} = EventQueue->new(shift);
 	$self->{processors_number} = $self->{events}->cpu_number();
+
+	$self->{cluster_size} = $self->{num_processors} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{num_processors});
 
 	bless $self, $class;
 	return $self;
