@@ -5,7 +5,6 @@ use warnings;
 
 use List::Util qw(min);
 use POSIX;
-use Carp;
 use Log::Log4perl qw(get_logger);
 
 use overload '""' => \&stringification;

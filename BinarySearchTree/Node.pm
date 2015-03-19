@@ -1,11 +1,12 @@
 package BinarySearchTree::Node;
 
-use Data::Dumper;
-use Scalar::Util qw(refaddr);
-use Carp;
-
 use warnings;
 use strict;
+
+use Data::Dumper;
+use Scalar::Util qw(refaddr);
+use Log::Log4perl qw(get_logger);
+
 use constant {
 	LEFT => 0,
 	RIGHT => 1,
@@ -14,6 +15,7 @@ use constant {
 
 sub new {
 	my $class = shift;
+
 	my $self = {
 		content => shift,
 		children => [undef, undef], #left 0, right 1
@@ -53,7 +55,6 @@ sub other_direction {
 sub add {
 	my $self = shift;
 	my $content = shift;
-
 	my $current_node = $self;
 	my $next_direction = $current_node->get_direction_for($content);
 
@@ -72,23 +73,21 @@ sub add {
 
 sub balance {
 	my $self = shift;
+
 	while ($self->{priority} > $self->{father}->{priority}) {
 		$self->rotate();
 	}
+
 	return;
 }
 
 sub direction_of_unique_child {
 	my $self = shift;
+
 	return NONE unless $self->children_number() == 1;
-	if (defined $self->{children}->[LEFT]) {
-		return LEFT;
-	} else {
-		return RIGHT;
-	}
+	return (defined $self->{children}->[LEFT]) ? return LEFT : return RIGHT;
 }
 
-#careful, the 'remove' routine can invalidate outside pointers
 sub remove {
 	my $self = shift;
 	my $father = $self->{father};
@@ -111,10 +110,10 @@ sub remove {
 		$father->{children}->[get_node_direction($father, $self)] = $self->{children}->[$unique_child_direction];
 		$self->{children}->[$unique_child_direction]->{father} = $father;
 	}
+
 	return;
 }
 
-# Return the direction of the node given
 sub get_node_direction {
 	my $self = shift;
 	my $child = shift;
@@ -130,26 +129,28 @@ sub children_number {
 	return scalar grep { defined $_ } @{$self->{children}};
 }
 
-# Set father of the node given
 sub set_father {
 	my $self = shift;
 	my $father = shift;
 	my $direction = shift;
+
 	$self->{father} = $father;
 	$father->{children}->[$direction] = $self;
+
+	return;
 }
 
-# Return the last children of the node given
 sub last_child {
 	my $node = shift;
 	my $direction = shift;
+
 	while (defined $node->{children}->[$direction]) {
 		$node = $node->{children}->[$direction];
 	}
+
 	return $node;
 }
 
-# Return the node of the key if he exist
 sub find_node {
 	my $self = shift;
 	my $key = shift;
@@ -169,7 +170,6 @@ sub nodes_loop {
 	my $start_key = shift;
 	my $end_key = shift;
 	my $routine = shift;
-
 	my $current_node = $self;
 	my @parents;
 
@@ -191,6 +191,7 @@ sub nodes_loop {
 			$current_node = (not defined $end_key or $current_node->{content} < $end_key) ? $current_node->{children}->[RIGHT] : undef;
 		}
 	}
+
 	return;
 }
 
@@ -215,7 +216,6 @@ sub get_direction_for {
 sub dot_all_content {
 	my $self = shift;
 	my $fd = shift;
-
 	my $addr = refaddr $self;
 	my $content = $self->{content};
 
@@ -225,7 +225,9 @@ sub dot_all_content {
 		my $addrf = refaddr $self->{father};
 		print $fd "$addrf -> $addr\n";
 	}
+
 	$_->dot_all_content($fd) for ($self->children());
+
 	return;
 }
 
@@ -233,6 +235,7 @@ sub save_svg {
 	my $self = shift;
 	my $filename = shift;
 	my $dotfile = $filename;
+
 	$dotfile =~s/svg$/dot/;
 	open(my $fd, ">", "$dotfile")
 		or die "can't open $dotfile";
@@ -249,7 +252,9 @@ sub save_svg {
 sub content {
 	my $self = shift;
 	my $content = shift;
+
 	$self->{content} = $content if defined $content;
+
 	return $self->{content};
 }
 
