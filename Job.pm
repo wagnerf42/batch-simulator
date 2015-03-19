@@ -6,7 +6,7 @@ use warnings;
 use List::Util qw(min);
 use POSIX;
 use Carp;
-use Log::Log4perl;
+use Log::Log4perl qw(get_logger);
 
 use overload '""' => \&stringification;
 
@@ -118,34 +118,33 @@ sub starting_time {
 
 sub starts_after {
 	my ($self, $time) = @_;
+	my $logger = get_logger('Job::starts_after');
+
+	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
 	return ($self->{starting_time} > $time);
-}
-
-sub ending_time_estimation {
-	my ($self, $time) = @_;
-
-	confess unless defined $self->{starting_time};
-
-	my $real_end_time = $self->{starting_time} + $self->{run_time};
-	return $real_end_time if $real_end_time <= $time;
-	return $self->{starting_time} + $self->{requested_time};
 }
 
 sub real_ending_time {
 	my $self = shift;
-	die unless defined $self->{starting_time};
+	my $logger = get_logger('Job::real_ending_time');
+
+	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
 	return $self->{starting_time} + $self->{run_time};
 }
 
 sub submitted_ending_time {
 	my ($self) = shift;
-	die unless defined $self->{starting_time};
+	my $logger = get_logger('Job::submitted_ending_time');
+
+	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
 	return $self->{starting_time} + $self->{requested_time};
 }
 
 sub flow_time {
 	my ($self) = @_;
-	die unless defined $self->{starting_time};
+	my $logger = get_logger('Job::flow_time');
+
+	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
 	return $self->{starting_time} + $self->{run_time} - $self->{submit_time};
 }
 
@@ -162,7 +161,9 @@ sub submit_time {
 
 sub wait_time {
 	my ($self) = @_;
-	die unless defined $self->{starting_time};
+	my $logger = get_logger('Job::wait_time');
+
+	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
 	return $self->{starting_time} - $self->{submit_time};
 }
 

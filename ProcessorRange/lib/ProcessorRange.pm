@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use overload '""' => \&stringification;
 use Carp;
+use Log::Log4perl qw(get_logger);
 
 require Exporter;
 
@@ -14,13 +15,10 @@ our @ISA = qw(Exporter);
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 
-# This allows declaration	use ProcessorRange ':all';
+# This allows declaration use ProcessorRange ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(
-	
-) ] );
-
+our %EXPORT_TAGS = ('all' => [qw()]);
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @REDUCTION_FUNCTIONS = (
@@ -32,7 +30,6 @@ our @REDUCTION_FUNCTIONS = (
 );
 
 our @EXPORT = qw(@REDUCTION_FUNCTIONS);
-
 our $VERSION = '0.01';
 
 require XSLoader;
@@ -41,6 +38,8 @@ XSLoader::load('ProcessorRange', $VERSION);
 sub new {
 	my $class = shift;
 	my $self;
+	my $logger = get_logger('ProcessorRange::new');
+
 	if (@_ == 1) {
 		my $original_range = shift;
 		$self = copy_range($original_range);
@@ -49,28 +48,23 @@ sub new {
 		my $limits = [@_];
 		$self = new_range($limits);
 	}
-	$self->check_ok();
+
+	$self->check_ok() if $logger->is_debug();
 	return $self;
 }
 
-#check we are not forming invalid ranges
 sub check_ok {
-	#disable the test
-	return;
-
 	my $self = shift;
 	my $last_end;
+	my $logger = get_logger('ProcessorRange::check_ok');
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
-			confess "invalid range $self" unless $end >= $start;
-			confess "invalid range $self" unless defined $end;
-			confess "invalid range $self" unless defined $start;
-			if (defined $last_end) {
-				confess "bad range $self" if $start <= $last_end + 1;
-				confess "bad range $self" if $end < $last_end;
-			}
-			$last_end = $end;
+
+			$logger->logconfess("invalid range $self: end > start ($end > $start)") if $end > $start;
+			$logger->logconfess("invalid range $self: start not defined") unless defined $end;
+			$logger->logconfess("invalid range $self: end not defined") unless defined $end;
 			return 1;
 		}
 	);
@@ -79,13 +73,13 @@ sub check_ok {
 sub remove {
 	my $self = shift;
 	my $other = shift;
+
 	my $inverted_other = $other->invert($self->get_last());
 	$self->intersection($inverted_other);
 	$inverted_other->free_allocated_memory();
 	return;
 }
 
-#compute a list of paired (start,end) ranges
 sub compute_pairs {
 	my $self = shift;
 	my @pairs;
@@ -162,7 +156,6 @@ sub contains_at_least {
 sub reduce_to_basic {
 	my $self = shift;
 	my $target_number = shift;
-	confess "invalid argument $target_number" if $target_number <= 0;
 	my @remaining_ranges;
 
 	$self->ranges_loop(
@@ -170,15 +163,14 @@ sub reduce_to_basic {
 			my ($start, $end) = @_;
 			my $taking = $target_number;
 			my $available_processors = $end + 1 - $start;
-			confess "big pb : $self" if $available_processors == 0;
-			if ($available_processors < $target_number) {
-				$taking = $available_processors;
-			}
+
+			$taking = $available_processors if ($available_processors < $target_number);
+
 			push @remaining_ranges, $start;
 			push @remaining_ranges, $start + $taking - 1;
 			$target_number -= $taking;
 			return ($target_number != 0);
-		},
+		}
 	);
 	$self->affect_ranges([@remaining_ranges]);
 	$self->check_ok();
