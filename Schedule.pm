@@ -25,7 +25,10 @@ sub new {
 
 
 	die "bad trace $self->{trace}" unless ref $self->{trace} eq 'Trace';
+
 	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{num_processors};
+
+	$self->{cluster_size} = $self->{num_processors} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{num_processors});
 
 	# Make sure the trace is clean
 	$self->{trace}->unassign_jobs();
