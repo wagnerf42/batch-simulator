@@ -16,16 +16,16 @@ use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 sub new {
 	my $class = shift;
 	my $starting_time = shift;
-	my $duration = shift;
+	my $ending_time = shift;
 	my $ids = shift;
 	my $logger = get_logger('Profile::new');
 
 	my $self = {
 		starting_time => $starting_time,
-		duration => $duration
+		ending_time => $ending_time
 	};
 
-	$logger->logconfess("invalid profile duration $self->{duration}") if defined $self->{duration} and $self->{duration} <= 0;
+	$logger->logconfess("invalid profile duration ($self->{ending_time} - $self->{starting_time}") if defined $self->{ending_time} and $self->{ending_time} <= $self->{starting_time};
 
 	$self->{processors} = (ref $ids eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
 
@@ -35,8 +35,8 @@ sub new {
 
 sub stringification {
 	my $self = shift;
-	return "[$self->{starting_time} ; ($self->{processors}) ; $self->{duration}]" if defined $self->{duration};
-	return "[$self->{starting_time} ; ($self->{processors}) ]";
+
+	return "[$self->{starting_time} ; ($self->{processors}) " . (defined $self->{ending_time}) ? ": $self->{ending_time} ]" : " ]";
 }
 
 sub processors {
@@ -51,22 +51,34 @@ sub processors_ids {
 
 sub duration {
 	my $self = shift;
-	$self->{duration} = shift if (@_);
-	return $self->{duration};
+
+	return $self->{ending_time} - $self->{starting_time} if defined $self->{ending_time};
+	return;
+}
+
+sub ending_time {
+	my $self = shift;
+	my $ending_time = shift;
+
+	$self->{ending_time} = $ending_time if defined $ending_time;
+
+	return $self->{ending_time};
 }
 
 sub add_job {
 	my $self = shift;
 	my $job = shift;
-	my $current_time = shift;
-	return $self->split_by_job($job, $current_time);
+
+	return $self->split_by_job($job);
 }
 
 sub remove_job {
 	my $self = shift;
 	my $job = shift;
+
 	$self->{processors}->add($job->assigned_processors_ids());
-	return $self;
+
+	return;
 }
 
 sub split_by_job {
@@ -76,14 +88,13 @@ sub split_by_job {
 	my @profiles;
 
 	my $middle_start = $self->{starting_time};
-	my $middle_end = (defined $self->{duration}) ? min($self->ending_time(), $job->submitted_ending_time()) : $job->submitted_ending_time();
-	my $middle_profile = Profile->new($middle_start, $middle_end - $middle_start, $self->{processors}->copy_range());
+	my $middle_end = (defined $self->{ending_time}) ? min($self->{ending_time}, $job->submitted_ending_time()) : $job->submitted_ending_time();
+	my $middle_profile = Profile->new($middle_start, $middle_end, $self->{processors}->copy_range());
 	$middle_profile->remove_used_processors($job);
 	push @profiles, $middle_profile unless $middle_profile->is_fully_loaded();
 
-	unless (defined $self->ending_time() and $job->submitted_ending_time() >= $self->ending_time()) {
-		my $end_duration = $self->ending_time() - $job->submitted_ending_time() if defined $self->{duration};
-		my $end_profile = Profile->new($job->submitted_ending_time(), $end_duration, $self->{processors}->copy_range());
+	unless (defined $self->{ending_time} and $job->submitted_ending_time() >= $self->{ending_time}) {
+		my $end_profile = Profile->new($job->submitted_ending_time(), $self->{ending_time}, $self->{processors}->copy_range());
 		push @profiles, $end_profile;
 	}
 	return @profiles;
@@ -110,17 +121,12 @@ sub starting_time {
 	return $self->{starting_time};
 }
 
-sub ending_time {
-	my $self = shift;
-	return unless defined $self->{duration};
-	return $self->{starting_time} + $self->{duration};
-}
-
 sub ends_after {
 	my $self = shift;
 	my $time = shift;
-	return 1 unless defined $self->{duration};
-	return ($self->{duration} + $self->{starting_time} > $time);
+
+	return 1 unless defined $self->{ending_time};
+	return ($self->{ending_time} > $time);
 }
 
 sub svg {
@@ -183,7 +189,7 @@ sub all_times_comparison {
 	my $inverted = shift;
 
 	my $coef = ($inverted) ? -1 : 1;
-	my $ending_time = $self->ending_time();
+	my $ending_time = $self->{ending_time};
 
 	if (ref $other eq '') {
 		return -$coef if (defined $ending_time) and ($ending_time <= $other);
