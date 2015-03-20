@@ -50,6 +50,7 @@ sub new {
 	}
 
 	$self->check_ok() if $logger->is_debug();
+
 	return $self;
 }
 
@@ -68,15 +69,18 @@ sub check_ok {
 			return 1;
 		}
 	);
+
+	return;
 }
 
 sub remove {
 	my $self = shift;
 	my $other = shift;
-
 	my $inverted_other = $other->invert($self->get_last());
+
 	$self->intersection($inverted_other);
 	$inverted_other->free_allocated_memory();
+
 	return;
 }
 
@@ -90,12 +94,13 @@ sub compute_pairs {
 			return 1;
 		}
 	);
+
+	return;
 }
 
 sub compute_ranges_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
-
 	my $clusters;
 	my $current_cluster = -1;
 
@@ -117,13 +122,15 @@ sub compute_ranges_in_clusters {
 
 		}
 	);
+
 	return $clusters;
 }
 
 sub processors_ids {
-	my ($self, $processors_ids) = @_;
-
+	my $self = shift;
+	my $processors_ids = shift;
 	my @ids;
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -131,12 +138,14 @@ sub processors_ids {
 			return 1;
 		}
 	);
+
 	return @ids;
 }
 
 sub stringification {
 	my $self = shift;
 	my @strings;
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -144,12 +153,14 @@ sub stringification {
 			return 1;
 		}
 	);
+
 	return join(' ', @strings);
 }
 
 sub contains_at_least {
 	my $self = shift;
 	my $limit = shift;
+
 	return $self->size() >= $limit;
 }
 
@@ -157,6 +168,7 @@ sub reduce_to_basic {
 	my $self = shift;
 	my $target_number = shift;
 	my @remaining_ranges;
+	my $logger = get_logger('ProcessorRange::reduce_to_basic');
 
 	$self->ranges_loop(
 		sub {
@@ -172,14 +184,19 @@ sub reduce_to_basic {
 			return ($target_number != 0);
 		}
 	);
+
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok();
+	$self->check_ok() if $logger->is_debug();
+
+	return;
 }
 
 sub reduce_to_forced_contiguous {
 	my $self = shift;
 	my $target_number = shift;
 	my @remaining_ranges;
+	my $logger = get_logger('ProcessorRange::reduce_to_forced_contiguous');
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -193,16 +210,19 @@ sub reduce_to_forced_contiguous {
 			return 0;
 		},
 	);
+
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok();
+	$self->check_ok() if $logger->is_debug();
+
+	return;
 }
 
 sub reduce_to_best_effort_contiguous {
 	my $self = shift;
 	my $target_number = shift;
 	my @remaining_ranges;
-
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
+	my $logger = get_logger('ProcessorRange::reduce_to_best_effort_contiguous');
 
 	for my $pair (@sorted_pairs) {
 		my ($start, $end) = @{$pair};
@@ -216,7 +236,9 @@ sub reduce_to_best_effort_contiguous {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok();
+	$self->check_ok() if $logger->is_debug();
+
+	return;
 }
 
 sub cluster_size {
@@ -227,8 +249,8 @@ sub cluster_size {
 sub sort_and_fuse_contiguous_ranges {
 	my $ranges = shift;
 	my @sorted_ranges = sort {$a->[1] <=> $b->[1]} @{$ranges};
-
 	my @remaining_ranges;
+
 	push @remaining_ranges, (shift @sorted_ranges);
 
 	for my $range (@sorted_ranges) {
@@ -241,6 +263,7 @@ sub sort_and_fuse_contiguous_ranges {
 
 	my $result = [];
 	push @{$result}, ($_->[0], $_->[1]) for @remaining_ranges;
+
 	return $result;
 }
 
@@ -267,7 +290,8 @@ sub reduce_to_best_effort_local {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok();
+
+	return;
 }
 
 sub reduce_to_forced_local {
@@ -278,6 +302,7 @@ sub reduce_to_forced_local {
 	my $clusters = $self->compute_ranges_in_clusters($cluster_size);
 	my @sorted_clusters = sort { cluster_size($b) - cluster_size($a) } @{$clusters};
 	my $target_clusters_number = ceil($target_number/$cluster_size);
+	my $logger = get_logger('ProcessorRange::reduce_to_forced_local');
 
 	for my $cluster (@sorted_clusters) {
 		for my $pair (@{$cluster}) {
@@ -301,7 +326,9 @@ sub reduce_to_forced_local {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok();
+	$self->check_ok() if $logger->is_debug();
+
+	return;
 }
 
 #returns true if all processors form a contiguous block
@@ -309,8 +336,11 @@ sub reduce_to_forced_local {
 sub contiguous {
 	my $self = shift;
 	my $processors_number = shift;
-	die "are 0 processors contiguous ?" if $self->is_empty();
 	my @ranges;
+	my $logger = get_logger('ProcessorRange::contiguous');
+
+	$logger->logdie('are 0 processors contiguous ?') if $self->is_empty();
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -318,7 +348,9 @@ sub contiguous {
 			return 1;
 		}
 	);
+
 	return 1 if @ranges == 2;
+
 	if (@ranges == 4) {
 		#complex case
 		return (($ranges[0] == 0) and ($ranges[3] == $processors_number - 1));
@@ -327,22 +359,22 @@ sub contiguous {
 	}
 }
 
-#returns true if we use a minimal number of clusters
-#needs cluster size
 sub local {
 	my $self = shift;
 	my $cluster_size = shift;
 	my $needed_clusters = ceil($self->size() / $cluster_size);
+
 	return ($needed_clusters == $self->used_clusters($cluster_size));
 }
 
-#returns the number of different clusters in use
-#needs cluster size
 sub used_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
-	die "are 0 processors local ?" if $self->is_empty();
 	my %used_clusters_ids;
+	my $logger = get_logger('ProcessorRange::used_clusters');
+
+	$logger->logdie('are 0 processors local ?') if $self->is_empty();
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -357,54 +389,4 @@ sub used_clusters {
 }
 
 1;
-__END__
-# Below is stub documentation for your module. You'd better edit it!
 
-=head1 NAME
-
-ProcessorRange - Perl extension for blah blah blah
-
-=head1 SYNOPSIS
-
-  use ProcessorRange;
-  blah blah blah
-
-=head1 DESCRIPTION
-
-Stub documentation for ProcessorRange, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
-
-Blah blah blah.
-
-=head2 EXPORT
-
-None by default.
-
-
-
-=head1 SEE ALSO
-
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
-
-If you have a mailing list set up for your module, mention it here.
-
-If you have a web site set up for your module, mention it here.
-
-=head1 AUTHOR
-
-wagnerf, E<lt>wagnerf@nonetE<gt>
-
-=head1 COPYRIGHT AND LICENSE
-
-Copyright (C) 2014 by wagnerf
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself, either Perl version 5.20.1 or,
-at your option, any later version of Perl 5 you may have available.
-
-
-=cut

@@ -19,6 +19,8 @@ typedef struct _processor_range {
 	unsigned int processors_number;
 } processor_range;
 
+//unsigned int allocated_blocks = 0;
+
 static vector* vector_new() {
 	vector *v;
 	Newx(v, 1, vector);
