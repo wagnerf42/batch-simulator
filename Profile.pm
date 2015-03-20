@@ -204,7 +204,7 @@ sub all_times_comparison {
 
 sub DESTROY {
 	my $self = shift;
-	$self->{processors}->free_allocated_memory() if defined $self->{processors};
+	$self->{processors}->free_allocated_memory(4) if defined $self->{processors};
 	return;
 }
 

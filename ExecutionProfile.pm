@@ -92,7 +92,7 @@ sub get_free_processors_for {
 	# It is possible that not all processors were found
 	if (($left_processors->size() < $job->requested_cpus()) or ($duration < $job->requested_time())) {
 		$logger->debug('exit 1');
-		$left_processors->free_allocated_memory();
+		$left_processors->free_allocated_memory(2);
 		return;
 	}
 
@@ -100,7 +100,7 @@ sub get_free_processors_for {
 	$left_processors->$reduction_function($job->requested_cpus());
 
 	if ($left_processors->is_empty()) {
-		$left_processors->free_allocated_memory();
+		$left_processors->free_allocated_memory(2);
 		$logger->debug('exit 2');
 		return;
 	}

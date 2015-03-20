@@ -79,7 +79,7 @@ sub remove {
 	my $inverted_other = $other->invert($self->get_last());
 
 	$self->intersection($inverted_other);
-	$inverted_other->free_allocated_memory();
+	$inverted_other->free_allocated_memory(0);
 
 	return;
 }

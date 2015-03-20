@@ -12,6 +12,8 @@ typedef struct _vector {
 	unsigned int *values;
 	unsigned int allocated_size;
 	unsigned int count;
+	unsigned int id;
+	unsigned int block;
 } vector;
 
 typedef struct _processor_range {
@@ -19,14 +21,17 @@ typedef struct _processor_range {
 	unsigned int processors_number;
 } processor_range;
 
-//unsigned int allocated_blocks = 0;
+unsigned int allocated = 0;
 
-static vector* vector_new() {
+static vector* vector_new(unsigned int block) {
 	vector *v;
 	Newx(v, 1, vector);
 	Newx(v->values, VECTOR_DEFAULT_SIZE, unsigned int);
 	v->allocated_size = VECTOR_DEFAULT_SIZE;
 	v->count = 0;
+	v->id = allocated++;
+	v->block = block;
+	fprintf(stderr, "allocated %d block %d\n", v->id, v->block);
 	return v;
 }
 
@@ -35,6 +40,7 @@ static vector_remove_all(vector *v) {
 }
 
 static void vector_free(vector *v) {
+	fprintf(stderr, "freed %d block %d\n", v->id, v->block);
 	Safefree(v->values);
 	Safefree(v);
 }
@@ -90,7 +96,7 @@ static ProcessorRange assign_ranges(ProcessorRange p, AV *array) {
 
 //merge contiguous ranges into one
 static void fix_ranges(ProcessorRange p) {
-	vector *fixed_ranges = vector_new();
+	vector *fixed_ranges = vector_new(0);
 	unsigned int size = vector_get_size(p->ranges);
 	unsigned int i;
 
@@ -119,7 +125,7 @@ invert(ProcessorRange p, unsigned int limit)
 	CODE:
 	processor_range *inverted;
 	Newx(inverted, 1, processor_range);
-	inverted->ranges = vector_new();
+	inverted->ranges = vector_new(1);
 	unsigned int last_start = 0;
 	unsigned int final_end;
 	unsigned int i;
@@ -156,7 +162,7 @@ add(ProcessorRange range1, ProcessorRange range2)
 	range1->processors_number = 0;
 	unsigned int inside_segments = 0;
 	unsigned int starting_point; //starting point of range when iterating building them
-	vector *result = vector_new();
+	vector *result = vector_new(2);
 	unsigned int indices[2] = { 0, 0 };
 	unsigned int limits[2];
 	unsigned int i;
@@ -213,7 +219,7 @@ intersection(ProcessorRange range1, ProcessorRange range2)
 	range1->processors_number = 0;
 	unsigned int inside_segments = 0;
 	unsigned int starting_point; //starting point of range when iterating building them
-	vector *result = vector_new();
+	vector *result = vector_new(3);
 	unsigned int indices[2] = { 0, 0 };
 	unsigned int limits[2];
 	unsigned int i;
@@ -316,7 +322,7 @@ new_range(AV *array)
 	CODE:
 	processor_range *p;
 	Newx(p, 1, processor_range);
-	p->ranges = vector_new();
+	p->ranges = vector_new(4);
 	RETVAL = assign_ranges(p, array);
 	OUTPUT:
 	RETVAL
@@ -326,7 +332,7 @@ copy_range(ProcessorRange original)
 	CODE:
 	processor_range *p;
 	Newx(p, 1, processor_range);
-	p->ranges = vector_new();
+	p->ranges = vector_new(5);
 	unsigned int size = vector_get_size(original->ranges);
 	unsigned int i;
 	p->processors_number = 0;
@@ -344,7 +350,7 @@ copy_range(ProcessorRange original)
 	OUTPUT:
 	RETVAL
 
-void free_allocated_memory(ProcessorRange self)
+void free_allocated_memory(ProcessorRange self, unsigned int block)
 	CODE:
 	vector_free(self->ranges);
 
