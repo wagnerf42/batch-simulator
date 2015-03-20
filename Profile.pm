@@ -36,7 +36,7 @@ sub new {
 sub stringification {
 	my $self = shift;
 
-	return "[$self->{starting_time} ; ($self->{processors}) " . (defined $self->{ending_time}) ? ": $self->{ending_time} ]" : " ]";
+	return "[$self->{starting_time} ; ($self->{processors}) " . (defined $self->{ending_time} ? ": $self->{ending_time}]" : "]");
 }
 
 sub processors {
