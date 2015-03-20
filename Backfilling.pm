@@ -101,9 +101,6 @@ sub run {
 	while ($self->{events}->not_empty()) {
 		my @events = $self->{events}->retrieve_all();
 
-		$logger->debug("events @events");
-		$logger->debug("current time is $self->{current_time}");
-
 		if ($self->uses_external_simulator()) {
 			$self->{current_time} = $self->{events}->current_time();
 		} else {
@@ -114,6 +111,9 @@ sub run {
 
 		my @typed_events;
 		push @{$typed_events[$_->type()]}, $_ for @events; # 2 lists, one for each event type
+
+		$logger->debug("events @events");
+		$logger->debug("current time is $self->{current_time}");
 
 		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
@@ -209,11 +209,12 @@ sub reassign_jobs_two_positions {
 	my $logger = get_logger('Backfilling::reassign_jobs_two_positions');
 
 	for my $job (@{$self->{reserved_jobs}}) {
+
 		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 
-			$logger->debug("enough processors for job " . $job->job_number());
+			$logger->debug("enough processors for job " . $job->job_number() . " (" . $self->{execution_profile}->processors_available_at($self->{current_time}) . ")");
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
 
 			my $new_processors;
