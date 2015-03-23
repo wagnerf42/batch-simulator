@@ -126,6 +126,7 @@ sub run {
 				$job->run_time($self->{current_time}-$job->starting_time());
 			} else {
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
+				$job->unassign();
 			}
 		}
 
@@ -149,6 +150,9 @@ sub run {
 		$self->start_jobs();
 		$self->tycat() if $logger->is_debug();
 	}
+
+	$self->{execution_profile}->free_profiles();
+	$self->{trace}->unassign_jobs();
 
 	# Time measure
 	$self->{schedule_time} = time() - $self->{schedule_time};
@@ -227,8 +231,10 @@ sub reassign_jobs_two_positions {
 				$logger->debug("assigning job " . $job->job_number());
 				$job->assign_to($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
+				$logger->debug("job $job->{job_number} received " . $job->assigned_processors_ids());
 			} else {
 				$self->{execution_profile}->add_job_at($job_starting_time, $job, $self->{current_time});
+				$logger->debug("job $job->{job_number} received " . $job->assigned_processors_ids());
 			}
 		}
 	}
@@ -254,7 +260,9 @@ sub assign_job {
 
 	$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
 	$job->assign_to($starting_time, $chosen_processors);
+	$logger->debug("job $job->{job_number} received " . $job->assigned_processors_ids());
 	$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
+	$logger->debug("execution profile $self->{execution_profile}");
 
 	return;
 }

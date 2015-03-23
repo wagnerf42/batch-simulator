@@ -154,7 +154,7 @@ sub stringification {
 		}
 	);
 
-	return join(' ', @strings);
+	return $self->ranges_id() . ': ' . join(' ', @strings);
 }
 
 sub contains_at_least {

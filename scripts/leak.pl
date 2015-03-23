@@ -10,7 +10,9 @@ my $nhack;
 
 while (defined(my $line = <$file>)) {
 	my @fields = ($line =~ /(allocated|freed)\s(\d+)\sblock\s(\d+)/);
-	$nhack->{$fields[0]}->{$fields[1]} = $fields[2];
+	if (@fields == 3) {
+		$nhack->{$fields[0]}->{$fields[1]} = $fields[2];
+	}
 }
 
 for my $key (keys %{$nhack->{allocated}}) {

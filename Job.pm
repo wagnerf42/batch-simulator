@@ -166,9 +166,13 @@ sub job_number {
 
 sub unassign {
 	my $self = shift;
+
 	delete $self->{starting_time};
-	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
-	delete $self->{assigned_processors_ids};
+	if (defined $self->{assigned_processors_ids}) {
+		print STDERR "REMOVING JOB $self->{job_number} $self->{assigned_processors_ids}\n";
+		$self->{assigned_processors_ids}->free_allocated_memory();
+		delete $self->{assigned_processors_ids};
+	}
 	return;
 }
 
@@ -176,7 +180,9 @@ sub assign_to {
 	my ($self, $starting_time, $assigned_processors) = @_;
 
 	$self->{starting_time} = $starting_time;
+	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
 	$self->{assigned_processors_ids} = $assigned_processors;
+
 	return;
 }
 
@@ -235,11 +241,11 @@ sub clusters_required {
 	return POSIX::ceil($self->requested_cpus() / $cluster_size);
 }
 
-sub DESTROY {
-	my $self = shift;
-	print STDERR "DESTROY job $self freeing $self->{assigned_processors_ids}\n" if defined $self->{assigned_processors_ids};
-	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
-	return;
-}
+#sub DESTROY {
+#	my $self = shift;
+#	print STDERR "DESTROY job $self freeing $self->{assigned_processors_ids}\n" if defined $self->{assigned_processors_ids};
+#	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
+#	return;
+#}
 
 1;
