@@ -91,7 +91,6 @@ sub get_free_processors_for {
 
 	# It is possible that not all processors were found
 	if (($left_processors->size() < $job->requested_cpus()) or ($duration < $job->requested_time())) {
-		$logger->debug('exit 1');
 		$left_processors->free_allocated_memory();
 		return;
 	}
@@ -101,10 +100,10 @@ sub get_free_processors_for {
 
 	if ($left_processors->is_empty()) {
 		$left_processors->free_allocated_memory();
-		$logger->debug('exit 2');
 		return;
 	}
 
+	$logger->debug('returning ok');
 	return $left_processors;
 }
 
@@ -287,6 +286,7 @@ sub add_job_at {
 	for my $profile (@profiles_to_update) {
 		$self->{profile_tree}->remove_content($profile);
 		my @new_profiles = $profile->add_job($job);
+		$profile->processors()->free_allocated_memory();
 		$self->{profile_tree}->add_content($_) for (@new_profiles);
 	}
 
@@ -419,13 +419,8 @@ sub set_current_time {
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
 
-			if (defined $ending_time and $ending_time > $current_time) {
-				$updated_profile = [$profile, $current_time, $ending_time - $current_time];
-				return 0;
-			}
-
-			if (not defined $ending_time) {
-				$updated_profile = [$profile, $current_time, $profile->duration()];
+			if (not defined $ending_time or $ending_time > $current_time) {
+				$updated_profile = $profile;
 				return 0;
 			}
 
@@ -434,15 +429,35 @@ sub set_current_time {
 		});
 
 	if (defined $updated_profile) {
-		my ($profile, $starting_time, $duration) = @$updated_profile;
-		$self->{profile_tree}->remove_content($profile);
-		$profile->starting_time($starting_time);
-		$profile->duration($duration);
-		$self->{profile_tree}->add_content($profile);
+		$self->{profile_tree}->remove_content($updated_profile);
+		$updated_profile->starting_time($current_time);
+		$self->{profile_tree}->add_content($updated_profile);
 	}
 
-	$self->{profile_tree}->remove_content($_) for @removed_profiles;
+	for my $profile (@removed_profiles) {
+		$self->{profile_tree}->remove_content($profile);
+		$profile->processors()->free_allocated_memory();
+	}
 
+	return;
+}
+
+sub free_profiles {
+	my $self = shift;
+	my @profiles;
+
+	$self->{profile_tree}->nodes_loop(undef, undef,
+		sub {
+			my $profile = shift;
+			push @profiles, $profile;
+			return 1;
+		}
+	);
+
+	for my $profile (@profiles) {
+		$self->{profile_tree}->remove_content($profile);
+		$profile->processors()->free_allocated_memory();
+	}
 	return;
 }
 

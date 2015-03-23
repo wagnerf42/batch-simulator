@@ -123,7 +123,7 @@ sub run {
 
 			if ($self->uses_external_simulator()) {
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
-				$job->run_time($self->{current_time}-$job->starting_time());
+				$job->run_time($self->{current_time} - $job->starting_time());
 			} else {
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
 			}
@@ -149,6 +149,8 @@ sub run {
 		$self->start_jobs();
 		$self->tycat() if $logger->is_debug();
 	}
+
+	$self->{execution_profile}->free_profiles();
 
 	# Time measure
 	$self->{schedule_time} = time() - $self->{schedule_time};
@@ -188,7 +190,6 @@ sub start_jobs {
 	}
 
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
-	$logger->debug("jobs to be started: @newly_started_jobs");
 	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->uses_external_simulator());
 
 	return;
@@ -214,7 +215,7 @@ sub reassign_jobs_two_positions {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 
-			$logger->debug("enough processors for job " . $job->job_number() . " (" . $self->{execution_profile}->processors_available_at($self->{current_time}) . ")");
+			$logger->debug("enough processors for job " . $job->job_number());
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
 
 			my $new_processors;
@@ -224,7 +225,7 @@ sub reassign_jobs_two_positions {
 			}
 
 			if ($new_processors) {
-				$logger->debug("assigning job " . $job->job_number());
+				$logger->debug("reassigning job " . $job->job_number());
 				$job->assign_to($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
 			} else {
