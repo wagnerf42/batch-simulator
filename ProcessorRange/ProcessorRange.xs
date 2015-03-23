@@ -336,6 +336,7 @@ copy_range(ProcessorRange original)
 	unsigned int size = vector_get_size(original->ranges);
 	unsigned int i;
 	p->processors_number = 0;
+	fprintf(stderr, "copy blocks %d to %d\n", original->ranges->id, p->ranges->id);
 	for(i = 0 ; i < size ; i++) {
 		unsigned int value = vector_get(original->ranges, i);
 		vector_push(p->ranges, value);
@@ -350,7 +351,7 @@ copy_range(ProcessorRange original)
 	OUTPUT:
 	RETVAL
 
-void free_allocated_memory(ProcessorRange self, unsigned int block)
+void free_allocated_memory(ProcessorRange self)
 	CODE:
 	vector_free(self->ranges);
 
