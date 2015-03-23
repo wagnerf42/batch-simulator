@@ -123,10 +123,9 @@ sub run {
 
 			if ($self->uses_external_simulator()) {
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
-				$job->run_time($self->{current_time}-$job->starting_time());
+				$job->run_time($self->{current_time} - $job->starting_time());
 			} else {
 				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
-				$job->unassign();
 			}
 		}
 
@@ -152,7 +151,6 @@ sub run {
 	}
 
 	$self->{execution_profile}->free_profiles();
-	$self->{trace}->unassign_jobs();
 
 	# Time measure
 	$self->{schedule_time} = time() - $self->{schedule_time};
