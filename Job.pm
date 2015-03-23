@@ -241,11 +241,10 @@ sub clusters_required {
 	return POSIX::ceil($self->requested_cpus() / $cluster_size);
 }
 
-#sub DESTROY {
-#	my $self = shift;
-#	print STDERR "DESTROY job $self freeing $self->{assigned_processors_ids}\n" if defined $self->{assigned_processors_ids};
-#	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
-#	return;
-#}
+sub DESTROY {
+	my $self = shift;
+	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
+	return;
+}
 
 1;

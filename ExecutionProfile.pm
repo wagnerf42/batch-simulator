@@ -286,7 +286,6 @@ sub add_job_at {
 	for my $profile (@profiles_to_update) {
 		$self->{profile_tree}->remove_content($profile);
 		my @new_profiles = $profile->add_job($job);
-		$profile->processors()->free_allocated_memory();
 		$self->{profile_tree}->add_content($_) for (@new_profiles);
 	}
 
@@ -443,10 +442,7 @@ sub set_current_time {
 
 	for my $profile (@removed_profiles) {
 		$logger->debug("removing profile $profile");
-
 		$self->{profile_tree}->remove_content($profile);
-		$profile->processors()->print_block();
-		$profile->processors()->free_allocated_memory();
 	}
 
 	return;
@@ -466,7 +462,6 @@ sub free_profiles {
 
 	for my $profile (@profiles) {
 		$self->{profile_tree}->remove_content($profile);
-		$profile->processors()->free_allocated_memory();
 	}
 	return;
 }

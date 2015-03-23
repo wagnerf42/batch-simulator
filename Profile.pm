@@ -100,7 +100,7 @@ sub split_by_job {
 	unless ($middle_profile->is_fully_loaded()) {
 		push @profiles, $middle_profile
 	} else {
-		$middle_profile->processors()->free_allocated_memory();
+		#$middle_profile->processors()->free_allocated_memory();
 	}
 
 	unless (defined $self->{ending_time} and $job->submitted_ending_time() >= $self->{ending_time}) {
@@ -213,14 +213,13 @@ sub all_times_comparison {
 	die 'comparison not implemented';
 }
 
-#sub DESTROY {
-#	my $self = shift;
-#
-#	print STDERR "DESTROY profile $self freeing $self->{processors}\n" if defined $self->{processors};
-#	print STDERR "DESTROY profile ($self->{starting_time}) no processors\n" unless defined $self->{processors};
-#	$self->{processors}->free_allocated_memory() if defined $self->{processors};
-#
-#	return;
-#}
+sub DESTROY {
+	my $self = shift;
+
+	print STDERR "DESTROY profile $self freeing $self->{processors}\n" if defined $self->{processors};
+	print STDERR "DESTROY profile ($self->{starting_time}) no processors\n" unless defined $self->{processors};
+	$self->{processors}->free_allocated_memory() if defined $self->{processors};
+	return;
+}
 
 1;
