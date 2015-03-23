@@ -409,15 +409,10 @@ sub set_current_time {
 	my $current_time = shift;
 	my $updated_profile;
 	my @removed_profiles;
-	my $logger = get_logger('ExecutionProfile::set_current_time');
-
-	$logger->debug("new time $current_time ep $self");
 
 	$self->{profile_tree}->nodes_loop(undef, $current_time,
 		sub {
 			my $profile = shift;
-
-			$logger->debug("reading profile $profile");
 
 			return 0 if $profile->starting_time() == $current_time;
 
@@ -434,18 +429,13 @@ sub set_current_time {
 		});
 
 	if (defined $updated_profile) {
-		$logger->debug("updating profile $updated_profile to start $current_time");
-
 		$self->{profile_tree}->remove_content($updated_profile);
 		$updated_profile->starting_time($current_time);
 		$self->{profile_tree}->add_content($updated_profile);
 	}
 
 	for my $profile (@removed_profiles) {
-		$logger->debug("removing profile $profile");
-
 		$self->{profile_tree}->remove_content($profile);
-		$profile->processors()->print_block();
 		$profile->processors()->free_allocated_memory();
 	}
 

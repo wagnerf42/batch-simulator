@@ -192,7 +192,6 @@ sub start_jobs {
 	}
 
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
-	$logger->debug("jobs to be started: @newly_started_jobs");
 	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->uses_external_simulator());
 
 	return;
@@ -218,7 +217,7 @@ sub reassign_jobs_two_positions {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 
-			$logger->debug("enough processors for job " . $job->job_number() . " (" . $self->{execution_profile}->processors_available_at($self->{current_time}) . ")");
+			$logger->debug("enough processors for job " . $job->job_number());
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
 
 			my $new_processors;
@@ -228,13 +227,11 @@ sub reassign_jobs_two_positions {
 			}
 
 			if ($new_processors) {
-				$logger->debug("assigning job " . $job->job_number());
+				$logger->debug("reassigning job " . $job->job_number());
 				$job->assign_to($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
-				$logger->debug("job $job->{job_number} received " . $job->assigned_processors_ids());
 			} else {
 				$self->{execution_profile}->add_job_at($job_starting_time, $job, $self->{current_time});
-				$logger->debug("job $job->{job_number} received " . $job->assigned_processors_ids());
 			}
 		}
 	}
@@ -260,9 +257,7 @@ sub assign_job {
 
 	$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
 	$job->assign_to($starting_time, $chosen_processors);
-	$logger->debug("job $job->{job_number} received " . $job->assigned_processors_ids());
 	$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
-	$logger->debug("execution profile $self->{execution_profile}");
 
 	return;
 }

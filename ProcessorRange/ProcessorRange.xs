@@ -12,8 +12,6 @@ typedef struct _vector {
 	unsigned int *values;
 	unsigned int allocated_size;
 	unsigned int count;
-	unsigned int id;
-	unsigned int block;
 } vector;
 
 typedef struct _processor_range {
@@ -29,9 +27,6 @@ static vector* vector_new(unsigned int block) {
 	Newx(v->values, VECTOR_DEFAULT_SIZE, unsigned int);
 	v->allocated_size = VECTOR_DEFAULT_SIZE;
 	v->count = 0;
-	v->id = allocated++;
-	v->block = block;
-	fprintf(stderr, "allocated %d block %d\n", v->id, v->block);
 	return v;
 }
 
@@ -40,7 +35,6 @@ static vector_remove_all(vector *v) {
 }
 
 static void vector_free(vector *v) {
-	fprintf(stderr, "freed %d block %d\n", v->id, v->block);
 	Safefree(v->values);
 	Safefree(v);
 }
@@ -353,16 +347,6 @@ copy_range(ProcessorRange original)
 void free_allocated_memory(ProcessorRange self)
 	CODE:
 	vector_free(self->ranges);
-
-void print_block(ProcessorRange self)
-	CODE:
-	fprintf(stderr, "id %d block %d\n", self->ranges->id, self->ranges->block);
-
-unsigned int ranges_id(ProcessorRange self)
-	CODE:
-	RETVAL = self->ranges->id;
-	OUTPUT:
-	RETVAL
 
 unsigned int
 get_last(ProcessorRange p)

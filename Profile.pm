@@ -79,9 +79,7 @@ sub add_job {
 sub remove_job {
 	my $self = shift;
 	my $job = shift;
-	my $logger = get_logger('Profile::remove_job');
 
-	$logger->debug("remove $self");
 	$self->{processors}->add($job->assigned_processors_ids());
 
 	return;
@@ -212,15 +210,5 @@ sub all_times_comparison {
 
 	die 'comparison not implemented';
 }
-
-#sub DESTROY {
-#	my $self = shift;
-#
-#	print STDERR "DESTROY profile $self freeing $self->{processors}\n" if defined $self->{processors};
-#	print STDERR "DESTROY profile ($self->{starting_time}) no processors\n" unless defined $self->{processors};
-#	$self->{processors}->free_allocated_memory() if defined $self->{processors};
-#
-#	return;
-#}
 
 1;
