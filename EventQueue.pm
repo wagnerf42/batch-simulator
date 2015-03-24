@@ -7,6 +7,7 @@ use IO::Socket::UNIX;
 use File::Slurp;
 use JSON;
 use Log::Log4perl qw(get_logger);
+use Data::Dumper;
 
 use Job;
 
@@ -65,6 +66,7 @@ sub new {
 		Local => '/tmp/bat_socket',
 		Listen => 1
 	);
+	$logger->error_die('unable to create UNIX socket /tmp/bat_socket') unless defined $self->{server_socket};
 
 	$logger->info('waiting for a connection');
 	$self->{socket} = $self->{server_socket}->accept();
