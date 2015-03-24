@@ -64,11 +64,6 @@ sub new_simulation {
 	return $self;
 }
 
-sub uses_external_simulator {
-	my $self = shift;
-	return $self->{uses_external_simulator};
-}
-
 =item run()
 
 Runs the basic schedule algorithm, calling the assign_job routine from the child class.

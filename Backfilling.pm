@@ -91,7 +91,7 @@ sub run {
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
 
-	unless ($self->uses_external_simulator()) {
+	unless ($self->{uses_external_simulator}) {
 		$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
 		$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
 	}
@@ -101,7 +101,7 @@ sub run {
 	while ($self->{events}->not_empty()) {
 		my @events = $self->{events}->retrieve_all();
 
-		if ($self->uses_external_simulator()) {
+		if ($self->{uses_external_simulator}) {
 			$self->{current_time} = $self->{events}->current_time();
 		} else {
 			my $events_timestamp = $events[0]->timestamp(); # events coming from the heap will have the same time and type
@@ -112,8 +112,7 @@ sub run {
 		my @typed_events;
 		push @{$typed_events[$_->type()]}, $_ for @events; # 2 lists, one for each event type
 
-		$logger->debug("events @events");
-		$logger->debug("current time is $self->{current_time}");
+		$logger->debug("current time: $self->{current_time} events @events");
 
 		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
@@ -121,7 +120,7 @@ sub run {
 
 			delete $self->{started_jobs}->{$job->job_number()};
 
-			if ($self->uses_external_simulator()) {
+			if ($self->{uses_external_simulator}) {
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
 				$job->run_time($self->{current_time} - $job->starting_time());
 			} else {
@@ -138,7 +137,7 @@ sub run {
 		# Submission events
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
-			if ($self->uses_external_simulator()) {
+			if ($self->{uses_external_simulator}) {
 				$self->{trace}->add_job($job);
 			}
 			$self->assign_job($job);
@@ -181,7 +180,7 @@ sub start_jobs {
 		if ($job->starting_time() == $self->{current_time}) {
 			$logger->debug("job " . $job->job_number() . " starting");
 
-			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job)) unless ($self->uses_external_simulator());
+			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job)) unless ($self->{uses_external_simulator});
 			$self->{started_jobs}->{$job->job_number()} = $job;
 			push @newly_started_jobs, $job;
 		} else {
@@ -190,7 +189,7 @@ sub start_jobs {
 	}
 
 	$self->{reserved_jobs} = \@remaining_reserved_jobs;
-	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->uses_external_simulator());
+	$self->{events}->set_started_jobs(\@newly_started_jobs) if ($self->{uses_external_simulator});
 
 	return;
 }
@@ -255,7 +254,7 @@ sub assign_job {
 
 	$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
 	$job->assign_to($starting_time, $chosen_processors);
-	$self->{execution_profile}->add_job_at($starting_time, $job, $self->{current_time});
+	$self->{execution_profile}->add_job_at($starting_time, $job);
 
 	return;
 }
