@@ -6,24 +6,28 @@ use Data::Dumper qw(Dumper);
 use threads;
 use threads::shared;
 use Thread::Queue;
+use Log::Log4perl qw(get_logger);
 
 use Trace;
 use Backfilling;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my @jobs_numbers = (1400, 1500);
-my @cpus_numbers = (700);
+my @jobs_numbers = (300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500);
+my @cpus_numbers = (100, 200, 300, 400, 500);
 my $cluster_size = 16;
-my $threads_number = 2;
+my $threads_number = 6;
 my $backfilling_variant = BASIC;
-my $results_file_name = 'experiment/experiment_time1/experiment-11';
+my $results_file_name = 'experiment/experiment_time2/experiment1';
 
 $SIG{INT} = \&catch_signal;
 
 my $results = [];
 share($results);
 
-print STDERR "Creating queue\n";
+Log::Log4perl::init('log4perl.conf');
+my $logger = get_logger('test_time');
+$logger->info("Creating queue\n");
+
 my $q = Thread::Queue->new();
 for my $jobs_number_index (0..$#jobs_numbers) {
 	for my $cpus_number_index (0..$#cpus_numbers) {
@@ -32,31 +36,32 @@ for my $jobs_number_index (0..$#jobs_numbers) {
 }
 $q->end();
 
-print STDERR "Creating threads\n";
+$logger->info("Creating threads");
 my @threads = map {threads->create(\&run_instance, $_)} (0..($threads_number - 1));
 
-print STDERR "Waiting for threads to finish\n";
+$logger->info("Waiting for threads to finish");
 while ((my $running_threads = threads->list()) > 0) {
 	my @joinable_threads = threads->list(threads::joinable);
 	$_->join() for (@joinable_threads);
 	sleep(5);
 }
 
-print STDERR "Writing results to file $results_file_name\n";
+$logger->info("Writing results to file $results_file_name");
 write_results_to_file();
 
-print STDERR "Done\n";
+$logger->info("Done");
 
 sub run_instance {
 	my $id = shift;
+	my $logger = get_logger('test_time::run_instance');
 
 	# Exit the thread if a signal is received
-	$SIG{INT} = sub { print STDERR "Killing thread $id\n"; threads->exit(); };
+	$SIG{INT} = sub { $logger->info("Killing thread $id"); threads->exit(); };
 
 	while (defined(my $instance = $q->dequeue_nb())) {
 		my ($jobs_number, $jobs_number_index, $cpus_number, $cpus_number_index) = @$instance;
 
-		print STDERR "Thread $id running ($jobs_number, $cpus_number)\n";
+		$logger->info("Thread $id running ($jobs_number, $cpus_number)");
 
 		my $trace = Trace->new_from_swf($trace_file);
 		$trace->remove_large_jobs($cpus_number);
@@ -70,7 +75,7 @@ sub run_instance {
 		$results->[$jobs_number_index * @cpus_numbers + $cpus_number_index] = $schedule->{schedule_time};
 	}
 
-	print STDERR "Thread $id finished\n";
+	$logger->info("Thread $id finished");
 	return;
 }
 
