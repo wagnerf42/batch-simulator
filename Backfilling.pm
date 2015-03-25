@@ -58,6 +58,7 @@ sub new_simulation {
 	my $self = $class->SUPER::new_simulation(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
+	$self->{job_delay} = 20;
 	$self->{current_time} = 0;
 
 	return $self;
@@ -138,8 +139,10 @@ sub run {
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
 			if ($self->{uses_external_simulator}) {
+				$job->delay($self->{job_delay});
 				$self->{trace}->add_job($job);
 			}
+
 			$self->assign_job($job);
 			$logger->error_die("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
 			push @{$self->{reserved_jobs}}, $job;
