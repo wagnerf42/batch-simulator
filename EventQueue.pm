@@ -37,7 +37,8 @@ sub new {
 	};
 
 	$logger->logdie("bad json_file $self->{json_file}") unless -f $self->{json_file};
-	$self->{json} = decode_json(read_file($self->{json_file}));
+	my $json_data = read_file($self->{json_file});
+	$self->{json} = decode_json($json_data);
 
 	# Get information about the jobs
 	for my $job (@{$self->{json}->{jobs}}) {
