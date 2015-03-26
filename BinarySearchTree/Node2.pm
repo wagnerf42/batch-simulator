@@ -3,9 +3,10 @@ package BinarySearchTree::Node2;
 use Data::Dumper;
 use Scalar::Util qw(refaddr);
 
-
+use parent 'Displayable';
 use warnings;
 use strict;
+use overload '""' => \&stringification;
 use constant {
 	LEFT => 0,
 	RIGHT => 1,
@@ -215,7 +216,7 @@ sub find_node {
 	my $current_node = $self;
 
 	while (defined $current_node) {
-		last if $current_node->matches_size_key($key);
+		last if $current_node->matches_key($key);
 		my $direction = $current_node->get_direction_for($key);
 		$current_node = $current_node->{children}->[$direction];
 	}
@@ -243,12 +244,15 @@ sub might_contain_something_between {
 	my $start_key = shift;
 	my $end_key = shift;
 
-	return unless ref $start_key eq 'ARRAY';
+	return 1 unless ref $start_key eq 'ARRAY';
 
-	$start_key = [ shift @$start_key ];
-	$end_key = [ shift @$end_key ];
-	($start_key) = @$start_key if @$start_key == 1;
-	($end_key) = @$end_key if @$end_key == 1;
+	my @remaining_start_key = @{$start_key};
+	my @remaining_end_key = @{$end_key};
+
+	shift @remaining_start_key;
+	shift @remaining_end_key;
+	$start_key = $remaining_start_key[0] if @remaining_start_key == 1;
+	$end_key = $remaining_end_key[0] if @remaining_end_key == 1;
 
 	return $self->contains_something_between($start_key, $end_key);
 
@@ -270,12 +274,14 @@ sub nodes_loop {
 
 	while ($continue and (@parents or defined $current_node)) {
 		if (defined $current_node) {
-			#go left first
+			push @parents, $current_node;
 
-			if ($current_node->{key} > $start_key) {
-				my $left_child = $self->{children}->[LEFT];
+			if ($current_node->matches_range_key($start_key)) {
+				my $left_child = $current_node->{children}->[LEFT];
 				if (defined $left_child) {
 					$current_node = ($left_child->might_contain_something_between($start_key, $end_key)) ? $left_child : undef;
+				} else {
+					$current_node = undef;
 				}
 			} else {
 				$current_node = undef;
@@ -284,14 +290,17 @@ sub nodes_loop {
 		} else {
 			#we returned from exploration of a left child
 			$current_node = pop @parents;
+
 			#do content here
-			$continue = $routine->($current_node) if ($current_node->matches_key($start_key, $end_key));
+			$continue = $routine->($current_node) if ($current_node->matches_range_all_keys($start_key, $end_key));
 			#and continue with right subtree
 
-			if (not defined $end_key or $current_node->{key} < $end_key) {
-				my $right_child = $self->{children}->[RIGHT];
+			if ($current_node->matches_range_key(undef, $end_key)) {
+				my $right_child = $current_node->{children}->[RIGHT];
 				if (defined $right_child) {
-					$current_node = (right_child->might_contain_something_between($start_key, $end_key)) ? $right_child : undef;
+					$current_node = ($right_child->might_contain_something_between($start_key, $end_key)) ? $right_child : undef;
+				} else {
+					$current_node = undef;
 				}
 			} else {
 				$current_node = undef;
@@ -323,7 +332,7 @@ sub get_direction_for {
 	}
 }
 
-sub matches_size_key {
+sub matches_key {
 	my $self = shift;
 	my $key = shift;
 
@@ -336,21 +345,37 @@ sub matches_size_key {
 	}
 }
 
-sub matches_key {
+sub matches_range_key {
 	my $self = shift;
 	my $start_key = shift;
 	my $end_key = shift;
 
-	if (ref $start_key eq 'ARRAY' and $self->{key} != -1) {
-		my $size = @{$start_key};
-		for my $i (0 .. $size) {
-			if ($self->{key}->[$i] > $start_key->[$i] || $self->{key}->[$i] < $end_key->[$i]) {
+	if (ref $self->{key} eq 'ARRAY') {
+		if ((not defined $start_key or $self->{key}->[0] >= $start_key->[0]) and (not defined $end_key or $self->{key}->[0] <= $end_key->[0])) {
+			return 1;
+		}
+	} else {
+		return ((not defined $start_key or $self->{key} >= $start_key) and (not defined $end_key or $self->{key} <= $end_key));
+	}
+
+	return 0;
+}
+
+sub matches_range_all_keys {
+	my $self = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+
+	if (ref $self->{key} eq 'ARRAY') {
+		my $size = @{$self->{key}};
+		for my $i (0 .. $size-1) {
+			if ((defined $start_key && $self->{key}->[$i] < $start_key->[$i]) || (defined $end_key && $self->{key}->[$i] > $end_key->[$i])) {
 				return 0;
 			}
 		}
 		return 1;
 	} else {
-		return ($self->{key} >= $start_key && $self->{key} <= $end_key);
+		return ((not defined $start_key or $self->{key} >= $start_key) and (not defined $end_key or $self->{key} <= $end_key));
 	}
 	return 0;
 }
@@ -392,6 +417,15 @@ sub save_svg {
 	system "dot -Tsvg -o$filename $dotfile";
 	close($fd);
 	return;
+}
+
+sub stringification {
+	my $self = shift;
+	if (ref $self->{key} eq 'ARRAY') {
+		return "@{$self->{key}}";
+	} else {
+		return "$self->{key}";
+	}
 }
 
 1;
