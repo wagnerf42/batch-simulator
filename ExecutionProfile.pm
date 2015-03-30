@@ -65,7 +65,7 @@ sub get_free_processors_for {
 	my $job = shift;
 	my $starting_time = shift;
 	my $profile = $self->{profile_tree}->find_content($starting_time);
-	my $left_processors = Processorrange->new($profile->processors());
+	my $left_processors = ProcessorRange->new($profile->processors());
 	my $duration = 0;
 	my $logger = get_logger('ExecutionProfile::get_free_processors_for');
 

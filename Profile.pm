@@ -93,14 +93,14 @@ sub split_by_job {
 
 	my $middle_start = $self->{starting_time};
 	my $middle_end = (defined $self->{ending_time}) ? min($self->{ending_time}, $job->submitted_ending_time()) : $job->submitted_ending_time();
-	my $middle_profile = Profile->new($middle_start, $middle_end, $self->{processors}->copy_range());
+	my $middle_profile = Profile->new($middle_start, $middle_end, ProcessorRange->new($self->{processors}));
 	$middle_profile->remove_used_processors($job);
 	unless ($middle_profile->is_fully_loaded()) {
 		push @profiles, $middle_profile
 	}
 
 	unless (defined $self->{ending_time} and $job->submitted_ending_time() >= $self->{ending_time}) {
-		my $end_profile = Profile->new($job->submitted_ending_time(), $self->{ending_time}, $self->{processors}->copy_range());
+		my $end_profile = Profile->new($job->submitted_ending_time(), $self->{ending_time}, ProcessorRange->new($self->{processors}));
 		push @profiles, $end_profile;
 	}
 
