@@ -7,7 +7,7 @@ use warnings;
 use List::Util qw(min max);
 use Log::Log4perl qw(get_logger);
 
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
+#use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
 use Profile;
 use ProcessorRange;
@@ -65,7 +65,7 @@ sub get_free_processors_for {
 	my $job = shift;
 	my $starting_time = shift;
 	my $profile = $self->{profile_tree}->find_content($starting_time);
-	my $left_processors = $profile->processors()->copy_range();
+	my $left_processors = Processorrange->new($profile->processors());
 	my $duration = 0;
 	my $logger = get_logger('ExecutionProfile::get_free_processors_for');
 
@@ -91,7 +91,6 @@ sub get_free_processors_for {
 
 	# It is possible that not all processors were found
 	if (($left_processors->size() < $job->requested_cpus()) or ($duration < $job->requested_time())) {
-		$left_processors->free_allocated_memory();
 		return;
 	}
 
@@ -99,7 +98,6 @@ sub get_free_processors_for {
 	$left_processors->$reduction_function($job->requested_cpus());
 
 	if ($left_processors->is_empty()) {
-		$left_processors->free_allocated_memory();
 		return;
 	}
 
@@ -184,7 +182,7 @@ sub remove_job {
 
 		# Only remove if it is still there
 		if ($job_ending_time - $start > 0) {
-			my $new_profile = Profile->new($start, $job_ending_time, $job->assigned_processors_ids()->copy_range());
+			my $new_profile = Profile->new($start, $job_ending_time, ProcessorRange->new($job->assigned_processors_ids()));
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		return;
@@ -203,7 +201,7 @@ sub remove_job {
 		#split in two
 		my $first_profile_ending_time = $first_profile->ending_time();
 		$first_profile->ending_time($starting_time);
-		my $second_profile = Profile->new($starting_time, $first_profile_ending_time, $first_profile->processors()->copy_range());
+		my $second_profile = Profile->new($starting_time, $first_profile_ending_time, ProcessorRange->new($first_profile->processors()));
 
 		#put back
 		$self->{profile_tree}->add_content($first_profile);
@@ -220,7 +218,7 @@ sub remove_job {
 		$self->{profile_tree}->remove_content($first_profile);
 
 		#split in two
-		my $second_profile = Profile->new($job_ending_time, $first_profile->ending_time(), $first_profile->processors()->copy_range());
+		my $second_profile = Profile->new($job_ending_time, $first_profile->ending_time(), ProcessorRange->new($first_profile->processors()));
 		$first_profile->ending_time($job_ending_time);
 
 		#put back
@@ -238,7 +236,7 @@ sub remove_job {
 		if ($profile->starting_time() > $previous_profile_ending_time) {
 			$logger->debug("gap at [$previous_profile_ending_time, " . $profile->starting_time() . "]");
 
-			my $new_profile = Profile->new($previous_profile_ending_time, $profile->starting_time(), $job->assigned_processors_ids()->copy_range());
+			my $new_profile = Profile->new($previous_profile_ending_time, $profile->starting_time(), ProcessorRange->new($job->assigned_processors_ids()));
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		$previous_profile_ending_time = $profile->ending_time();
@@ -247,7 +245,7 @@ sub remove_job {
 	# Gap at the end
 	if ($job_ending_time > $previous_profile_ending_time) {
 		$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
-		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, $job->assigned_processors_ids()->copy_range());
+		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, ProcessorRange->new($job->assigned_processors_ids()));
 		$self->{profile_tree}->add_content($new_profile);
 	}
 
@@ -286,7 +284,6 @@ sub add_job_at {
 	for my $profile (@profiles_to_update) {
 		$self->{profile_tree}->remove_content($profile);
 		my @new_profiles = $profile->add_job($job);
-		$profile->processors()->free_allocated_memory();
 		$self->{profile_tree}->add_content($_) for (@new_profiles);
 	}
 
@@ -436,7 +433,6 @@ sub set_current_time {
 
 	for my $profile (@removed_profiles) {
 		$self->{profile_tree}->remove_content($profile);
-		$profile->processors()->free_allocated_memory();
 	}
 
 	return;
@@ -456,7 +452,6 @@ sub free_profiles {
 
 	for my $profile (@profiles) {
 		$self->{profile_tree}->remove_content($profile);
-		$profile->processors()->free_allocated_memory();
 	}
 	return;
 }

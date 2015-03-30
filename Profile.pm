@@ -7,7 +7,7 @@ use POSIX;
 use List::Util qw(min);
 use Log::Log4perl qw(get_logger);
 
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
+#use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
 use ProcessorRange;
 
@@ -97,8 +97,6 @@ sub split_by_job {
 	$middle_profile->remove_used_processors($job);
 	unless ($middle_profile->is_fully_loaded()) {
 		push @profiles, $middle_profile
-	} else {
-		$middle_profile->processors()->free_allocated_memory();
 	}
 
 	unless (defined $self->{ending_time} and $job->submitted_ending_time() >= $self->{ending_time}) {
