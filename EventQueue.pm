@@ -68,7 +68,7 @@ sub new {
 	);
 	$logger->error_die('unable to create UNIX socket /tmp/bat_socket') unless defined $self->{server_socket};
 
-	$logger->info('waiting for a connection');
+	#$logger->info('waiting for a connection');
 	$self->{socket} = $self->{server_socket}->accept();
 	$self->{current_simulator_time} = 0;
 
@@ -118,7 +118,7 @@ sub set_started_jobs {
 	}
 
 	my $message_size = pack('L', length($message));
-	$logger->debug("message (" . length($message) . " bytes): $message");
+	#$logger->debug("message (" . length($message) . " bytes): $message");
 
 	$self->{socket}->send($message_size);
 	$self->{socket}->send($message);

@@ -49,7 +49,7 @@ sub new {
 		$self = new_range($limits);
 	}
 
-	$self->check_ok() if $logger->is_debug();
+	#$self->check_ok() if $logger->is_debug();
 
 	return $self;
 }
@@ -186,7 +186,7 @@ sub reduce_to_basic {
 	);
 
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok() if $logger->is_debug();
+	#$self->check_ok() if $logger->is_debug();
 
 	return;
 }
@@ -212,7 +212,7 @@ sub reduce_to_forced_contiguous {
 	);
 
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok() if $logger->is_debug();
+	#$self->check_ok() if $logger->is_debug();
 
 	return;
 }
@@ -236,7 +236,7 @@ sub reduce_to_best_effort_contiguous {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok() if $logger->is_debug();
+	#$self->check_ok() if $logger->is_debug();
 
 	return;
 }
@@ -326,7 +326,7 @@ sub reduce_to_forced_local {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-	$self->check_ok() if $logger->is_debug();
+	#$self->check_ok() if $logger->is_debug();
 
 	return;
 }

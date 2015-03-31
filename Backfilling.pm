@@ -112,7 +112,7 @@ sub run {
 		my @typed_events;
 		push @{$typed_events[$_->type()]}, $_ for @events; # 2 lists, one for each event type
 
-		$logger->debug("current time: $self->{current_time} events @events");
+		#$logger->debug("current time: $self->{current_time} events @events");
 
 		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
@@ -130,7 +130,7 @@ sub run {
 
 		# Reassign all reserved jobs if any job finished
 		if (@{$typed_events[JOB_COMPLETED_EVENT]}) {
-			$logger->debug('reassigning jobs');
+			#$logger->debug('reassigning jobs');
 			$self->reassign_jobs_two_positions();
 		}
 
@@ -146,7 +146,7 @@ sub run {
 		}
 
 		$self->start_jobs();
-		$self->tycat() if $logger->is_debug();
+		#$self->tycat() if $logger->is_debug();
 	}
 
 	$self->{execution_profile}->free_profiles();
@@ -178,7 +178,7 @@ sub start_jobs {
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($job->starting_time() == $self->{current_time}) {
-			$logger->debug("job " . $job->job_number() . " starting");
+			#$logger->debug("job " . $job->job_number() . " starting");
 
 			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job)) unless ($self->{uses_external_simulator});
 			$self->{started_jobs}->{$job->job_number()} = $job;
@@ -214,17 +214,17 @@ sub reassign_jobs_two_positions {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 
-			$logger->debug("enough processors for job " . $job->job_number());
+			#$logger->debug("enough processors for job " . $job->job_number());
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
 
 			my $new_processors;
 			if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
-				$logger->debug("could start job " . $job->job_number());
+				#$logger->debug("could start job " . $job->job_number());
 				$new_processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
 			}
 
 			if ($new_processors) {
-				$logger->debug("reassigning job " . $job->job_number());
+				#$logger->debug("reassigning job " . $job->job_number());
 				$job->assign_to($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
 			} else {
@@ -252,7 +252,7 @@ sub assign_job {
 	my $logger = get_logger('Backfilling::assign_job');
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 
-	$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
+	#$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
 	$job->assign_to($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job);
 
