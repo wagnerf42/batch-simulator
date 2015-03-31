@@ -126,17 +126,6 @@ sub set_started_jobs {
 	return;
 }
 
-=item not_empty()
-
-Returns the connection state of the external simulator.
-
-=cut
-
-sub not_empty {
-	my $self = shift;
-	return eval{$self->{socket}->connected()};
-}
-
 =item retrieve_all()
 
 Retrieves all the available events in the event queue.
@@ -145,12 +134,17 @@ Retrieves all the available events in the event queue.
 
 sub retrieve_all {
 	my $self = shift;
+	my $logger = get_logger('EventQueue::retrieve_all');
+
 	my $packed_size = $self->recv(4);
+	return unless length($packed_size) == 4;
 	my $size = unpack('L', $packed_size);
+
 	my $message_content = $self->recv($size);
+	return unless length($message_content) == $size;
+
 	my @fields = split('\|', $message_content);
 	my $check = shift @fields;
-	my $logger = get_logger('EventQueue::retrieve_all');
 
 	$logger->logdie("error checking head of message: $check") unless $check=~/^0:(\d+(\.\d+)?)$/;
 	$self->{current_simulator_time} = $1;
@@ -176,17 +170,23 @@ sub retrieve_all {
 
 Uses a loop to receive size bytes from the network.
 
+With the current implementation, the routine starts writing on an empty string. The loop is used to continuously receive data from the socket. If somehow the socket is closed and stops transmitting data, the routine stops and returns whatever has been read up to that point.
+
+The return value is an string with the received message. It can be empty if nothing was read but the socket is still working.
+
 =cut
 
 sub recv {
 	my $self = shift;
 	my $size = shift;
-
 	my $message_content = '';
 	my $tmp;
+	my $logger = get_logger('EventQueue::recv');
 
 	while (length($message_content) < $size) {
-		defined $self->{socket}->recv($tmp, $size - length($message_content)) or die 'recv';
+		my $result = $self->{socket}->sysread($tmp, $size - length($message_content));
+		$logger->logdie('recv') unless defined $result;
+		last unless $result > 0;
 		$message_content .= $tmp;
 	}
 

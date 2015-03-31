@@ -58,7 +58,7 @@ sub new_simulation {
 	my $self = $class->SUPER::new_simulation(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
-	$self->{job_delay} = 20;
+	$self->{job_delay} = 5;
 	$self->{current_time} = 0;
 
 	return $self;
@@ -99,9 +99,7 @@ sub run {
 
 	$self->{schedule_time} = time(); # time measure
 
-	while ($self->{events}->not_empty()) {
-		my @events = $self->{events}->retrieve_all();
-
+	while (my @events = $self->{events}->retrieve_all()) {
 		if ($self->{uses_external_simulator}) {
 			$self->{current_time} = $self->{events}->current_time();
 		} else {
