@@ -383,13 +383,13 @@ sub find_first_profile_for {
 				my $start_profile = shift @included_profiles;
 				$starting_time = $start_profile->starting_time();
 				$processors = $self->get_free_processors_for($job, $start_profile->starting_time());
-				return 0 if $processors;
+				return 0 if defined $processors;
 			}
 
 			return 1;
 		});
 
-	return ($starting_time, $processors) if $processors;
+	return ($starting_time, $processors) if defined $processors;
 	return;
 }
 
