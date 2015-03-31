@@ -13,11 +13,11 @@ use Backfilling;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my @jobs_numbers = (300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500);
-my @cpus_numbers = (100, 200, 300, 400, 500);
+my @cpus_numbers = (100);
 my $cluster_size = 16;
-my $threads_number = 6;
+my $threads_number = 2;
 my $backfilling_variant = BASIC;
-my $results_file_name = 'experiment/experiment_time2/experiment1';
+my $results_file_name = 'experiment/experiment_time4/dev';
 
 $SIG{INT} = \&catch_signal;
 
