@@ -17,7 +17,7 @@ my @cpus_numbers = (100);
 my $cluster_size = 16;
 my $threads_number = 2;
 my $backfilling_variant = BASIC;
-my $results_file_name = 'experiment/experiment_time4/dev';
+my $results_file_name = $ARGV[0];
 
 $SIG{INT} = \&catch_signal;
 
