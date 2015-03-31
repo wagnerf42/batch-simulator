@@ -9,6 +9,7 @@ use Log::Log4perl qw(get_logger);
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
+use Util;
 use Profile;
 use ProcessorRange;
 use BinarySearchTree;
@@ -78,7 +79,7 @@ sub get_free_processors_for {
 			return 0 if $duration >= $job->requested_time();
 
 			# Profiles must all be contiguous
-			return 0 if $starting_time + $duration != $profile->starting_time();
+			return 0 unless float_equal($starting_time + $duration, $profile->starting_time(), 6);
 
 			$left_processors->intersection($profile->processors());
 			return 0 if $left_processors->size() < $job->requested_cpus();
