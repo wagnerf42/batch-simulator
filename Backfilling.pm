@@ -223,7 +223,7 @@ sub reassign_jobs_two_positions {
 				$new_processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
 			}
 
-			if ($new_processors) {
+			if (defined $new_processors) {
 				#$logger->debug("reassigning job " . $job->job_number());
 				$job->assign_to($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
