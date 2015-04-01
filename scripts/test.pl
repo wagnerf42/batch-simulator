@@ -16,13 +16,14 @@ my $logger = get_logger();
 $logger->info('reading trace');
 my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($cpus_number);
-$trace->keep_first_jobs($jobs_number);
-$trace->fix_submit_times();
-$trace->reset_jobs_numbers();
-#$trace->write_to_file("$jobs_number-$cpus_number.swf");
+$trace->reset_submit_times();
+
+$logger->info('making new random trace');
+my $trace_random = Trace->new_from_trace($trace, $jobs_number);
+$trace_random->write_to_file("$jobs_number-$cpus_number.swf");
 
 $logger->info('running scheduler');
-my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, BASIC);
+my $schedule = Backfilling->new($trace_random, $cpus_number, $cluster_size, BASIC);
 $schedule->run();
 #$schedule->tycat();
 
