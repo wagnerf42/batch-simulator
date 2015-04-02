@@ -67,13 +67,10 @@ sub get_free_processors_for {
 	my $profile = $self->{profile_tree}->find_content($starting_time);
 	my $left_processors = $profile->processors()->copy_range();
 	my $duration = 0;
-	#my $logger = get_logger('ExecutionProfile::get_free_processors_for');
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my $profile = shift;
-
-			#$logger->debug("profile $profile duration $duration");
 
 			# Stop if we have enough profiles
 			return 0 if $duration >= $job->requested_time();
@@ -85,7 +82,6 @@ sub get_free_processors_for {
 			return 0 if $left_processors->size() < $job->requested_cpus();
 
 			$duration = (defined $profile->ending_time()) ? $duration + $profile->duration() : $job->requested_time();
-			#$logger->debug("next duration $duration");
 			return 1;
 		});
 
@@ -103,7 +99,6 @@ sub get_free_processors_for {
 		return;
 	}
 
-	#$logger->debug('returning ok');
 	return $left_processors;
 }
 
@@ -160,8 +155,8 @@ sub remove_job {
 	my $starting_time = $job->starting_time();
 	my $job_ending_time = $job->submitted_ending_time();
 
-	#$logger->debug("removing job " . $job->job_number() . " at [" . max($current_time, $starting_time) . ", $job_ending_time]");
-	#$logger->debug("execution profile before removal: $self") if $logger->is_debug();
+	$logger->debug("removing job " . $job->job_number() . " at [" . max($current_time, $starting_time) . ", $job_ending_time]");
+	$logger->debug("execution profile before removal: $self") if $logger->is_debug();
 
 	my @impacted_profiles;
 	Profile::set_comparison_function('all_times');
@@ -174,13 +169,13 @@ sub remove_job {
 	);
 	Profile::set_comparison_function('default');
 
-	#$logger->debug("impacted profiles: @impacted_profiles") if $logger->is_debug();
+	$logger->debug("impacted profiles: @impacted_profiles") if $logger->is_debug();
 
 	# No impacted profiles
 	unless (@impacted_profiles) {
 		my $start = max($current_time, $starting_time); #avoid starting in the past
 
-		#$logger->debug('no impacted profiles');
+		$logger->debug('no impacted profiles');
 
 		# Only remove if it is still there
 		if ($job_ending_time - $start > 0) {
@@ -190,11 +185,9 @@ sub remove_job {
 		return;
 	}
 
-	#$logger->debug("impacted profiles: @impacted_profiles") if $logger->is_debug();
-
 	# Split at the first profile
 	if ($impacted_profiles[0]->starting_time() < $starting_time) {
-		#$logger->debug('split at the first profile');
+		$logger->debug('split at the first profile');
 
 		#remove
 		my $first_profile = shift @impacted_profiles;
@@ -213,7 +206,7 @@ sub remove_job {
 
 	# Split at the last profile
 	if ($impacted_profiles[-1]->ends_after($job_ending_time)) {
-		#$logger->debug('split at the last profile');
+		$logger->debug('split at the last profile');
 
 		#remove
 		my $first_profile = pop @impacted_profiles;
@@ -232,11 +225,11 @@ sub remove_job {
 	# Update profiles
 	my $previous_profile_ending_time = max($starting_time, $current_time);
 	for my $profile (@impacted_profiles) {
-		#$logger->debug("updating profile $profile");
+		$logger->debug("updating profile $profile");
 		$profile->remove_job($job);
 
 		if ($profile->starting_time() > $previous_profile_ending_time) {
-			#$logger->debug("gap at [$previous_profile_ending_time, " . $profile->starting_time() . "]");
+			$logger->debug("gap at [$previous_profile_ending_time, " . $profile->starting_time() . "]");
 
 			my $new_profile = Profile->new($previous_profile_ending_time, $profile->starting_time(), $job->assigned_processors_ids()->copy_range());
 			$self->{profile_tree}->add_content($new_profile);
@@ -246,12 +239,12 @@ sub remove_job {
 
 	# Gap at the end
 	if ($job_ending_time > $previous_profile_ending_time) {
-		#$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
+		$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
 		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, $job->assigned_processors_ids()->copy_range());
 		$self->{profile_tree}->add_content($new_profile);
 	}
 
-	#$logger->debug("execution profile after removal:  $self") if $logger->is_debug();
+	$logger->debug("execution profile after removal:  $self") if $logger->is_debug();
 
 	return;
 }
