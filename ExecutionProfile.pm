@@ -67,13 +67,10 @@ sub get_free_processors_for {
 	my $profile = $self->{profile_tree}->find_content($starting_time);
 	my $left_processors = $profile->processors()->copy_range();
 	my $duration = 0;
-	my $logger = get_logger('ExecutionProfile::get_free_processors_for');
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
 			my $profile = shift;
-
-			$logger->debug("profile $profile duration $duration");
 
 			# Stop if we have enough profiles
 			return 0 if $duration >= $job->requested_time();
@@ -85,7 +82,6 @@ sub get_free_processors_for {
 			return 0 if $left_processors->size() < $job->requested_cpus();
 
 			$duration = (defined $profile->ending_time()) ? $duration + $profile->duration() : $job->requested_time();
-			$logger->debug("next duration $duration");
 			return 1;
 		});
 
@@ -103,7 +99,6 @@ sub get_free_processors_for {
 		return;
 	}
 
-	$logger->debug('returning ok');
 	return $left_processors;
 }
 
@@ -189,8 +184,6 @@ sub remove_job {
 		}
 		return;
 	}
-
-	$logger->debug("impacted profiles: @impacted_profiles") if $logger->is_debug();
 
 	# Split at the first profile
 	if ($impacted_profiles[0]->starting_time() < $starting_time) {

@@ -119,7 +119,7 @@ sub set_started_jobs {
 	}
 
 	my $message_size = pack('L', length($message));
-	$logger->debug("message (" . length($message) . " bytes): $message");
+	$logger->debug("sending message (" . length($message) . " bytes): $message");
 
 	$self->{socket}->send($message_size);
 	$self->{socket}->send($message);
@@ -151,6 +151,8 @@ sub retrieve_all {
 	my @fields = split('\|', $message_content);
 	my $check = shift @fields;
 	my $logger = get_logger('EventQueue::retrieve_all');
+
+	$logger->debug("received message $message_content");
 
 	$logger->logdie("error checking head of message: $check") unless $check=~/^0:(\d+(\.\d+)?)$/;
 	$self->{current_simulator_time} = $1;

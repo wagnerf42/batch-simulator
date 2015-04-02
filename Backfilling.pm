@@ -112,7 +112,7 @@ sub run {
 		my @typed_events;
 		push @{$typed_events[$_->type()]}, $_ for @events; # 2 lists, one for each event type
 
-		$logger->debug("current time: $self->{current_time} events @events");
+		$logger->debug("current time: $self->{current_time} events @events") if $logger->is_debug();
 
 		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
@@ -129,25 +129,19 @@ sub run {
 		}
 
 		# Reassign all reserved jobs if any job finished
-		if (@{$typed_events[JOB_COMPLETED_EVENT]}) {
-			$logger->debug('reassigning jobs');
-			$self->reassign_jobs_two_positions();
-		}
+		$self->reassign_jobs_two_positions() if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
 		# Submission events
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
-			if ($self->{uses_external_simulator}) {
-				$self->{trace}->add_job($job);
-			}
+			$self->{trace}->add_job($job) if ($self->{uses_external_simulator});
 			$self->assign_job($job);
 			$logger->error_die("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
-			die("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
 		$self->start_jobs();
-		#$self->tycat() if $logger->is_debug();
+		$self->tycat() if $logger->is_debug();
 	}
 
 	$self->{execution_profile}->free_profiles();

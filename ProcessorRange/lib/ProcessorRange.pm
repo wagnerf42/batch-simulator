@@ -38,7 +38,6 @@ XSLoader::load('ProcessorRange', $VERSION);
 sub new {
 	my $class = shift;
 	my $self;
-	my $logger = get_logger('ProcessorRange::new');
 
 	if (@_ == 1) {
 		my $original_range = shift;
@@ -49,28 +48,7 @@ sub new {
 		$self = new_range($limits);
 	}
 
-	#$self->check_ok() if $logger->is_debug();
-
 	return $self;
-}
-
-sub check_ok {
-	my $self = shift;
-	my $last_end;
-	my $logger = get_logger('ProcessorRange::check_ok');
-
-	$self->ranges_loop(
-		sub {
-			my ($start, $end) = @_;
-
-			$logger->logconfess("invalid range $self: end > start ($end > $start)") if $end > $start;
-			$logger->logconfess("invalid range $self: start not defined") unless defined $end;
-			$logger->logconfess("invalid range $self: end not defined") unless defined $end;
-			return 1;
-		}
-	);
-
-	return;
 }
 
 sub remove {
@@ -168,7 +146,6 @@ sub reduce_to_basic {
 	my $self = shift;
 	my $target_number = shift;
 	my @remaining_ranges;
-	my $logger = get_logger('ProcessorRange::reduce_to_basic');
 
 	$self->ranges_loop(
 		sub {
@@ -186,7 +163,6 @@ sub reduce_to_basic {
 	);
 
 	$self->affect_ranges([@remaining_ranges]);
-	#$self->check_ok() if $logger->is_debug();
 
 	return;
 }
@@ -195,7 +171,6 @@ sub reduce_to_forced_contiguous {
 	my $self = shift;
 	my $target_number = shift;
 	my @remaining_ranges;
-	my $logger = get_logger('ProcessorRange::reduce_to_forced_contiguous');
 
 	$self->ranges_loop(
 		sub {
@@ -212,7 +187,6 @@ sub reduce_to_forced_contiguous {
 	);
 
 	$self->affect_ranges([@remaining_ranges]);
-	#$self->check_ok() if $logger->is_debug();
 
 	return;
 }
@@ -222,7 +196,6 @@ sub reduce_to_best_effort_contiguous {
 	my $target_number = shift;
 	my @remaining_ranges;
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
-	my $logger = get_logger('ProcessorRange::reduce_to_best_effort_contiguous');
 
 	for my $pair (@sorted_pairs) {
 		my ($start, $end) = @{$pair};
@@ -236,7 +209,6 @@ sub reduce_to_best_effort_contiguous {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-	#$self->check_ok() if $logger->is_debug();
 
 	return;
 }
@@ -302,7 +274,6 @@ sub reduce_to_forced_local {
 	my $clusters = $self->compute_ranges_in_clusters($cluster_size);
 	my @sorted_clusters = sort { cluster_size($b) - cluster_size($a) } @{$clusters};
 	my $target_clusters_number = ceil($target_number/$cluster_size);
-	my $logger = get_logger('ProcessorRange::reduce_to_forced_local');
 
 	for my $cluster (@sorted_clusters) {
 		for my $pair (@{$cluster}) {
@@ -326,7 +297,6 @@ sub reduce_to_forced_local {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-	#$self->check_ok() if $logger->is_debug();
 
 	return;
 }
