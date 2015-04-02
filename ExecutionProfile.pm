@@ -9,6 +9,7 @@ use Log::Log4perl qw(get_logger);
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
+use Util;
 use Profile;
 use ProcessorRange;
 use BinarySearchTree;
@@ -35,16 +36,15 @@ sub new {
 	my $processors_number = shift;
 	my $cluster_size = shift;
 	my $reduction_algorithm = shift;
-	my $starting_time = shift;
 
 	my $self = {
 		processors_number => $processors_number,
 		cluster_size => $cluster_size,
-		reduction_algorithm => $reduction_algorithm
+		reduction_algorithm => $reduction_algorithm,
 	};
 
 	$self->{profile_tree} = BinarySearchTree->new(-1, 0);
-	$self->{profile_tree}->add_content(Profile->new((defined($starting_time) ? $starting_time : 0), undef, [0, $self->{processors_number} - 1]));
+	$self->{profile_tree}->add_content(Profile->new(0, undef, [0, $self->{processors_number} - 1]));
 
 	bless $self, $class;
 	return $self;
@@ -76,7 +76,7 @@ sub get_free_processors_for {
 			return 0 if $duration >= $job->requested_time();
 
 			# Profiles must all be contiguous
-			return 0 if $starting_time + $duration != $profile->starting_time();
+			return 0 unless float_equal($starting_time + $duration, $profile->starting_time(), 6);
 
 			$left_processors->intersection($profile->processors());
 			return 0 if $left_processors->size() < $job->requested_cpus();
@@ -361,8 +361,8 @@ sub find_first_profile_for {
 			if (defined $previous_ending_time and $previous_ending_time != $profile->starting_time()) {
 				@included_profiles = ();
 			}
-			$previous_ending_time = $profile->ending_time();
 
+			$previous_ending_time = $profile->ending_time();
 			push @included_profiles, $profile;
 
 			# Not enough processors to continue
@@ -372,6 +372,7 @@ sub find_first_profile_for {
 
 			while (@included_profiles and (not defined $included_profiles[-1]->ending_time() or $included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() >= $job->requested_time())) {
 				my $start_profile = shift @included_profiles;
+
 				$starting_time = $start_profile->starting_time();
 				$processors = $self->get_free_processors_for($job, $start_profile->starting_time());
 				return 0 if defined $processors;

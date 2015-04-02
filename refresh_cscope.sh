@@ -1,5 +1,5 @@
 #!/bin/sh
-INCLUDED_FILES="scripts/*.pl *.pm */*.pm"
+INCLUDED_FILES=`find . -name '*.pm'`
 
 ls $INCLUDED_FILES > cscope.files
 cscope -b

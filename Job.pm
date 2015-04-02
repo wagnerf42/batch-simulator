@@ -73,11 +73,16 @@ sub new {
 sub copy {
 	my $class = shift;
 	my $original = shift;
+<<<<<<< HEAD
 
+=======
+>>>>>>> feature-delay
 	my $self = {};
+
 	%{$self} = %{$original};
 
 	bless $self, $class;
+
 	return $self;
 }
 
@@ -128,6 +133,7 @@ sub starts_after {
 	my $logger = get_logger('Job::starts_after');
 
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
+
 	return ($self->{starting_time} > $time);
 }
 
@@ -146,7 +152,7 @@ sub submitted_ending_time {
 
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
 
-	return $self->{starting_time} + $self->{requested_time};
+	return $self->{starting_time} + $self->{requested_time} + ((defined $self->{delay}) ? $self->{delay} : 0);
 }
 
 sub flow_time {
@@ -194,6 +200,7 @@ sub unassign {
 	my $self = shift;
 
 	delete $self->{starting_time};
+
 	if (defined $self->{assigned_processors_ids}) {
 		$self->{assigned_processors_ids}->free_allocated_memory();
 		delete $self->{assigned_processors_ids};
@@ -219,8 +226,21 @@ sub assigned_processors_ids {
 	return $self->{assigned_processors_ids};
 }
 
+sub delay {
+	my $self = shift;
+	my $delay = shift;
+
+	$self->{delay} = $delay if defined $delay;
+
+	return $self->{delay};
+}
+
 sub svg {
-	my ($self, $fh, $w_ratio, $h_ratio, $current_time) = @_;
+	my $self = shift;
+	my $fh = shift;
+	my $w_ratio = shift;
+	my $h_ratio = shift;
+	my $current_time = shift;
 
 	$self->{assigned_processors_ids}->ranges_loop(
 		sub {
