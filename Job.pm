@@ -71,44 +71,60 @@ sub new {
 }
 
 sub copy {
-	my ($class, $original) = @_;
+	my $class = shift;
+	my $original = shift;
+
 	my $self = {};
 	%{$self} = %{$original};
+
 	bless $self, $class;
 	return $self;
 }
 
 sub schedule_time {
-	my ($self, $schedule_time) = @_;
+	my $self = shift;
+	my $schedule_time = shift;
+
 	$self->{schedule_time} = $schedule_time if defined $schedule_time;
+
 	return $self->{schedule_time};
 }
 
 sub requested_cpus {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->{requested_cpus};
 }
 
 sub run_time {
-	my ($self, $run_time) = @_;
+	my $self = shift;
+	my $run_time = shift;
+
 	$self->{run_time} = $run_time if defined $run_time;
+
 	return $self->{run_time};
 }
 
 sub requested_time {
-	my ($self, $requested_time) = @_;
+	my $self = shift;
+	my $requested_time = shift;
+
 	$self->{requested_time} = $requested_time if defined $requested_time;
+
 	return $self->{requested_time};
 }
 
 sub starting_time {
-	my ($self, $starting_time) = @_;
+	my $self = shift;
+	my $starting_time = shift;
+
 	$self->{starting_time} = $starting_time if defined $starting_time;
+
 	return $self->{starting_time};
 }
 
 sub starts_after {
-	my ($self, $time) = @_;
+	my $self = shift;
+	my $time = shift;
 	my $logger = get_logger('Job::starts_after');
 
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
@@ -120,47 +136,57 @@ sub real_ending_time {
 	my $logger = get_logger('Job::real_ending_time');
 
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
+
 	return $self->{starting_time} + $self->{run_time};
 }
 
 sub submitted_ending_time {
-	my ($self) = shift;
+	my $self = shift;
 	my $logger = get_logger('Job::submitted_ending_time');
 
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
+
 	return $self->{starting_time} + $self->{requested_time};
 }
 
 sub flow_time {
-	my ($self) = @_;
+	my $self = shift;
 	my $logger = get_logger('Job::flow_time');
 
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
+
 	return $self->{starting_time} + $self->{run_time} - $self->{submit_time};
 }
 
 sub stretch {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->{wait_time}/$self->{run_time};
 }
 
 sub submit_time {
-	my ($self, $submit_time) = @_;
+	my $self = shift;
+	my $submit_time = shift;
+
 	$self->{submit_time} = $submit_time if defined $submit_time;
+
 	return $self->{submit_time};
 }
 
 sub wait_time {
-	my ($self) = @_;
+	my $self = shift;
 	my $logger = get_logger('Job::wait_time');
 
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
+
 	return $self->{starting_time} - $self->{submit_time};
 }
 
 sub job_number {
-	my ($self, $job_number) = @_;
+	my $self = shift;
+	my $job_number = shift;
+
 	$self->{job_number} = $job_number if defined $job_number;
+
 	return $self->{job_number};
 }
 
@@ -177,7 +203,9 @@ sub unassign {
 }
 
 sub assign_to {
-	my ($self, $starting_time, $assigned_processors) = @_;
+	my $self = shift;
+	my $starting_time = shift;
+	my $assigned_processors = shift;
 
 	$self->{starting_time} = $starting_time;
 	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
@@ -187,7 +215,7 @@ sub assign_to {
 }
 
 sub assigned_processors_ids {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->{assigned_processors_ids};
 }
 
@@ -232,18 +260,22 @@ sub svg {
 sub used_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
+
 	return $self->{assigned_processors_ids}->used_clusters($cluster_size);
 }
 
 sub clusters_required {
 	my $self = shift;
 	my $cluster_size = shift;
+
 	return POSIX::ceil($self->requested_cpus() / $cluster_size);
 }
 
 sub DESTROY {
 	my $self = shift;
+
 	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
+
 	return;
 }
 

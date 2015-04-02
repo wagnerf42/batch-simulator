@@ -18,31 +18,43 @@ sub new {
 }
 
 sub type {
-	my ($self, $type) = @_;
+	my $self = shift;
+	my $type = shift;
+
 	$self->{type} = $type if defined $type;
+
 	return $self->{type};
 }
 
 sub timestamp {
-	my ($self, $timestamp) = @_;
+	my $self = shift;
+	my $timestamp = shift;
+
 	$self->{timestamp} = $timestamp if defined $timestamp;
+
 	return $self->{timestamp};
 }
 
 sub payload {
-	my ($self, $payload) = @_;
+	my $self = shift;
+	my $payload = shift;
+
 	$self->{payload} = $payload if defined $payload;
+
 	return $self->{payload};
 }
 
 sub three_way_comparison {
-	my ($self, $other, $inverted) = @_;
+	my $self = shift;
+	my $other = shift;
+	my $inverted = shift;
+
 	return $self->{type} <=> $other->{type} if ($self->{timestamp} == $other->{timestamp});
 	return $self->{timestamp} <=> $other->{timestamp};
 }
 
 sub stringification {
-	my ($self) = @_;
+	my $self = shift;
 	return "[$self->{type}, $self->{timestamp}, ($self->{payload})]";
 }
 

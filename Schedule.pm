@@ -1,11 +1,14 @@
 package Schedule;
+use parent 'Displayable';
+
 use strict;
 use warnings;
-use EventQueue;
 
 use List::Util qw(max sum);
 use Time::HiRes qw(time);
-use parent 'Displayable';
+use Log::Log4perl qw(get_logger);
+
+use EventQueue;
 
 =head1 NAME
 
@@ -71,9 +74,7 @@ Runs the basic schedule algorithm, calling the assign_job routine from the child
 =cut
 
 sub run {
-	my ($self) = @_;
-
-	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
+	my $self = shift;
 
 	$self->assign_job($_) for @{$self->{trace}->jobs()};
 
@@ -81,52 +82,52 @@ sub run {
 }
 
 sub run_time {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->{run_time};
 }
 
 sub sum_flow_time {
-	my ($self) = @_;
+	my $self = shift;
 	return sum map {$_->flow_time()} @{$self->{trace}->jobs()};
 }
 
 sub max_flow_time {
-	my ($self) = @_;
+	my $self = shift;
 	return max map {$_->flow_time()} @{$self->{trace}->jobs()};
 }
 
 sub mean_flow_time {
-	my ($self) = @_;
+	my $self = shift;
 	return $self->sum_flow_time() / @{$self->{trace}->jobs()};
 }
 
 sub max_stretch {
-	my ($self) = @_;
+	my $self = shift;
 	return max map {$_->stretch()} @{$self->{trace}->jobs()};
 }
 
 sub mean_stretch {
-	my ($self) = @_;
+	my $self = shift;
 	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
 }
 
 sub cmax {
-	my ($self) = @_;
+	my $self = shift;
 	return max map {$_->submitted_ending_time()} (grep {defined $_->starting_time()} (@{$self->{trace}->jobs()}));
 }
 
 sub contiguous_jobs_number {
-	my ($self) = @_;
+	my $self = shift;
 	return scalar grep {$_->get_processor_range()->contiguous($self->{processors_number})} @{$self->{trace}->jobs()};
 }
 
 sub local_jobs_number {
-	my ($self) = @_;
+	my $self = shift;
 	return scalar grep {$_->get_processor_range()->local($self->{cluster_size})} @{$self->{trace}->jobs()};
 }
 
 sub locality_factor {
-	my ($self) = @_;
+	my $self = shift;
 	my $used_clusters = 0;
 	my $optimum_clusters = 0;
 
@@ -134,11 +135,12 @@ sub locality_factor {
 		$used_clusters += $job->used_clusters($self->{cluster_size});
 		$optimum_clusters += $job->clusters_required($self->{cluster_size});
 	}
+
 	return ($used_clusters / $optimum_clusters);
 }
 
 sub locality_factor_2 {
-	my ($self) = @_;
+	my $self = shift;
 	my $sum_of_ratios = 0;
 
 	for my $job (@{$self->{trace}->jobs()}) {
@@ -146,6 +148,7 @@ sub locality_factor_2 {
 		my $optimum_clusters = $job->clusters_required($self->{cluster_size});
 		$sum_of_ratios += $used_clusters / $optimum_clusters;
 	}
+
 	return $sum_of_ratios;
 }
 

@@ -330,9 +330,7 @@ sub could_start_job_at {
 
 			# Ok to return, profile may be good for the job
 			return 0 if $starting_time >= $job_ending_time;
-
 			return 0 if $min_processors <= $job->requested_cpus();
-
 			return 1;
 		});
 
