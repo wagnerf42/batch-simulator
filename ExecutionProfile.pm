@@ -153,7 +153,7 @@ sub remove_job {
 	my $self = shift;
 	my $job = shift;
 	my $current_time = shift;
-	my $logger = get_logger('ExecutionProfile::remove_job');
+	#my $logger = get_logger('ExecutionProfile::remove_job');
 
 	return unless defined $job->starting_time(); #do not remove jobs which are not here anyway
 

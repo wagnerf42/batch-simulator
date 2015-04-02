@@ -38,7 +38,7 @@ XSLoader::load('ProcessorRange', $VERSION);
 sub new {
 	my $class = shift;
 	my $self;
-	my $logger = get_logger('ProcessorRange::new');
+	#my $logger = get_logger('ProcessorRange::new');
 
 	if (@_ == 1) {
 		my $original_range = shift;
@@ -57,15 +57,15 @@ sub new {
 sub check_ok {
 	my $self = shift;
 	my $last_end;
-	my $logger = get_logger('ProcessorRange::check_ok');
+	#my $logger = get_logger('ProcessorRange::check_ok');
 
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
 
-			$logger->logconfess("invalid range $self: end > start ($end > $start)") if $end > $start;
-			$logger->logconfess("invalid range $self: start not defined") unless defined $end;
-			$logger->logconfess("invalid range $self: end not defined") unless defined $end;
+			#$logger->logconfess("invalid range $self: end > start ($end > $start)") if $end > $start;
+			#$logger->logconfess("invalid range $self: start not defined") unless defined $end;
+			#$logger->logconfess("invalid range $self: end not defined") unless defined $end;
 			return 1;
 		}
 	);
@@ -168,7 +168,7 @@ sub reduce_to_basic {
 	my $self = shift;
 	my $target_number = shift;
 	my @remaining_ranges;
-	my $logger = get_logger('ProcessorRange::reduce_to_basic');
+	#my $logger = get_logger('ProcessorRange::reduce_to_basic');
 
 	$self->ranges_loop(
 		sub {
@@ -195,7 +195,7 @@ sub reduce_to_forced_contiguous {
 	my $self = shift;
 	my $target_number = shift;
 	my @remaining_ranges;
-	my $logger = get_logger('ProcessorRange::reduce_to_forced_contiguous');
+	#my $logger = get_logger('ProcessorRange::reduce_to_forced_contiguous');
 
 	$self->ranges_loop(
 		sub {
@@ -222,7 +222,7 @@ sub reduce_to_best_effort_contiguous {
 	my $target_number = shift;
 	my @remaining_ranges;
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
-	my $logger = get_logger('ProcessorRange::reduce_to_best_effort_contiguous');
+	#my $logger = get_logger('ProcessorRange::reduce_to_best_effort_contiguous');
 
 	for my $pair (@sorted_pairs) {
 		my ($start, $end) = @{$pair};
@@ -302,7 +302,7 @@ sub reduce_to_forced_local {
 	my $clusters = $self->compute_ranges_in_clusters($cluster_size);
 	my @sorted_clusters = sort { cluster_size($b) - cluster_size($a) } @{$clusters};
 	my $target_clusters_number = ceil($target_number/$cluster_size);
-	my $logger = get_logger('ProcessorRange::reduce_to_forced_local');
+	#my $logger = get_logger('ProcessorRange::reduce_to_forced_local');
 
 	for my $cluster (@sorted_clusters) {
 		for my $pair (@{$cluster}) {
@@ -337,9 +337,10 @@ sub contiguous {
 	my $self = shift;
 	my $processors_number = shift;
 	my @ranges;
-	my $logger = get_logger('ProcessorRange::contiguous');
+	#my $logger = get_logger('ProcessorRange::contiguous');
 
-	$logger->logdie('are 0 processors contiguous ?') if $self->is_empty();
+	#$logger->logdie('are 0 processors contiguous ?') if $self->is_empty();
+	die('are 0 processors contiguous ?') if $self->is_empty();
 
 	$self->ranges_loop(
 		sub {
@@ -371,9 +372,10 @@ sub used_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
 	my %used_clusters_ids;
-	my $logger = get_logger('ProcessorRange::used_clusters');
+	#my $logger = get_logger('ProcessorRange::used_clusters');
 
-	$logger->logdie('are 0 processors local ?') if $self->is_empty();
+	#$logger->logdie('are 0 processors local ?') if $self->is_empty();
+	die('are 0 processors local ?') if $self->is_empty();
 
 	$self->ranges_loop(
 		sub {

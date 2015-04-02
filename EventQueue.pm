@@ -30,13 +30,14 @@ socket to receive events from the external simulator.
 
 sub new {
 	my $class = shift;
-	my $logger = get_logger('EventQueue::new');
+	#my $logger = get_logger('EventQueue::new');
 
 	my $self = {
 		json_file => shift,
 	};
 
-	$logger->logdie("bad json_file $self->{json_file}") unless -f $self->{json_file};
+	#$logger->logdie("bad json_file $self->{json_file}") unless -f $self->{json_file};
+	die("bad json_file $self->{json_file}") unless -f $self->{json_file};
 	$self->{json} = decode_json(read_file($self->{json_file}));
 
 	# Get information about the jobs
@@ -66,7 +67,8 @@ sub new {
 		Local => '/tmp/bat_socket',
 		Listen => 1
 	);
-	$logger->error_die('unable to create UNIX socket /tmp/bat_socket') unless defined $self->{server_socket};
+	#$logger->error_die('unable to create UNIX socket /tmp/bat_socket') unless defined $self->{server_socket};
+	die('unable to create UNIX socket /tmp/bat_socket') unless defined $self->{server_socket};
 
 	#$logger->info('waiting for a connection');
 	$self->{socket} = $self->{server_socket}->accept();
@@ -107,7 +109,7 @@ Informs the external simulator that jobs have started.
 sub set_started_jobs {
 	my $self = shift;
 	my $jobs = shift;
-	my $logger = get_logger('EventQueue::set_started_jobs');
+	#my $logger = get_logger('EventQueue::set_started_jobs');
 	my $message = "0:$self->{current_simulator_time}|$self->{current_simulator_time}:";
 
 	if (@{$jobs}) {
@@ -149,25 +151,29 @@ sub retrieve_all {
 	my $message_content = $self->recv($size);
 	my @fields = split('\|', $message_content);
 	my $check = shift @fields;
-	my $logger = get_logger('EventQueue::retrieve_all');
+	#my $logger = get_logger('EventQueue::retrieve_all');
 
-	$logger->logdie("error checking head of message: $check") unless $check=~/^0:(\d+(\.\d+)?)$/;
+	#$logger->logdie("error checking head of message: $check") unless $check=~/^0:(\d+(\.\d+)?)$/;
+	die("error checking head of message: $check") unless $check=~/^0:(\d+(\.\d+)?)$/;
 	$self->{current_simulator_time} = $1;
 
 	my @incoming_events;
 	for my $field (@fields) {
-		$logger->logdie("invalid message $field") unless $field=~/^(\d+(\.\d+)?):([SC]):(\d+)/;
+		#$logger->logdie("invalid message $field") unless $field=~/^(\d+(\.\d+)?):([SC]):(\d+)/;
+		die("invalid message $field") unless $field=~/^(\d+(\.\d+)?):([SC]):(\d+)/;
 
 		my $timestamp = $1;
 		my $type = $3;
 		$type = ($type eq 'C') ? 0 : 1;
 		my $job_id = $4;
 
-		$logger->logdie("no job for id $job_id in $self->{json}") unless defined $self->{jobs}->{$job_id};
+		#$logger->logdie("no job for id $job_id in $self->{json}") unless defined $self->{jobs}->{$job_id};
+		die("no job for id $job_id in $self->{json}") unless defined $self->{jobs}->{$job_id};
 		push @incoming_events, Event->new($type, $timestamp, $self->{jobs}->{$job_id});
 	}
 
-	$logger->logdie("no events received") unless @incoming_events;
+	#$logger->logdie("no events received") unless @incoming_events;
+	die("no events received") unless @incoming_events;
 	return @incoming_events;
 }
 

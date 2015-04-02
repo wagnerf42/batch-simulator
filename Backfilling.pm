@@ -86,7 +86,7 @@ original position.
 
 sub run {
 	my $self = shift;
-	my $logger = get_logger('Backfilling::run');
+	#my $logger = get_logger('Backfilling::run');
 
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
@@ -141,7 +141,8 @@ sub run {
 				$self->{trace}->add_job($job);
 			}
 			$self->assign_job($job);
-			$logger->error_die("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
+			#$logger->error_die("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
+			die("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
@@ -173,7 +174,7 @@ can't start now is found.
 sub start_jobs {
 	my $self = shift;
 	my @remaining_reserved_jobs;
-	my $logger = get_logger('Backfilling::start_jobs');
+	#my $logger = get_logger('Backfilling::start_jobs');
 	my @newly_started_jobs;
 
 	for my $job (@{$self->{reserved_jobs}}) {
@@ -206,7 +207,7 @@ is not possible, the job is returned to it's original position.
 
 sub reassign_jobs_two_positions {
 	my $self = shift;
-	my $logger = get_logger('Backfilling::reassign_jobs_two_positions');
+	#my $logger = get_logger('Backfilling::reassign_jobs_two_positions');
 
 	for my $job (@{$self->{reserved_jobs}}) {
 
@@ -249,7 +250,7 @@ been submitted but haven't started yet.
 sub assign_job {
 	my $self = shift;
 	my $job = shift;
-	my $logger = get_logger('Backfilling::assign_job');
+	#my $logger = get_logger('Backfilling::assign_job');
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 
 	#$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
