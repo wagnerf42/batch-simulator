@@ -10,7 +10,7 @@ use Data::Dumper;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
-use Util;
+use Util qw(float_equal float_precision);
 use Profile;
 use ProcessorRange;
 use BinarySearchTree;
@@ -270,7 +270,7 @@ sub add_job_at {
 			my $profile = shift;
 
 			# Avoid including a profile that starts at $ending_time
-			return 0 if float_equal($profile->starting_time, $ending_time, DEFAULT_PRECISION);
+			return 0 if float_equal($profile->starting_time, $ending_time);
 
 			push @profiles_to_update, $profile;
 			return 1;
@@ -310,7 +310,7 @@ sub could_start_job_at {
 			my $profile = shift;
 
 			# Gap in the profile, can't use it to run the job
-			unless (float_equal($starting_time, $profile->starting_time(), DEFAULT_PRECISION)) {
+			unless (float_equal($starting_time, $profile->starting_time())) {
 				$min_processors = 0;
 				return 0;
 			}
@@ -406,7 +406,7 @@ sub set_current_time {
 		sub {
 			my $profile = shift;
 
-			return 0 if float_equal($profile->starting_time(), $current_time, DEFAULT_PRECISION);
+			return 0 if float_equal($profile->starting_time(), $current_time);
 
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
@@ -492,7 +492,7 @@ sub save_svg {
 		});
 
 	my $last_starting_time = $profiles[-1]->starting_time();
-	return if float_equal($last_starting_time, 0, DEFAULT_PRECISION);
+	return if float_equal($last_starting_time, 0);
 
 	open(my $filehandle, '>', "$svg_filename") or die "unable to open $svg_filename";
 

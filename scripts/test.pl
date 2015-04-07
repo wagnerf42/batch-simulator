@@ -7,8 +7,7 @@ use Log::Log4perl qw(get_logger);
 use Trace;
 use Backfilling;
 
-my ($trace_file, $jobs_number, $cpus_number) = @ARGV;
-my $cluster_size = 4;
+my ($trace_file, $jobs_number, $cpus_number, $cluster_size) = @ARGV;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger();

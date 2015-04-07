@@ -199,7 +199,7 @@ sub reduce_to_basic {
 		}
 	);
 
-	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
+	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
 	return;
 }
 
@@ -221,12 +221,12 @@ sub reduce_to_forced_contiguous {
 		},
 	);
 
-	unless (@remaining_ranges) {
+	if (@remaining_ranges) {
+		$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
+	} else {
 		$self->remove_all();
-		return;
 	}
 
-	$self->affect_ranges([@remaining_ranges]);
 	return;
 }
 
@@ -249,7 +249,7 @@ sub reduce_to_best_effort_contiguous {
 		last if $target_number == 0;
 	}
 
-	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
+	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
 	return;
 }
 
@@ -260,22 +260,24 @@ sub cluster_size {
 
 sub sort_and_fuse_contiguous_ranges {
 	my $ranges = shift;
-	my @sorted_ranges = sort {$a->[1] <=> $b->[1]} @{$ranges};
+	my @pairs;
+	while (@$ranges) {
+		push @pairs, [shift @$ranges, shift @$ranges];
+	}
+	my @sorted_ranges = sort {$a->[1] <=> $b->[1]} @pairs;
 	my @remaining_ranges;
 
-	push @remaining_ranges, (shift @sorted_ranges);
+	push @remaining_ranges, (@{shift @sorted_ranges});
 
 	for my $range (@sorted_ranges) {
-		if ($range->[0] == $remaining_ranges[$#remaining_ranges]->[1] + 1) {
-			$remaining_ranges[$#remaining_ranges]->[1] = $range->[1];
+		if ($range->[0] == $remaining_ranges[$#remaining_ranges] + 1) {
+			$remaining_ranges[$#remaining_ranges] = $range->[1];
 		} else {
-			push @remaining_ranges, $range;
+			push @remaining_ranges, @$range;
 		}
 	}
 
-	my $result = [];
-	push @{$result}, ($_->[0], $_->[1]) for @remaining_ranges;
-	return $result;
+	return \@remaining_ranges;
 }
 
 sub reduce_to_best_effort_local {
@@ -301,7 +303,7 @@ sub reduce_to_best_effort_local {
 		last if $target_number == 0;
 	}
 
-	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
+	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
 	return;
 }
 
@@ -336,7 +338,11 @@ sub reduce_to_forced_local {
 		last if $target_number == 0;
 	}
 
-	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
+	if (@remaining_ranges) {
+		$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
+	} else {
+		$self->remove_all();
+	}
 	return;
 }
 

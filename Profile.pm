@@ -10,7 +10,7 @@ use Log::Log4perl qw(get_logger);
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
 use ProcessorRange;
-use Util;
+use Util qw(float_equal float_precision);
 
 use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 

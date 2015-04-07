@@ -10,7 +10,7 @@ use Log::Log4perl qw(get_logger);
 use ExecutionProfile;
 use Heap;
 use Event;
-use Util;
+use Util qw(float_equal float_precision);
 
 use constant {
 	JOB_COMPLETED_EVENT => 0,
@@ -146,7 +146,6 @@ sub run {
 		}
 
 		$self->start_jobs();
-		$self->tycat() if $logger->is_debug();
 	}
 
 	$self->{execution_profile}->free_profiles();
