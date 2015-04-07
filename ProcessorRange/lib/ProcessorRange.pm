@@ -82,6 +82,29 @@ sub compute_pairs {
 	return @pairs;
 }
 
+sub check_ok {
+	my $self = shift;
+	my $last_end = -1;
+	my $logger = get_logger('ProcessorRange::check_ok');
+
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+
+			$logger->logconfess("invalid range $self: repeated cpu ($last_end)") if $start == $last_end;
+			$logger->logconfess("invalid range $self: end < start ($end < $start)") if $end < $start;
+			$logger->logconfess("invalid range $self: start not defined") unless defined $end;
+			$logger->logconfess("invalid range $self: end not defined") unless defined $end;
+
+			$last_end = $end;
+			return 1;
+		}
+	);
+
+	return;
+}
+
+
 sub compute_ranges_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
@@ -176,7 +199,7 @@ sub reduce_to_basic {
 		}
 	);
 
-	$self->affect_ranges([@remaining_ranges]);
+	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
 	return;
 }
 
@@ -189,6 +212,7 @@ sub reduce_to_forced_contiguous {
 		sub {
 			my ($start, $end) = @_;
 			my $available_processors = $end + 1 - $start;
+
 			return 1 if ($available_processors < $target_number);
 
 			push @remaining_ranges, $start;
@@ -197,7 +221,7 @@ sub reduce_to_forced_contiguous {
 		},
 	);
 
-	$self->affect_ranges([@remaining_ranges]);
+	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
 	return;
 }
 
@@ -222,7 +246,7 @@ sub reduce_to_best_effort_contiguous {
 		last if $target_number == 0;
 	}
 
-	$self->affect_ranges([@remaining_ranges]);
+	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
 	return;
 }
 
@@ -274,7 +298,7 @@ sub reduce_to_best_effort_local {
 		last if $target_number == 0;
 	}
 
-	$self->affect_ranges([@remaining_ranges]);
+	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
 	return;
 }
 
@@ -294,7 +318,7 @@ sub reduce_to_forced_local {
 			my $taking = min($target_number, $available_processors);
 
 			push @remaining_ranges, $start;
-			push @remaining_ranges, $start + $taking;
+			push @remaining_ranges, $start + $taking - 1;
 			$target_number -= $taking;
 			last if $target_number == 0;
 		}
@@ -309,7 +333,7 @@ sub reduce_to_forced_local {
 		last if $target_number == 0;
 	}
 
-	$self->affect_ranges([@remaining_ranges]);
+	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
 	return;
 }
 
