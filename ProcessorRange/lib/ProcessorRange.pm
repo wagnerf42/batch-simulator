@@ -1,14 +1,17 @@
 package ProcessorRange;
 
 use 5.0;
+
 use strict;
 use warnings;
-use overload '""' => \&stringification;
+
 use Carp;
 use Log::Log4perl qw(get_logger);
+use POSIX qw(floor ceil);
+use List::Util qw(min max sum);
+use Data::Dumper;
 
 require Exporter;
-
 our @ISA = qw(Exporter);
 
 # Items to export into callers namespace by default. Note: do not export
@@ -34,6 +37,8 @@ our $VERSION = '0.01';
 
 require XSLoader;
 XSLoader::load('ProcessorRange', $VERSION);
+
+use overload '""' => \&stringification;
 
 sub new {
 	my $class = shift;
@@ -65,6 +70,7 @@ sub remove {
 sub compute_pairs {
 	my $self = shift;
 	my @pairs;
+
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
@@ -73,7 +79,7 @@ sub compute_pairs {
 		}
 	);
 
-	return;
+	return @pairs;
 }
 
 sub compute_ranges_in_clusters {
@@ -142,6 +148,14 @@ sub contains_at_least {
 	return $self->size() >= $limit;
 }
 
+sub reduction_function {
+	my $self = shift;
+	my $reduction_algorithm = shift;
+
+	my $reduction_function = $REDUCTION_FUNCTIONS[$reduction_algorithm];
+	return $self->$reduction_function(@_);
+}
+
 sub reduce_to_basic {
 	my $self = shift;
 	my $target_number = shift;
@@ -163,7 +177,6 @@ sub reduce_to_basic {
 	);
 
 	$self->affect_ranges([@remaining_ranges]);
-
 	return;
 }
 
@@ -176,9 +189,7 @@ sub reduce_to_forced_contiguous {
 		sub {
 			my ($start, $end) = @_;
 			my $available_processors = $end + 1 - $start;
-			if ($available_processors < $target_number) {
-				return 1;
-			}
+			return 1 if ($available_processors < $target_number);
 
 			push @remaining_ranges, $start;
 			push @remaining_ranges, $start + $target_number - 1;
@@ -187,13 +198,15 @@ sub reduce_to_forced_contiguous {
 	);
 
 	$self->affect_ranges([@remaining_ranges]);
-
 	return;
 }
 
 sub reduce_to_best_effort_contiguous {
 	my $self = shift;
 	my $target_number = shift;
+
+	confess unless defined $target_number;
+
 	my @remaining_ranges;
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
 
@@ -202,14 +215,14 @@ sub reduce_to_best_effort_contiguous {
 		my $available_processors = $end + 1 - $start;
 		my $taking = min($target_number, $available_processors);
 
-		push @remaining_ranges, [ $start, $start + $taking - 1 ];
+		push @remaining_ranges, $start;
+		push @remaining_ranges, $start + $taking - 1;
 
 		$target_number -= $taking;
 		last if $target_number == 0;
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-
 	return;
 }
 
@@ -235,7 +248,6 @@ sub sort_and_fuse_contiguous_ranges {
 
 	my $result = [];
 	push @{$result}, ($_->[0], $_->[1]) for @remaining_ranges;
-
 	return $result;
 }
 
@@ -253,7 +265,8 @@ sub reduce_to_best_effort_local {
 			my $available_processors = $end - $start + 1;
 			my $taking = min($target_number, $available_processors);
 
-			push @remaining_ranges, [$start, $start + $taking - 1];
+			push @remaining_ranges, $start;
+			push @remaining_ranges, $start + $taking - 1;
 			$target_number -= $taking;
 			last if $target_number == 0;
 		}
@@ -262,7 +275,6 @@ sub reduce_to_best_effort_local {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-
 	return;
 }
 
@@ -281,7 +293,8 @@ sub reduce_to_forced_local {
 			my $available_processors = $end - $start + 1;
 			my $taking = min($target_number, $available_processors);
 
-			push @remaining_ranges, [$start, $start + $taking - 1];
+			push @remaining_ranges, $start;
+			push @remaining_ranges, $start + $taking;
 			$target_number -= $taking;
 			last if $target_number == 0;
 		}
@@ -297,7 +310,6 @@ sub reduce_to_forced_local {
 	}
 
 	$self->affect_ranges([@remaining_ranges]);
-
 	return;
 }
 

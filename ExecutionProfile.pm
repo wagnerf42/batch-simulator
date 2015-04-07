@@ -6,6 +6,7 @@ use warnings;
 
 use List::Util qw(min max);
 use Log::Log4perl qw(get_logger);
+use Data::Dumper;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
@@ -91,8 +92,7 @@ sub get_free_processors_for {
 		return;
 	}
 
-	my $reduction_function = $REDUCTION_FUNCTIONS[$self->{reduction_algorithm}];
-	$left_processors->$reduction_function($job->requested_cpus());
+	$left_processors->reduction_function($self->{reduction_algorithm}, $job->requested_cpus(), $self->{cluster_size});
 
 	if ($left_processors->is_empty()) {
 		$left_processors->free_allocated_memory();
