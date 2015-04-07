@@ -10,6 +10,7 @@ use Log::Log4perl qw(get_logger);
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
 use ProcessorRange;
+use Util;
 
 use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 
@@ -101,7 +102,7 @@ sub split_by_job {
 		$middle_profile->processors()->free_allocated_memory();
 	}
 
-	unless (defined $self->{ending_time} and $job->submitted_ending_time() >= $self->{ending_time}) {
+	unless (defined $self->{ending_time} and float_precision($job->submitted_ending_time()) >= float_precision($self->{ending_time})) {
 		my $end_profile = Profile->new($job->submitted_ending_time(), $self->{ending_time}, $self->{processors}->copy_range());
 		push @profiles, $end_profile;
 	}

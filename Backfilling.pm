@@ -10,6 +10,7 @@ use Log::Log4perl qw(get_logger);
 use ExecutionProfile;
 use Heap;
 use Event;
+use Util;
 
 use constant {
 	JOB_COMPLETED_EVENT => 0,
@@ -123,7 +124,7 @@ sub run {
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
 				$job->run_time($self->{current_time} - $job->starting_time());
 			} else {
-				$self->{execution_profile}->remove_job($job, $self->{current_time}) if ($job->requested_time() != $job->run_time());
+				$self->{execution_profile}->remove_job($job, $self->{current_time}) unless float_equal($job->requested_time(), $job->run_time());
 			}
 		}
 
@@ -176,7 +177,7 @@ sub start_jobs {
 	my @newly_started_jobs;
 
 	for my $job (@{$self->{reserved_jobs}}) {
-		if ($job->starting_time() == $self->{current_time}) {
+		if (float_equal($job->starting_time(), $self->{current_time})) {
 			$logger->debug("job " . $job->job_number() . " starting");
 
 			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job)) unless ($self->{uses_external_simulator});

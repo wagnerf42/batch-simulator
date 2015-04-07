@@ -270,7 +270,7 @@ sub add_job_at {
 			my $profile = shift;
 
 			# Avoid including a profile that starts at $ending_time
-			return 0 if $profile->starting_time == $ending_time;
+			return 0 if float_equal($profile->starting_time, $ending_time, DEFAULT_PRECISION);
 
 			push @profiles_to_update, $profile;
 			return 1;
@@ -310,20 +310,20 @@ sub could_start_job_at {
 			my $profile = shift;
 
 			# Gap in the profile, can't use it to run the job
-			if ($starting_time != $profile->starting_time()) {
+			unless (float_equal($starting_time, $profile->starting_time(), DEFAULT_PRECISION)) {
 				$min_processors = 0;
 				return 0;
 			}
 
 			# Ok to return if it's the last profile
-			return 0 unless defined $profile->duration();
+			return 0 unless (defined $profile->duration());
 
 			$starting_time += $profile->duration();
 			$min_processors = min($min_processors, $profile->processors()->size());
 
 			# Ok to return, profile may be good for the job
-			return 0 if $starting_time >= $job_ending_time;
-			return 0 if $min_processors <= $job->requested_cpus();
+			return 0 if (float_precision($starting_time) >= float_precision($job_ending_time));
+			return 0 if ($min_processors <= $job->requested_cpus());
 			return 1;
 		});
 
@@ -358,7 +358,7 @@ sub find_first_profile_for {
 		sub {
 			my $profile = shift;
 			# Gap in the list of profiles
-			if (defined $previous_ending_time and $previous_ending_time != $profile->starting_time()) {
+			if (defined $previous_ending_time and !float_equal($previous_ending_time, $profile->starting_time())) {
 				@included_profiles = ();
 			}
 
@@ -370,7 +370,7 @@ sub find_first_profile_for {
 				@included_profiles = ();
 			}
 
-			while (@included_profiles and (not defined $included_profiles[-1]->ending_time() or $included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() >= $job->requested_time())) {
+			while (@included_profiles and (not defined $included_profiles[-1]->ending_time() or float_precision($included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time()) >= float_precision($job->requested_time()))) {
 				my $start_profile = shift @included_profiles;
 
 				$starting_time = $start_profile->starting_time();
@@ -406,12 +406,12 @@ sub set_current_time {
 		sub {
 			my $profile = shift;
 
-			return 0 if $profile->starting_time() == $current_time;
+			return 0 if float_equal($profile->starting_time(), $current_time, DEFAULT_PRECISION);
 
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
 
-			if (not defined $ending_time or $ending_time > $current_time) {
+			if (not defined $ending_time or float_precision($ending_time) > float_precision($current_time)) {
 				$updated_profile = $profile;
 				return 0;
 			}
@@ -492,7 +492,7 @@ sub save_svg {
 		});
 
 	my $last_starting_time = $profiles[-1]->starting_time();
-	return if $last_starting_time == 0;
+	return if float_equal($last_starting_time, 0, DEFAULT_PRECISION);
 
 	open(my $filehandle, '>', "$svg_filename") or die "unable to open $svg_filename";
 

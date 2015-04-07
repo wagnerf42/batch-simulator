@@ -4,7 +4,7 @@ use warnings;
 
 use Exporter qw(import);
 
-our @EXPORT = qw(FALSE TRUE float_equal);
+our @EXPORT = qw(FALSE TRUE float_equal float_precision DEFAULT_PRECISION);
 
 sub git_tree_dirty {
 	my $git_branch = `git symbolic-ref --short HEAD`;
@@ -17,13 +17,28 @@ use constant {
 	TRUE => 1
 };
 
+use constant {
+	DEFAULT_PRECISION => 6
+};
+
 sub float_equal {
 	my $a = shift;
 	my $b = shift;
 	my $precision = shift;
 
+	$precision = DEFAULT_PRECISION unless defined $precision;
+
 	#return sprintf("%.${precision}g", $a) eq sprintf("%.${precision}g", $b);
 	return abs($a - $b) < 10 ** -$precision;
+}
+
+sub float_precision {
+	my $a = shift;
+	my $precision = shift;
+
+	$precision = DEFAULT_PRECISION unless defined $precision;
+
+	return sprintf("%.${precision}g", $a);
 }
 
 1;
