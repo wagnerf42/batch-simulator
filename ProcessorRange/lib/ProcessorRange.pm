@@ -192,8 +192,7 @@ sub reduce_to_basic {
 
 			$taking = $available_processors if ($available_processors < $target_number);
 
-			push @remaining_ranges, $start;
-			push @remaining_ranges, $start + $taking - 1;
+			push @remaining_ranges, [$start, $start + $taking - 1];
 			$target_number -= $taking;
 			return ($target_number != 0);
 		}
@@ -215,8 +214,7 @@ sub reduce_to_forced_contiguous {
 
 			return 1 if ($available_processors < $target_number);
 
-			push @remaining_ranges, $start;
-			push @remaining_ranges, $start + $target_number - 1;
+			push @remaining_ranges, [$start, $start + $target_number - 1];
 			return 0;
 		},
 	);
@@ -242,8 +240,7 @@ sub reduce_to_best_effort_contiguous {
 		my $available_processors = $end + 1 - $start;
 		my $taking = min($target_number, $available_processors);
 
-		push @remaining_ranges, $start;
-		push @remaining_ranges, $start + $taking - 1;
+		push @remaining_ranges, [$start, $start + $taking - 1];
 
 		$target_number -= $taking;
 		last if $target_number == 0;
@@ -260,11 +257,8 @@ sub cluster_size {
 
 sub sort_and_fuse_contiguous_ranges {
 	my $ranges = shift;
-	my @pairs;
-	while (@$ranges) {
-		push @pairs, [shift @$ranges, shift @$ranges];
-	}
-	my @sorted_ranges = sort {$a->[1] <=> $b->[1]} @pairs;
+
+	my @sorted_ranges = sort {$a->[1] <=> $b->[1]} @{$ranges};
 	my @remaining_ranges;
 
 	push @remaining_ranges, (@{shift @sorted_ranges});
@@ -294,8 +288,7 @@ sub reduce_to_best_effort_local {
 			my $available_processors = $end - $start + 1;
 			my $taking = min($target_number, $available_processors);
 
-			push @remaining_ranges, $start;
-			push @remaining_ranges, $start + $taking - 1;
+			push @remaining_ranges, [$start, $start + $taking - 1];
 			$target_number -= $taking;
 			last if $target_number == 0;
 		}
@@ -322,8 +315,7 @@ sub reduce_to_forced_local {
 			my $available_processors = $end - $start + 1;
 			my $taking = min($target_number, $available_processors);
 
-			push @remaining_ranges, $start;
-			push @remaining_ranges, $start + $taking - 1;
+			push @remaining_ranges, [$start, $start + $taking - 1];
 			$target_number -= $taking;
 			last if $target_number == 0;
 		}
