@@ -73,16 +73,11 @@ sub new {
 sub copy {
 	my $class = shift;
 	my $original = shift;
-<<<<<<< HEAD
 
-=======
->>>>>>> feature-delay
 	my $self = {};
-
 	%{$self} = %{$original};
 
 	bless $self, $class;
-
 	return $self;
 }
 
