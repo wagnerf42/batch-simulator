@@ -18,6 +18,7 @@ my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 $trace->keep_first_jobs($jobs_number);
+$trace->reset_jobs_numbers();
 
 $logger->info('running scheduler');
 for my $variant (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL) {

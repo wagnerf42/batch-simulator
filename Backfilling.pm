@@ -223,7 +223,7 @@ sub reassign_jobs_two_positions {
 			}
 
 			if (defined $new_processors) {
-				$logger->debug("reassigning job " . $job->job_number());
+				$logger->debug("reassigning job " . $job->job_number() . " processors $new_processors");
 				$job->assign_to($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
 			} else {
@@ -251,7 +251,7 @@ sub assign_job {
 	my $logger = get_logger('Backfilling::assign_job');
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 
-	$logger->debug("assigning job " . $job->job_number() . " to time $starting_time");
+	$logger->debug("assigning job " . $job->job_number() . " to time $starting_time processors $chosen_processors");
 	$job->assign_to($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job);
 

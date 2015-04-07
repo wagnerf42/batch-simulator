@@ -221,15 +221,18 @@ sub reduce_to_forced_contiguous {
 		},
 	);
 
-	$self->affect_ranges([@remaining_ranges]) if @remaining_ranges;
+	unless (@remaining_ranges) {
+		$self->remove_all();
+		return;
+	}
+
+	$self->affect_ranges([@remaining_ranges]);
 	return;
 }
 
 sub reduce_to_best_effort_contiguous {
 	my $self = shift;
 	my $target_number = shift;
-
-	confess unless defined $target_number;
 
 	my @remaining_ranges;
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();

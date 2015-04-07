@@ -302,6 +302,7 @@ void
 remove_all(ProcessorRange p)
 	CODE:
 	vector_remove_all(p->ranges);
+	p->processors_number = 0;
 
 ProcessorRange
 affect_ranges(ProcessorRange p, AV *array)
