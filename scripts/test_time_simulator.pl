@@ -13,10 +13,11 @@ use Backfilling;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my $batsim = '../batsim/build/batsim';
-my @jobs_numbers = (300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500);
-my @cpus_numbers = (128);
-my $cluster_size = 16;
-my $threads_number = 2;
+my $platform_file = '../batsim/platforms/small_platform.xml';
+my @jobs_numbers = (30);
+my @cpus_numbers = (2);
+my $cluster_size = 1;
+my $threads_number = 1;
 my $backfilling_variant = BASIC;
 my $results_file_name = $ARGV[0];
 
@@ -47,8 +48,8 @@ while ((my $running_threads = threads->list()) > 0) {
 	sleep(5);
 }
 
-$logger->info("Writing results to file $results_file_name");
-write_results_to_file();
+#$logger->info("Writing results to file $results_file_name");
+#write_results_to_file();
 
 $logger->info("Done");
 
@@ -89,9 +90,9 @@ sub run_schedule {
 	$trace->reset_submit_times();
 	$trace->keep_first_jobs($jobs_number);
 	$trace->reset_jobs_numbers();
-	$trace->($cpus_number, $json_file);
+	$trace->save_json($json_file, $cpus_number);
 
-	my $schedule = Backfilling->new(undef, BASIC, $json_file);
+	my $schedule = Backfilling->new_simulation(undef, BASIC, $json_file);
 	$schedule->run();
 
 	return $schedule->{schedule_time};

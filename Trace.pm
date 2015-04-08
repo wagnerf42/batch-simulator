@@ -20,13 +20,14 @@ sub new {
 sub save_json {
 	my $self = shift;
 	my $file = shift;
+	my $cpus_number = shift;
 
 	my $json = {
 		version => 0,
 		command => "",
 		date => `date -R`,
 		escription => "Auto-generated from trace $self->{filename}",
-		nb_res => int(shift),
+		nb_res => int($cpus_number),
 		profiles => {},
 		jobs => [],
 	};

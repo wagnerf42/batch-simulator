@@ -24,7 +24,7 @@ for my $variant (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, L
 	$logger->info("running variant $variant");
 	my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant);
 	$schedule->run();
-	$schedule->tycat();
+	#$schedule->tycat();
 }
 
 $logger->info('done');
