@@ -18,46 +18,47 @@ sub new {
 }
 
 sub save_json {
-    my $self = shift;
-    my $json;
-    $json->{version} = 0;
-    $json->{command} = "";
-    $json->{date} = `date -R`;
-    $json->{description} = "Auto-generated from trace $self->{filename}";
+	my $self = shift;
+	my $file = shift;
 
-    $json->{nb_res} = int(shift);    
-    $json->{profiles} = {};
-    $json->{jobs} = [];
-   
-    my $job_number = 1;
-    for my $job (@{$self->{jobs}}) {
-	my $id = $job_number;
-	push @{$json->{jobs}}, {
-	    'id' => $job_number,
-	    'subtime' => int($job->submit_time()),
-	    'walltime' => int($job->requested_time()),
-	    'res' => int($job->requested_cpus()),
-	    'profile' => "p$id",
+	my $json = {
+		version => 0,
+		command => "",
+		date => `date -R`,
+		escription => "Auto-generated from trace $self->{filename}",
+		nb_res => int(shift),
+		profiles => {},
+		jobs => [],
 	};
-	
-	$json->{profiles}->{"p$id"} = {
-	    'type' => 'msg_par_hg',
-	    'cpu' => int($job->run_time()*10000000),
-	    'com' => 1000000,
-	};
-	
-	$job_number++;
-    }
-	
 
-    my $json_text = to_json( $json, { pretty => 1, canonical => 1 } );
+	my $job_number = 1;
+	for my $job (@{$self->{jobs}}) {
+		my $id = $job_number;
 
-    my $file = shift;
-    open(my $fd, '>', $file) or die "not open possible for $file";
+		push @{$json->{jobs}}, {
+			'id' => $job_number,
+			'subtime' => int($job->submit_time()),
+			'walltime' => int($job->requested_time()),
+			'res' => int($job->requested_cpus()),
+			'profile' => "p$id",
+		};
 
-    print $fd "$json_text\n";
-    close $fd;
-    return;
+		$json->{profiles}->{"p$id"} = {
+			'type' => 'msg_par_hg',
+			'cpu' => int($job->run_time()*10000000),
+			'com' => 1000000,
+		};
+
+		$job_number++;
+	}
+
+
+	my $json_text = to_json( $json, { pretty => 1, canonical => 1 } );
+	open(my $fd, '>', $file) or die "not open possible for $file";
+	print $fd "$json_text\n";
+
+	close $fd;
+	return;
 }
 
 sub add_job {

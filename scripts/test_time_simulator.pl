@@ -12,6 +12,7 @@ use Trace;
 use Backfilling;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
+my $batsim = '../batsim/build/batsim';
 my @jobs_numbers = (300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500);
 my @cpus_numbers = (128);
 my $cluster_size = 16;
@@ -67,7 +68,7 @@ sub run {
 		# Running schedule and batsim
 		my $schedule_thread = threads->create(\&run_schedule, $jobs_number, $cpus_number);
 		sleep(1);
-		my $batsim_result = `/home/fernando/Documents/batsim/build/batsim $platform_file $json_file`;
+		my $batsim_result = `$batsim $platform_file /tmp/$jobs_number-$cpus_number.json`;
 
 		# Writing result
 		$results->[$jobs_number_index * @cpus_numbers + $cpus_number_index] = $schedule_thread->join();
@@ -81,13 +82,16 @@ sub run_schedule {
 	my $jobs_number = shift;
 	my $cpus_number = shift;
 
+	my $json_file = "/tmp/$jobs_number-$cpus_number.json";
+
 	my $trace = Trace->new_from_swf($trace_file);
 	$trace->remove_large_jobs($cpus_number);
+	$trace->reset_submit_times();
 	$trace->keep_first_jobs($jobs_number);
-	$trace->fix_submit_times();
 	$trace->reset_jobs_numbers();
+	$trace->($cpus_number, $json_file);
 
-	my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $backfilling_variant);
+	my $schedule = Backfilling->new(undef, BASIC, $json_file);
 	$schedule->run();
 
 	return $schedule->{schedule_time};
