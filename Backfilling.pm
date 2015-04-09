@@ -98,7 +98,7 @@ sub run {
 		$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
 	}
 
-	$self->{schedule_time} = time(); # time measure
+	$self->{run_time} = time(); # time measure
 
 	while (my @events = $self->{events}->retrieve_all()) {
 		if ($self->{uses_external_simulator}) {
@@ -151,7 +151,7 @@ sub run {
 	$self->{execution_profile}->free_profiles();
 
 	# Time measure
-	$self->{schedule_time} = time() - $self->{schedule_time};
+	$self->{run_time} = time() - $self->{run_time};
 
 	return;
 }

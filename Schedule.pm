@@ -113,17 +113,17 @@ sub mean_stretch {
 
 sub cmax {
 	my $self = shift;
-	return max map {$_->submitted_ending_time()} (grep {defined $_->starting_time()} (@{$self->{trace}->jobs()}));
+	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
 }
 
 sub contiguous_jobs_number {
 	my $self = shift;
-	return scalar grep {$_->get_processor_range()->contiguous($self->{processors_number})} @{$self->{trace}->jobs()};
+	return scalar grep {$_->assigned_processors_ids()->contiguous($self->{processors_number})} (@{$self->{trace}->jobs()});
 }
 
 sub local_jobs_number {
 	my $self = shift;
-	return scalar grep {$_->get_processor_range()->local($self->{cluster_size})} @{$self->{trace}->jobs()};
+	return scalar grep {$_->assigned_processors_ids()->local($self->{cluster_size})} (@{$self->{trace}->jobs()});
 }
 
 sub locality_factor {
