@@ -14,8 +14,8 @@ use Backfilling;
 use Database;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my $instances = 60;
-my $jobs_number = 300;
+my $instances = 6;
+my $jobs_number = 30;
 my $cpus_number = 512;
 my $cluster_size = 16;
 my $threads_number = 6;
@@ -51,6 +51,11 @@ my %execution_info = (
 
 my $execution_id = $database->add_execution(\%execution_info);
 
+# Create a directory to store the output
+my $basic_file_name = "run_instances-$jobs_number-$instances-$cpus_number-$execution_id";
+my $experiment_folder = "experiment/run_instances/$basic_file_name";
+mkdir $experiment_folder unless -f $experiment_folder;
+
 $logger->info("Creating queue\n");
 my $q = Thread::Queue->new();
 $q->enqueue($_) for (0..($instances - 1));
@@ -68,9 +73,9 @@ while ((my $running_threads = threads->list()) > 0) {
 	sleep(5);
 }
 
-$database->update_run_time($execution_info, time() - $run_time);
+$database->update_run_time($execution_id, time() - $run_time);
 
-$logger->info("Writing results to file");
+$logger->info("Writing results to file $experiment_folder/$basic_file_name.csv");
 write_results_to_file();
 
 $logger->info("Done");
@@ -93,9 +98,20 @@ sub run_instance {
 		);
 		my $trace_id = $database->add_trace($trace_instance, \%trace_info);
 
+		my $results_instance = [];
+		share($results_instance);
+
 		for my $backfilling_variant (@backfilling_variants) {
 			my $schedule = Backfilling->new($trace_instance, $cpus_number, $cluster_size, $backfilling_variant);
 			$schedule->run();
+
+			push @{$results_instance}, (
+				$schedule->cmax(),
+				$schedule->contiguous_jobs_number(),
+				$schedule->local_jobs_number(),
+				$schedule->locality_factor(),
+				$schedule->run_time(),
+			);
 
 			my %instance_info = (
 				algorithm => $backfilling_variant,
@@ -107,6 +123,9 @@ sub run_instance {
 			);
 			my $instance_id = $database->add_instance($execution_id, $trace_id, \%instance_info);
 		}
+
+		push @{$results_instance}, $trace_id;
+		$results->[$instance] = $results_instance;
 	}
 
 	$logger->info("Thread $id finished");
@@ -114,14 +133,22 @@ sub run_instance {
 }
 
 sub write_results_to_file {
-	#open (my $file, '>', $results_file_name) or die "unable to open $results_file_name";
-	#close($file);
-	return;
-}
+	open (my $file, '>', "$experiment_folder/$basic_file_name.csv") or die "unable to open $experiment_folder/$basic_file_name";
 
-sub write_results_to_database {
+	print $file join(' ',
+		'FIRST_CMAX', 'FIRST_CONTJ', 'FIRST_LOCJ', 'FIRST_LOCF', 'FIRST_RT',
+		'BECONT_CMAX', 'BECONT_CONTJ', 'BECONT_LOCJ', 'BECONT_LOCF', 'BECONT_RT',
+		'CONT_CMAX', 'CONT_CONTJ', 'CONT_LOCJ', 'CONT_LOCF', 'CONT_RT',
+		'BELOC_CMAX', 'BELOC_CONTJ', 'BELOC_LOCJ', 'BELOC_LOCF', 'BELOC_RT',
+		'LOC_CMAX', 'LOC_CONTJ', 'LOC_LOCJ', 'LOC_LOCF', 'LOC_RT',
+		'TRACE_ID',
+	) . "\n";
 
+	for my $results_item (@{$results}) {
+		print $file join(' ', @{$results_item}) . "\n";
+	}
 
+	close($file);
 	return;
 }
 
