@@ -8,18 +8,20 @@ use threads::shared;
 use Thread::Queue;
 use Log::Log4perl qw(get_logger);
 use Time::HiRes qw(time);
+#use Number::Bytes::Human qw(format_bytes);
+#use Devel::Size qw(size total_size);
 
 use Trace;
 use Backfilling;
 use Database;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my $instances = 6;
-my $jobs_number = 30;
+my $instances = 36;
+my $jobs_number = 300;
 my $cpus_number = 512;
 my $cluster_size = 16;
 my $threads_number = 6;
-my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
+my @backfilling_variants = (BASIC);
 
 $SIG{INT} = \&catch_signal;
 
@@ -75,8 +77,8 @@ while ((my $running_threads = threads->list()) > 0) {
 
 $database->update_run_time($execution_id, time() - $run_time);
 
-$logger->info("Writing results to file $experiment_folder/$basic_file_name.csv");
-write_results_to_file();
+#$logger->info("Writing results to file $experiment_folder/$basic_file_name.csv");
+#write_results_to_file();
 
 $logger->info("Done");
 
@@ -98,20 +100,20 @@ sub run_instance {
 		);
 		my $trace_id = $database->add_trace($trace_instance, \%trace_info);
 
-		my $results_instance = [];
-		share($results_instance);
+#		my $results_instance = [];
+#		share($results_instance);
 
 		for my $backfilling_variant (@backfilling_variants) {
 			my $schedule = Backfilling->new($trace_instance, $cpus_number, $cluster_size, $backfilling_variant);
 			$schedule->run();
 
-			push @{$results_instance}, (
-				$schedule->cmax(),
-				$schedule->contiguous_jobs_number(),
-				$schedule->local_jobs_number(),
-				$schedule->locality_factor(),
-				$schedule->run_time(),
-			);
+#			push @{$results_instance}, (
+#				$schedule->cmax(),
+#				$schedule->contiguous_jobs_number(),
+#				$schedule->local_jobs_number(),
+#				$schedule->locality_factor(),
+#				$schedule->run_time(),
+#			);
 
 			my %instance_info = (
 				algorithm => $backfilling_variant,
@@ -122,10 +124,12 @@ sub run_instance {
 				run_time => $schedule->run_time(),
 			);
 			my $instance_id = $database->add_instance($execution_id, $trace_id, \%instance_info);
+
+			$trace_instance->unassign_jobs();
 		}
 
-		push @{$results_instance}, $trace_id;
-		$results->[$instance] = $results_instance;
+#		push @{$results_instance}, $trace_id;
+#		$results->[$instance] = $results_instance;
 	}
 
 	$logger->info("Thread $id finished");

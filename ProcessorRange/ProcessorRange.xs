@@ -8,10 +8,16 @@
 
 #define VECTOR_DEFAULT_SIZE 8
 
+//#define DEBUG_LEAKS
+
 typedef struct _vector {
 	unsigned int *values;
 	unsigned int allocated_size;
 	unsigned int count;
+#ifdef DEBUG_LEAKS
+	unsigned int id;
+	unsigned int block;
+#endif
 } vector;
 
 typedef struct _processor_range {
@@ -19,7 +25,9 @@ typedef struct _processor_range {
 	unsigned int processors_number;
 } processor_range;
 
+#ifdef DEBUG_LEAKS
 unsigned int allocated = 0;
+#endif
 
 static vector* vector_new(unsigned int block) {
 	vector *v;
@@ -27,6 +35,11 @@ static vector* vector_new(unsigned int block) {
 	Newx(v->values, VECTOR_DEFAULT_SIZE, unsigned int);
 	v->allocated_size = VECTOR_DEFAULT_SIZE;
 	v->count = 0;
+#ifdef DEBUG_LEAKS
+	v->id = allocated++;
+	v->block = block;
+	fprintf(stderr, "allocated %d block %d\n", v->id, v->block);
+#endif
 	return v;
 }
 
@@ -37,6 +50,9 @@ static vector_remove_all(vector *v) {
 static void vector_free(vector *v) {
 	Safefree(v->values);
 	Safefree(v);
+#ifdef DEBUG_LEAKS
+	fprintf(stderr, "freed %d block %d\n", v->id, v->block);
+#endif
 }
 
 static void vector_push(vector *v, unsigned int e) {
