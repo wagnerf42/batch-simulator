@@ -48,8 +48,8 @@ while ((my $running_threads = threads->list()) > 0) {
 	sleep(5);
 }
 
-#$logger->info("Writing results to file $results_file_name");
-#write_results_to_file();
+$logger->info("Writing results to file $results_file_name");
+write_results_to_file();
 
 $logger->info("Done");
 
@@ -95,7 +95,8 @@ sub run_schedule {
 	my $schedule = Backfilling->new_simulation(undef, BASIC, $json_file);
 	$schedule->run();
 
-	return $schedule->{schedule_time};
+
+	return $schedule->run_time();
 }
 
 sub write_results_to_file {

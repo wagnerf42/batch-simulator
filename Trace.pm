@@ -158,7 +158,8 @@ sub new_from_trace {
 	$logger->logdie('empty trace') unless defined $trace->{jobs}->[0];
 
 	my $self = {
-		jobs => []
+		jobs => [],
+		filename => $trace->{filename},
 	};
 
 	push @{$self->{jobs}}, dclone($trace->{jobs}->[int rand(@{$trace->{jobs}})]) for (1..$size);
