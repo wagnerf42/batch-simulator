@@ -14,11 +14,15 @@ use Backfilling;
 use Database;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my $instances = 6;
+my $schedule_script = 'scripts/run_schedule.pl';
+my $experiment_path = 'experiment/run_instances';
+my $database_file = "$experiment_path/parser.db";
+my $instances = 240;
 my $jobs_number = 30;
 my $cpus_number = 512;
 my $cluster_size = 16;
 my $threads_number = 6;
+#my @backfilling_variants = (BASIC);
 my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
 
 $SIG{INT} = \&catch_signal;
@@ -35,7 +39,7 @@ $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 $trace->reset_jobs_numbers();
 
-my $database = Database->new();
+my $database = Database->new($database_file);
 $database->prepare_tables();
 
 my %execution_info = (
@@ -53,7 +57,7 @@ my $execution_id = $database->add_execution(\%execution_info);
 
 # Create a directory to store the output
 my $basic_file_name = "run_instances-$jobs_number-$instances-$cpus_number-$execution_id";
-my $experiment_folder = "experiment/run_instances/$basic_file_name";
+my $experiment_folder = "$experiment_path/$basic_file_name";
 mkdir $experiment_folder unless -f $experiment_folder;
 
 $logger->info("Creating queue\n");
@@ -83,7 +87,7 @@ $logger->info("Done");
 sub run_instance {
 	my $id = shift;
 	my $logger = get_logger('test_time::run_instance');
-	my $database = Database->new();
+	my $database = Database->new($database_file);
 
 	# Exit the thread if a signal is received
 	$SIG{INT} = sub { $logger->info("Killing thread $id"); threads->exit(); };
@@ -98,30 +102,25 @@ sub run_instance {
 		);
 		my $trace_id = $database->add_trace($trace_instance, \%trace_info);
 
+		my $trace_instance_file = "$experiment_folder/$instance.swf";
+		$trace_instance->write_to_file($trace_instance_file);
+
 		my $results_instance = [];
 		share($results_instance);
 
 		for my $backfilling_variant (@backfilling_variants) {
-			my $schedule = Backfilling->new($trace_instance, $cpus_number, $cluster_size, $backfilling_variant);
-			$schedule->run();
+			my $schedule_thread = threads->create(\&run_schedule, $trace_instance_file, $backfilling_variant);
+			my $schedule_result = $schedule_thread->join();
 
 			push @{$results_instance}, (
-				$schedule->cmax(),
-				$schedule->contiguous_jobs_number(),
-				$schedule->local_jobs_number(),
-				$schedule->locality_factor(),
-				$schedule->run_time(),
+				$schedule_result->{cmax},
+				$schedule_result->{contiguous_jobs},
+				$schedule_result->{local_jobs},
+				$schedule_result->{locality_factor},
+				$schedule_result->{run_time},
 			);
 
-			my %instance_info = (
-				algorithm => $backfilling_variant,
-				cmax => $schedule->cmax(),
-				contiguous_jobs => $schedule->contiguous_jobs_number(),
-				local_jobs => $schedule->local_jobs_number(),
-				locality_factor => $schedule->locality_factor(),
-				run_time => $schedule->run_time(),
-			);
-			my $instance_id = $database->add_instance($execution_id, $trace_id, \%instance_info);
+			my $instance_id = $database->add_instance($execution_id, $trace_id, $schedule_result);
 		}
 
 		push @{$results_instance}, $trace_id;
@@ -130,6 +129,27 @@ sub run_instance {
 
 	$logger->info("Thread $id finished");
 	return;
+}
+
+sub run_schedule {
+	my $trace_file = shift;
+	my $backfilling_variant = shift;
+
+
+	my $schedule_result = `$schedule_script $trace_file $cpus_number $cluster_size $backfilling_variant`;
+	my ($cmax, $contiguous_jobs_number, $local_jobs_number, $locality_factor, $run_time) = split(' ', $schedule_result);
+
+	my %instance_info = (
+		algorithm => $backfilling_variant,
+		cmax => $cmax,
+		contiguous_jobs => $contiguous_jobs_number,
+		local_jobs => $local_jobs_number,
+		locality_factor => $locality_factor,
+		run_time => $run_time,
+	);
+
+	return \%instance_info;
+
 }
 
 sub write_results_to_file {

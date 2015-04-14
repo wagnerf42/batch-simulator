@@ -28,4 +28,3 @@ my @results = (
 
 print STDOUT join(' ', @results);
 
-return;
