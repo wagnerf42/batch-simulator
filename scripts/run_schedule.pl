@@ -7,7 +7,6 @@ use Log::Log4perl qw(get_logger);
 
 use Trace;
 use Backfilling;
-use Database;
 
 my ($trace_file, $cpus_number, $cluster_size, $variant) = @ARGV;
 

@@ -7,7 +7,6 @@ use Log::Log4perl qw(get_logger);
 
 use Trace;
 use Backfilling;
-use Database;
 
 my ($cluster_size, $backfilling_variant, $json_file) = @ARGV;
 

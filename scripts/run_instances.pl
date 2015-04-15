@@ -11,12 +11,10 @@ use Time::HiRes qw(time);
 
 use Trace;
 use Backfilling;
-use Database;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my $schedule_script = 'scripts/run_schedule.pl';
 my $experiment_path = 'experiment/run_instances';
-my $database_file = "$experiment_path/parser.db";
 my $instances = 240;
 my $jobs_number = 30;
 my $cpus_number = 512;
@@ -38,22 +36,6 @@ my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 $trace->reset_jobs_numbers();
-
-my $database = Database->new($database_file);
-$database->prepare_tables();
-
-my %execution_info = (
-	trace_file => $trace_file,
-	jobs_number => $jobs_number,
-	executions_number => $instances,
-	cpus_number => $cpus_number,
-	threads_number => $threads_number,
-	git_revision => `git rev-parse HEAD`,
-	comments => "",
-	cluster_size => $cluster_size,
-);
-
-my $execution_id = $database->add_execution(\%execution_info);
 
 # Create a directory to store the output
 my $basic_file_name = "run_instances-$jobs_number-$instances-$cpus_number-$execution_id";
@@ -87,7 +69,6 @@ $logger->info("Done");
 sub run_instance {
 	my $id = shift;
 	my $logger = get_logger('test_time::run_instance');
-	my $database = Database->new($database_file);
 
 	# Exit the thread if a signal is received
 	$SIG{INT} = sub { $logger->info("Killing thread $id"); threads->exit(); };
@@ -96,12 +77,6 @@ sub run_instance {
 		$logger->info("Thread $id running $instance");
 
 		my $trace_instance = Trace->new_from_trace($trace, $jobs_number);
-		my %trace_info = (
-			generation_method => "random jobs",
-			reset_submit_times => 1,
-		);
-		my $trace_id = $database->add_trace($trace_instance, \%trace_info);
-
 		my $trace_instance_file = "$experiment_folder/$instance.swf";
 		$trace_instance->write_to_file($trace_instance_file);
 
@@ -119,8 +94,6 @@ sub run_instance {
 				$schedule_result->{locality_factor},
 				$schedule_result->{run_time},
 			);
-
-			my $instance_id = $database->add_instance($execution_id, $trace_id, $schedule_result);
 		}
 
 		push @{$results_instance}, $trace_id;

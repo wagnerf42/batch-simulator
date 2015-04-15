@@ -11,14 +11,12 @@ use Time::HiRes qw(time);
 
 use Trace;
 use Backfilling;
-use Database;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my $batsim = '../batsim/build/batsim';
 my $schedule_script = 'scripts/run_schedule_simulator.pl';
 my $platform_file = '../batsim/platforms/small_platform.xml';
 my $experiment_path = 'experiment/run_instances_simulator';
-my $database_file = "$experiment_path/parser.db";
 my $instances = 1;
 my $jobs_number = 10;
 my $cpus_number = 4;
@@ -35,28 +33,11 @@ share($results);
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test_time');
 
-# Initialize database
-my $database = Database->new($database_file);
-$database->prepare_tables();
-
 $logger->info("Reading trace");
 my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 $trace->reset_jobs_numbers();
-
-my %execution_info = (
-	trace_file => $trace_file,
-	jobs_number => $jobs_number,
-	executions_number => $instances,
-	cpus_number => $cpus_number,
-	threads_number => $threads_number,
-	git_revision => `git rev-parse HEAD`,
-	comments => "",
-	cluster_size => $cluster_size,
-);
-
-my $execution_id = $database->add_execution(\%execution_info);
 
 # Create a directory to store the output
 my $basic_file_name = "run_instances-$jobs_number-$instances-$cpus_number-$execution_id";
@@ -91,7 +72,6 @@ $logger->info("Done");
 sub run_instance {
 	my $id = shift;
 	my $logger = get_logger('test_time::run_instance');
-	my $database = Database->new($database_file);
 
 	# Exit the thread if a signal is received
 	$SIG{INT} = sub { $logger->info("Killing thread $id"); threads->exit(); };
@@ -103,13 +83,6 @@ sub run_instance {
 
 		my $json_file = "$experiment_folder/$instance.json";
 		$trace_instance->save_json($json_file, $cpus_number);
-
-		my %trace_info = (
-			generation_method => "random jobs",
-			reset_submit_times => 1,
-		);
-
-		my $trace_id = $database->add_trace($trace_instance, \%trace_info);
 
 		my $results_instance = [];
 		share($results_instance);
@@ -129,8 +102,6 @@ sub run_instance {
 				$schedule_result->{locality_factor},
 				$schedule_result->{run_time},
 			);
-
-			my $instance_id = $database->add_instance($execution_id, $trace_id, $schedule_result);
 		}
 
 		push @{$results_instance}, $trace_id;
