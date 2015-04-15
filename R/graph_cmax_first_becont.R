@@ -1,0 +1,7 @@
+filename<-commandArgs(TRUE)[1]
+output_filename<-commandArgs(TRUE)[2]
+data<-read.table(filename,header=TRUE)
+pdf(output_filename)
+plot(data$FIRST_CMAX, data$BECONT_CMAX, main="Makespan distribution for basic backfilling and best effort contiguous", xlab="Makespan for basic backfilling (seconds)", ylab="Makespan for best effort contiguous (seconds)")
+abline(0, 1)
+
