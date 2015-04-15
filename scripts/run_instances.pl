@@ -15,7 +15,8 @@ use Backfilling;
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my $schedule_script = 'scripts/run_schedule.pl';
 my $experiment_path = 'experiment/run_instances';
-my $instances = 240;
+my $execution_id = 1;
+my $instances = 6;
 my $jobs_number = 30;
 my $cpus_number = 512;
 my $cluster_size = 16;
@@ -40,7 +41,8 @@ $trace->reset_jobs_numbers();
 # Create a directory to store the output
 my $basic_file_name = "run_instances-$jobs_number-$instances-$cpus_number-$execution_id";
 my $experiment_folder = "$experiment_path/$basic_file_name";
-mkdir $experiment_folder unless -f $experiment_folder;
+$logger->logdie("experiment folder $experiment_folder already exists") if (-f $experiment_folder);
+mkdir $experiment_folder;
 
 $logger->info("Creating queue\n");
 my $q = Thread::Queue->new();
@@ -58,8 +60,6 @@ while ((my $running_threads = threads->list()) > 0) {
 	$_->join() for (@joinable_threads);
 	sleep(5);
 }
-
-$database->update_run_time($execution_id, time() - $run_time);
 
 $logger->info("Writing results to file $experiment_folder/$basic_file_name.csv");
 write_results_to_file();
@@ -85,18 +85,12 @@ sub run_instance {
 
 		for my $backfilling_variant (@backfilling_variants) {
 			my $schedule_thread = threads->create(\&run_schedule, $trace_instance_file, $backfilling_variant);
-			my $schedule_result = $schedule_thread->join();
+			my @schedule_result = $schedule_thread->join();
 
-			push @{$results_instance}, (
-				$schedule_result->{cmax},
-				$schedule_result->{contiguous_jobs},
-				$schedule_result->{local_jobs},
-				$schedule_result->{locality_factor},
-				$schedule_result->{run_time},
-			);
+			push @{$results_instance}, @schedule_result;
 		}
 
-		push @{$results_instance}, $trace_id;
+		push @{$results_instance}, $instance;
 		$results->[$instance] = $results_instance;
 	}
 
@@ -112,17 +106,7 @@ sub run_schedule {
 	my $schedule_result = `$schedule_script $trace_file $cpus_number $cluster_size $backfilling_variant`;
 	my ($cmax, $contiguous_jobs_number, $local_jobs_number, $locality_factor, $run_time) = split(' ', $schedule_result);
 
-	my %instance_info = (
-		algorithm => $backfilling_variant,
-		cmax => $cmax,
-		contiguous_jobs => $contiguous_jobs_number,
-		local_jobs => $local_jobs_number,
-		locality_factor => $locality_factor,
-		run_time => $run_time,
-	);
-
-	return \%instance_info;
-
+	return ($cmax, $contiguous_jobs_number, $local_jobs_number, $locality_factor, $run_time);
 }
 
 sub write_results_to_file {
