@@ -49,16 +49,20 @@ sub new {
 
 sub new_simulation {
 	my $class = shift;
+	my $cluster_size = shift;
+	my $reduction_algorithm = shift;
+	my $socket_file = shift;
+	my $json_file = shift;
 
 	my $self = {
-		cluster_size => shift,
-		reduction_algorithm => shift,
+		cluster_size => $cluster_size,
+		reduction_algorithm => $reduction_algorithm,
 		cmax => 0,
 		uses_external_simulator => 1
 	};
 
 	$self->{trace} = Trace->new();
-	$self->{events} = EventQueue->new(shift);
+	$self->{events} = EventQueue->new($socket_file, $json_file);
 	$self->{processors_number} = $self->{events}->cpu_number();
 
 	$self->{cluster_size} = $self->{processors_number} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{processors_number});

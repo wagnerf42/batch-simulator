@@ -17,11 +17,12 @@ my $batsim = '../batsim/build/batsim';
 my $schedule_script = 'scripts/run_schedule_simulator.pl';
 my $platform_file = '../batsim/platforms/small_platform.xml';
 my $experiment_path = 'experiment/run_instances_simulator';
-my $instances = 1;
+my $execution_id = 1;
+my $instances = 8;
 my $jobs_number = 10;
 my $cpus_number = 4;
 my $cluster_size = 2;
-my $threads_number = 1;
+my $threads_number = 2;
 my @backfilling_variants = (BASIC);
 #my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
 
@@ -62,8 +63,6 @@ while ((my $running_threads = threads->list()) > 0) {
 	sleep(5);
 }
 
-$database->update_run_time($execution_id, time() - $run_time);
-
 $logger->info("Writing results to file $experiment_folder/$basic_file_name.csv");
 write_results_to_file();
 
@@ -84,13 +83,15 @@ sub run_instance {
 		my $json_file = "$experiment_folder/$instance.json";
 		$trace_instance->save_json($json_file, $cpus_number);
 
+		my $socket_file = "/tmp/batsim_socket_$instance";
+
 		my $results_instance = [];
 		share($results_instance);
 
 		for my $backfilling_variant (@backfilling_variants) {
-			my $schedule_thread = threads->create(\&run_schedule, $backfilling_variant, $json_file);
+			my $schedule_thread = threads->create(\&run_schedule, $backfilling_variant, $socket_file, $json_file);
 			sleep(1);
-			my $batsim_thread = threads->create(\&run_batsim, $json_file);
+			my $batsim_thread = threads->create(\&run_batsim, $socket_file, $instance, $json_file);
 
 			my $batsim_result = $batsim_thread->join();
 			my $schedule_result = $schedule_thread->join();
@@ -104,7 +105,7 @@ sub run_instance {
 			);
 		}
 
-		push @{$results_instance}, $trace_id;
+		push @{$results_instance}, $instance;
 		$results->[$instance] = $results_instance;
 	}
 
@@ -114,9 +115,10 @@ sub run_instance {
 
 sub run_schedule {
 	my $backfilling_variant = shift;
+	my $socket_file = shift;
 	my $json_file = shift;
 
-	my $schedule_result = `$schedule_script $cluster_size $backfilling_variant $json_file`;
+	my $schedule_result = `$schedule_script $cluster_size $backfilling_variant $socket_file $json_file`;
 	my ($cmax, $contiguous_jobs_number, $local_jobs_number, $locality_factor, $run_time) = split(' ', $schedule_result);
 	
 	my %instance_info = (
@@ -132,9 +134,13 @@ sub run_schedule {
 }
 
 sub run_batsim {
+	my $socket_file = shift;
+	my $instance = shift;
 	my $json_file = shift;
 
-	my $batsim_result =  `$batsim $platform_file $json_file`;
+	my $trace_file = "$experiment_folder/$instance";
+
+	my $batsim_result =  `$batsim -s $socket_file -e $trace_file $platform_file $json_file`;
 	return $batsim_result;
 }
 

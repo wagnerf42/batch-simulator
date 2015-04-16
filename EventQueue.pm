@@ -33,6 +33,7 @@ sub new {
 	my $logger = get_logger('EventQueue::new');
 
 	my $self = {
+		socket_file => shift,
 		json_file => shift,
 	};
 
@@ -61,14 +62,14 @@ sub new {
 	}
 
 	# Generate the UNIX socket
-	unlink('/tmp/bat_socket');
+	unlink($self->{socket_file});
 	$self->{server_socket} = IO::Socket::UNIX->new(
 		Type => SOCK_STREAM(),
-		Local => '/tmp/bat_socket',
+		Local => $self->{socket_file},
 		Listen => 1
 	);
-	$logger->error_die('unable to create UNIX socket /tmp/bat_socket') unless defined $self->{server_socket};
-	die('unable to create UNIX socket /tmp/bat_socket') unless defined $self->{server_socket};
+	$logger->error_die("unable to create UNIX socket $self->{socket_file}") unless defined $self->{server_socket};
+	die("unable to create UNIX socket $self->{socket_file}") unless defined $self->{server_socket};
 
 	$logger->info('waiting for a connection');
 	$self->{socket} = $self->{server_socket}->accept();
