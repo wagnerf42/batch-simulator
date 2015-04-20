@@ -17,13 +17,13 @@ my $batsim = '../batsim/build/batsim';
 my $schedule_script = 'scripts/run_schedule_simulator.pl';
 my $platform_file = '../batsim/platforms/small_platform.xml';
 my $experiment_path = 'experiment/run_instances_simulator';
-my $execution_id = 2;
+my $execution_id = 3;
 my $jobs_number = 300;
 my $cpus_number = 512;
 my $cluster_size = 16;
-my $threads_number = 4;
+my $threads_number = 2;
+my $instances = 2;
 my @communication_values = (1, 10, 100, 1000, 10000, 100000, 1000000);
-my $instances = 8;
 my $backfilling_variant = BASIC;
 
 $SIG{INT} = \&catch_signal;
@@ -150,7 +150,7 @@ sub write_results_to_file {
 	open (my $file, '>', "$experiment_folder/$basic_file_name.csv") or die "unable to open $experiment_folder/$basic_file_name";
 
 	for my $index (0..(scalar @communication_values - 1)) {
-		my @cmax_values = map { $_[$index] } (@{$results});
+		my @cmax_values = map { $_->[$index] } (@{$results});
 		print $file join (' ', @cmax_values) . "\n";
 	}
 
