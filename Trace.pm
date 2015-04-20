@@ -21,6 +21,9 @@ sub save_json {
 	my $self = shift;
 	my $file = shift;
 	my $cpus_number = shift;
+	my $comm_factor = shift;
+
+	$comm_factor = 1000000 unless defined $comm_factor;
 
 	my $json = {
 		version => 0,
@@ -47,7 +50,7 @@ sub save_json {
 		$json->{profiles}->{"p$id"} = {
 			'type' => 'msg_par_hg',
 			'cpu' => int($job->run_time()*10000000),
-			'com' => 1000000,
+			'com' => $comm_factor,
 		};
 
 		$job_number++;

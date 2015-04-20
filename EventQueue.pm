@@ -69,9 +69,7 @@ sub new {
 		Listen => 1
 	);
 	$logger->error_die("unable to create UNIX socket $self->{socket_file}") unless defined $self->{server_socket};
-	die("unable to create UNIX socket $self->{socket_file}") unless defined $self->{server_socket};
 
-	$logger->info('waiting for a connection');
 	$self->{socket} = $self->{server_socket}->accept();
 	$self->{current_simulator_time} = 0;
 

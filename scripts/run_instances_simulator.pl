@@ -17,14 +17,14 @@ my $batsim = '../batsim/build/batsim';
 my $schedule_script = 'scripts/run_schedule_simulator.pl';
 my $platform_file = '../batsim/platforms/small_platform.xml';
 my $experiment_path = 'experiment/run_instances_simulator';
-my $execution_id = 1;
+my $execution_id = 2;
+my $jobs_number = 300;
+my $cpus_number = 512;
+my $cluster_size = 16;
+my $threads_number = 4;
+my @communication_values = (1, 10, 100, 1000, 10000, 100000, 1000000);
 my $instances = 8;
-my $jobs_number = 10;
-my $cpus_number = 4;
-my $cluster_size = 2;
-my $threads_number = 2;
-my @backfilling_variants = (BASIC);
-#my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
+my $backfilling_variant = BASIC;
 
 $SIG{INT} = \&catch_signal;
 
@@ -44,7 +44,7 @@ $trace->reset_jobs_numbers();
 my $basic_file_name = "run_instances-$jobs_number-$instances-$cpus_number-$execution_id";
 my $experiment_folder = "$experiment_path/$basic_file_name";
 $logger->info("Creating experiment folder $experiment_folder");
-mkdir $experiment_folder unless -f $experiment_folder;
+mkdir $experiment_folder unless (-f $experiment_folder);
 
 $logger->info("Creating queue\n");
 my $q = Thread::Queue->new();
@@ -80,15 +80,16 @@ sub run_instance {
 
 		my $trace_instance = Trace->new_from_trace($trace, $jobs_number);
 
-		my $json_file = "$experiment_folder/$instance.json";
-		$trace_instance->save_json($json_file, $cpus_number);
 
 		my $socket_file = "/tmp/batsim_socket_$instance";
 
 		my $results_instance = [];
 		share($results_instance);
 
-		for my $backfilling_variant (@backfilling_variants) {
+		for my $communication_value (@communication_values) {
+			my $json_file = "$experiment_folder/$instance-$communication_value.json";
+			$trace_instance->save_json($json_file, $cpus_number, $communication_values[$instance]);
+
 			my $schedule_thread = threads->create(\&run_schedule, $backfilling_variant, $socket_file, $json_file);
 			sleep(1);
 			my $batsim_thread = threads->create(\&run_batsim, $socket_file, $instance, $json_file);
@@ -102,6 +103,7 @@ sub run_instance {
 				$schedule_result->{local_jobs},
 				$schedule_result->{locality_factor},
 				$schedule_result->{run_time},
+				$communication_value,
 			);
 		}
 
@@ -121,7 +123,7 @@ sub run_schedule {
 	my $schedule_result = `$schedule_script $cluster_size $backfilling_variant $socket_file $json_file`;
 	my ($cmax, $contiguous_jobs_number, $local_jobs_number, $locality_factor, $run_time) = split(' ', $schedule_result);
 	
-	my %instance_info = (
+	my %result = (
 		algorithm => $backfilling_variant,
 		cmax => $cmax,
 		contiguous_jobs => $contiguous_jobs_number,
@@ -130,7 +132,7 @@ sub run_schedule {
 		run_time => $run_time,
 	);
 
-	return \%instance_info;
+	return \%result;
 }
 
 sub run_batsim {
@@ -140,21 +142,12 @@ sub run_batsim {
 
 	my $trace_file = "$experiment_folder/$instance";
 
-	my $batsim_result =  `$batsim -s $socket_file -e $trace_file $platform_file $json_file`;
+	my $batsim_result =  `$batsim -s $socket_file -e $trace_file -- $platform_file $json_file --log=batsim.thresh:critical --log=network.thresh:critical 2> /dev/null`;
 	return $batsim_result;
 }
 
 sub write_results_to_file {
 	open (my $file, '>', "$experiment_folder/$basic_file_name.csv") or die "unable to open $experiment_folder/$basic_file_name";
-
-	print $file join(' ',
-		'FIRST_CMAX', 'FIRST_CONTJ', 'FIRST_LOCJ', 'FIRST_LOCF', 'FIRST_RT',
-		'BECONT_CMAX', 'BECONT_CONTJ', 'BECONT_LOCJ', 'BECONT_LOCF', 'BECONT_RT',
-		'CONT_CMAX', 'CONT_CONTJ', 'CONT_LOCJ', 'CONT_LOCF', 'CONT_RT',
-		'BELOC_CMAX', 'BELOC_CONTJ', 'BELOC_LOCJ', 'BELOC_LOCF', 'BELOC_RT',
-		'LOC_CMAX', 'LOC_CONTJ', 'LOC_LOCJ', 'LOC_LOCF', 'LOC_RT',
-		'TRACE_ID',
-	) . "\n";
 
 	for my $results_item (@{$results}) {
 		print $file join(' ', @{$results_item}) . "\n";
