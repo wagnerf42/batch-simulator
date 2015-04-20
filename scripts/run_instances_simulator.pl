@@ -99,15 +99,15 @@ sub run_instance {
 
 			push @{$results_instance}, (
 				$schedule_result->{cmax},
-				$schedule_result->{contiguous_jobs},
-				$schedule_result->{local_jobs},
-				$schedule_result->{locality_factor},
-				$schedule_result->{run_time},
-				$communication_value,
+				#$schedule_result->{contiguous_jobs},
+				#$schedule_result->{local_jobs},
+				#$schedule_result->{locality_factor},
+				#$schedule_result->{run_time},
+				#$communication_value,
 			);
 		}
 
-		push @{$results_instance}, $instance;
+		#push @{$results_instance}, $instance;
 		$results->[$instance] = $results_instance;
 	}
 
@@ -149,8 +149,9 @@ sub run_batsim {
 sub write_results_to_file {
 	open (my $file, '>', "$experiment_folder/$basic_file_name.csv") or die "unable to open $experiment_folder/$basic_file_name";
 
-	for my $results_item (@{$results}) {
-		print $file join(' ', @{$results_item}) . "\n";
+	for my $index (0..(scalar @communication_values - 1)) {
+		my @cmax_values = map { $_[$index] } (@{$results});
+		print $file join (' ', @cmax_values) . "\n";
 	}
 
 	close($file);
