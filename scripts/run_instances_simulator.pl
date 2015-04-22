@@ -15,14 +15,14 @@ use Backfilling;
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my $batsim = '../batsim/build/batsim';
 my $schedule_script = 'scripts/run_schedule_simulator.pl';
-my $platform_file = '../batsim/platforms/small_platform.xml';
+my $platform_file = '../batsim/platforms/cluster512.xml';
 my $experiment_path = 'experiment/run_instances_simulator';
-my $execution_id = 3;
+my $execution_id = 4;
 my $jobs_number = 300;
 my $cpus_number = 512;
 my $cluster_size = 16;
-my $threads_number = 2;
-my $instances = 2;
+my $threads_number = 1;
+my $instances = 1;
 my @communication_values = (1, 10, 100, 1000, 10000, 100000, 1000000);
 my $backfilling_variant = BASIC;
 
@@ -142,7 +142,7 @@ sub run_batsim {
 
 	my $trace_file = "$experiment_folder/$instance";
 
-	my $batsim_result =  `$batsim -s $socket_file -e $trace_file -- $platform_file $json_file --log=batsim.thresh:critical --log=network.thresh:critical 2> /dev/null`;
+	my $batsim_result =  `$batsim -s $socket_file -m'master_host0' -- $platform_file $json_file`;
 	return $batsim_result;
 }
 
