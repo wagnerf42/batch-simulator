@@ -115,6 +115,7 @@ sub mean_stretch {
 	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
 }
 
+#TODO Check this (delay)
 sub cmax {
 	my $self = shift;
 	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});

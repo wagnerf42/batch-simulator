@@ -17,13 +17,13 @@ my $batsim = '../batsim/build/batsim';
 my $schedule_script = 'scripts/run_schedule_simulator.pl';
 my $platform_file = '../batsim/platforms/cluster512.xml';
 my $experiment_path = 'experiment/run_instances_simulator';
-my $execution_id = 4;
-my $jobs_number = 300;
-my $cpus_number = 512;
-my $cluster_size = 16;
-my $threads_number = 1;
-my $instances = 1;
-my @communication_values = (1, 10, 100, 1000, 10000, 100000, 1000000);
+my $execution_id = 14;
+my $jobs_number = 100;
+my $cpus_number = 10;
+my $cluster_size = 5;
+my $threads_number = 8;
+my $instances = 300;
+my @communication_values = (1);
 my $backfilling_variant = BASIC;
 
 $SIG{INT} = \&catch_signal;
@@ -57,11 +57,7 @@ $logger->info("Creating threads");
 my @threads = map {threads->create(\&run_instance, $_)} (0..($threads_number - 1));
 
 $logger->info("Waiting for threads to finish");
-while ((my $running_threads = threads->list()) > 0) {
-	my @joinable_threads = threads->list(threads::joinable);
-	$_->join() for (@joinable_threads);
-	sleep(5);
-}
+$_->join() for (@threads);
 
 $logger->info("Writing results to file $experiment_folder/$basic_file_name.csv");
 write_results_to_file();
@@ -99,15 +95,14 @@ sub run_instance {
 
 			push @{$results_instance}, (
 				$schedule_result->{cmax},
-				#$schedule_result->{contiguous_jobs},
-				#$schedule_result->{local_jobs},
-				#$schedule_result->{locality_factor},
-				#$schedule_result->{run_time},
-				#$communication_value,
+				$schedule_result->{contiguous_jobs},
+				$schedule_result->{local_jobs},
+				$schedule_result->{locality_factor},
+				$schedule_result->{run_time},
 			);
 		}
 
-		#push @{$results_instance}, $instance;
+		push @{$results_instance}, $instance;
 		$results->[$instance] = $results_instance;
 	}
 
@@ -142,16 +137,15 @@ sub run_batsim {
 
 	my $trace_file = "$experiment_folder/$instance";
 
-	my $batsim_result =  `$batsim -s $socket_file -m'master_host0' -- $platform_file $json_file`;
+	my $batsim_result =  `$batsim -s $socket_file -m'master_host0' -- $platform_file $json_file 2>/dev/null`;
 	return $batsim_result;
 }
 
 sub write_results_to_file {
 	open (my $file, '>', "$experiment_folder/$basic_file_name.csv") or die "unable to open $experiment_folder/$basic_file_name";
 
-	for my $index (0..(scalar @communication_values - 1)) {
-		my @cmax_values = map { $_->[$index] } (@{$results});
-		print $file join (' ', @cmax_values) . "\n";
+	for my $results_item (@{$results}) {
+		print $file join(' ', @{$results_item}) . "\n";
 	}
 
 	close($file);

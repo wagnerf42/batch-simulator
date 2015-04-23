@@ -12,7 +12,7 @@ sub tycat {
 	my $self = shift;
 	my $filename = shift;
 	$filename = "$dir/$file_count.svg" unless defined $filename;
-	$self->save_svg($filename);
+	$self->save_svg($filename, @_);
 	`tycat $filename`;
 	$file_count++;
 	return;

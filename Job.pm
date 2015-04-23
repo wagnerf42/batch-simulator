@@ -147,7 +147,7 @@ sub submitted_ending_time {
 
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
 
-	return $self->{starting_time} + $self->{requested_time} + ((defined $self->{delay}) ? $self->{delay} : 0);
+	return $self->{starting_time} + $self->{requested_time};
 }
 
 sub flow_time {
@@ -219,15 +219,6 @@ sub assign_to {
 sub assigned_processors_ids {
 	my $self = shift;
 	return $self->{assigned_processors_ids};
-}
-
-sub delay {
-	my $self = shift;
-	my $delay = shift;
-
-	$self->{delay} = $delay if defined $delay;
-
-	return $self->{delay};
 }
 
 sub svg {

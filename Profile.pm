@@ -11,6 +11,8 @@ use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
 use ProcessorRange;
 use Util qw(float_equal float_precision);
+use Debug;
+use Carp;
 
 use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 
@@ -57,7 +59,7 @@ sub processors_ids {
 sub duration {
 	my $self = shift;
 
-	return $self->{ending_time} - $self->{starting_time} if defined $self->{ending_time};
+	return ($self->{ending_time} - $self->{starting_time}) if defined $self->{ending_time};
 	return;
 }
 
@@ -102,7 +104,7 @@ sub split_by_job {
 		$middle_profile->processors()->free_allocated_memory();
 	}
 
-	unless (defined $self->{ending_time} and float_precision($job->submitted_ending_time()) >= float_precision($self->{ending_time})) {
+	if (not defined $self->{ending_time} or ((not float_equal($job->submitted_ending_time(), $self->{ending_time})) and ($job->submitted_ending_time() < $self->{ending_time}))) {
 		my $end_profile = Profile->new($job->submitted_ending_time(), $self->{ending_time}, $self->{processors}->copy_range());
 		push @profiles, $end_profile;
 	}
@@ -136,7 +138,7 @@ sub ends_after {
 	my $time = shift;
 
 	return 1 unless defined $self->{ending_time};
-	return ($self->{ending_time} > $time);
+	return ((not float_equal($self->{ending_time}, $time)) and ($self->{ending_time} > $time));
 }
 
 sub svg {
@@ -150,7 +152,7 @@ sub svg {
 
 			#rectangle
 			my $x = $self->{starting_time} * $w_ratio;
-			my $w = $self->{duration} * $w_ratio;
+			my $w = $self->duration() * $w_ratio;
 
 			my $y = $start * $h_ratio;
 			my $h = $h_ratio * ($end - $start + 1);

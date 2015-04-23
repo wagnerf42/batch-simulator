@@ -25,7 +25,7 @@ sub float_equal {
 	$precision = 6 unless defined $precision;
 
 	#return sprintf("%.${precision}g", $a) eq sprintf("%.${precision}g", $b);
-	return abs($a - $b) < 10 ** -$precision;
+	return (abs($a - $b) < 10 ** -$precision);
 }
 
 sub float_precision {
@@ -34,7 +34,7 @@ sub float_precision {
 
 	$precision = 6 unless defined $precision;
 
-	return sprintf("%.${precision}g", $a);
+	return sprintf("%.${precision}f", $a);
 }
 
 1;
