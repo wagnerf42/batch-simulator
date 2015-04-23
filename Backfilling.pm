@@ -59,7 +59,7 @@ sub new_simulation {
 	my $self = $class->SUPER::new_simulation(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
-	$self->{job_delay} = 5;
+	$self->{job_delay} = 15;
 	$self->{current_time} = 0;
 
 	return $self;
@@ -147,6 +147,9 @@ sub run {
 
 		$self->start_jobs();
 	}
+
+	# All jobs should be scheduled and started
+	$logger->logdie('there are still jobs in the reserved queue') if (@{$self->{reserved_jobs}});
 
 	$self->{execution_profile}->free_profiles();
 

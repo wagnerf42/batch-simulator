@@ -68,6 +68,7 @@ sub get_free_processors_for {
 	my $profile = $self->{profile_tree}->find_content($starting_time);
 	my $left_processors = $profile->processors()->copy_range();
 	my $duration = 0;
+	#my $logger = get_logger('ExecutionProfile::get_free_processors_for');
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {

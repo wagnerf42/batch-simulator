@@ -50,7 +50,7 @@ sub save_json {
 		$json->{profiles}->{"p$id"} = {
 			'type' => 'msg_par_hg',
 			'cpu' => int($job->run_time()*10000000),
-			'com' => $comm_factor,
+			'com' => int($comm_factor),
 		};
 
 		$job_number++;
