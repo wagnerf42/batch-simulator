@@ -22,10 +22,18 @@ use constant {
 	BEST_EFFORT_CONTIGUOUS => 1,
 	CONTIGUOUS => 2,
 	BEST_EFFORT_LOCAL => 3,
-	LOCAL => 4
+	LOCAL => 4,
 };
 
-our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL NEW_EXECUTION_PROFILE REUSE_EXECUTION_PROFILE);
+our @BACKFILLING_VARIANT_STRINGS = (
+	"BASIC",
+	"BEST_EFFORT_CONTIGUOUS",
+	"CONTIGUOUS",
+	"BEST_EFFORT_LOCAL",
+	"LOCAL",
+);
+
+our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL @BACKFILLING_VARIANT_STRINGS NEW_EXECUTION_PROFILE REUSE_EXECUTION_PROFILE);
 
 =head1 NAME
 
@@ -59,7 +67,6 @@ sub new_simulation {
 	my $self = $class->SUPER::new_simulation(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
-	$self->{job_delay} = 15;
 	$self->{current_time} = 0;
 
 	return $self;

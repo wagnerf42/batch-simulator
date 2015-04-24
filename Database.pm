@@ -4,6 +4,7 @@ use warnings;
 
 use DBI;
 use Data::Dumper qw(Dumper);
+use Log::Log4perl qw(get_logger);
 
 use Trace;
 use Job;
@@ -39,35 +40,37 @@ sub prepare_tables {
 		cluster_size INT,
 		git_revision VARCHAR(255),
 		run_time INT,
+		delay INT,
 		comments VARCHAR(255),
 		add_time DATETIME,
 		PRIMARY KEY (id)
 	)");
 
+	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS traces (
+		id INTEGER NOT NULL,
+		execution INTEGER NOT NULL,
+		generation_method VARCHAR(255),
+		trace_file VARCHAR(255),
+		reset_submit_times INT,
+		fix_submit_times INT,
+		remove_large_jobs INT,
+		PRIMARY KEY (id),
+		FOREIGN KEY (execution) REFERENCES executions(id) ON DELETE CASCADE
+	)");
+
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS instances (
 		id INTEGER NOT NULL,
 		trace INTEGER NOT NULL,
-		execution INTEGER NOT NULL,
 		algorithm VARCHAR(255),
-		cmax INT,
+		communication_level INT,
+		cmax REAL,
 		local_jobs INT,
 		contiguous_jobs INT,
 		locality_factor REAL,
 		run_time REAL,
 		results BLOB,
 		PRIMARY KEY (id),
-		FOREIGN KEY (execution) REFERENCES executions(id) ON DELETE CASCADE,
 		FOREIGN KEY (trace) REFERENCES traces(id) ON DELETE CASCADE
-	)");
-
-	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS traces (
-		id INTEGER NOT NULL,
-		generation_method VARCHAR(255),
-		trace_file VARCHAR(255),
-		reset_submit_times INT,
-		fix_submit_times INT,
-		remove_large_jobs INT,
-		PRIMARY KEY (id)
 	)");
 
 	$self->{dbh}->do("CREATE TABLE IF NOT EXISTS jobs (
@@ -119,22 +122,32 @@ sub get_keysvalues {
 }
 
 sub add_execution {
-	my ($self, $execution) = @_;
-	my ($key_string, $value_string) = $self->get_keysvalues($execution);
-	my $add_time_string = "(SELECT datetime(" . time() . ", 'unixepoch', 'localtime'))";
+	my ($self, $execution_info) = @_;
 
+	my $logger = get_logger('Database::add_execution');
+
+	my ($key_string, $value_string) = $self->get_keysvalues($execution_info);
+	my $add_time_string = "(SELECT datetime(" . time() . ", 'unixepoch', 'localtime'))";
 	my $statement = "INSERT INTO executions (add_time, $key_string) VALUES ($add_time_string, '$value_string')";
+	$logger->debug($statement);
 	$self->{dbh}->do($statement);
-	return $self->get_max_id("executions");
+	my $execution_id = $self->get_max_id("executions");
+	$logger->debug("added execution $execution_id");
+	return $execution_id;
 }
 
 sub add_instance {
-	my ($self, $execution_id, $trace_id, $instance_info) = @_;
-	my ($key_string, $value_string) = $self->get_keysvalues($instance_info);
+	my ($self, $instance_info) = @_;
 
-	my $statement = "INSERT INTO instances (execution, trace, $key_string) VALUES ($execution_id, $trace_id, '$value_string')";
+	my $logger = get_logger('Database::add_instance');
+
+	my ($key_string, $value_string) = $self->get_keysvalues($instance_info);
+	my $statement = "INSERT INTO instances ($key_string) VALUES ('$value_string')";
+	$logger->debug($statement);
 	$self->{dbh}->do($statement);
-	return $self->get_max_id("instances");
+	my $instance_id = $self->get_max_id("instances");
+	$logger->debug("added instance $instance_id");
+	return $instance_id;
 }
 
 sub update_run_time {
@@ -145,21 +158,27 @@ sub update_run_time {
 
 sub add_trace {
 	my ($self, $trace, $trace_info) = @_;
-	my ($key_string, $value_string) = $self->get_keysvalues($trace_info);
 
+	my $logger = get_logger('Database::add_trace');
+
+	my ($key_string, $value_string) = $self->get_keysvalues($trace_info);
 	my $statement = "INSERT INTO traces ($key_string) VALUES ('$value_string')";
 	$self->{dbh}->do($statement);
+	$logger->debug($statement);
 	my $trace_id = $self->get_max_id("traces");
+	$logger->debug("added trace $trace_id");
 
-	for my $job (@{$trace->jobs()}) {
-		# Have to delete some extra keys
-		delete $job->{assigned_processors_ids};
-		delete $job->{schedule_cmax};
+	if (defined $trace) {
+		for my $job (@{$trace->jobs()}) {
+			# Have to delete some extra keys
+			delete $job->{assigned_processors_ids};
+			delete $job->{schedule_cmax};
 
-		my ($key_string, $value_string) = $self->get_keysvalues($job);
+			my ($key_string, $value_string) = $self->get_keysvalues($job);
 
-		my $statement = "INSERT INTO jobs (trace, $key_string) VALUES ('$trace_id', '$value_string')";
-		$self->{dbh}->do($statement);
+			my $statement = "INSERT INTO jobs (trace, $key_string) VALUES ('$trace_id', '$value_string')";
+			$self->{dbh}->do($statement);
+		}
 	}
 
 	return $trace_id;

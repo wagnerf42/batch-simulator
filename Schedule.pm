@@ -51,6 +51,7 @@ sub new_simulation {
 	my $class = shift;
 	my $cluster_size = shift;
 	my $reduction_algorithm = shift;
+	my $delay = shift;
 	my $socket_file = shift;
 	my $json_file = shift;
 
@@ -58,7 +59,8 @@ sub new_simulation {
 		cluster_size => $cluster_size,
 		reduction_algorithm => $reduction_algorithm,
 		cmax => 0,
-		uses_external_simulator => 1
+		uses_external_simulator => 1,
+		job_delay => $delay,
 	};
 
 	$self->{trace} = Trace->new();

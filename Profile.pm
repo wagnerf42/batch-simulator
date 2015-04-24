@@ -158,6 +158,7 @@ sub svg {
 			my $h = $h_ratio * ($end - $start + 1);
 			my $color = $svg_colors[$index % @svg_colors];
 			my $sw = min($w_ratio, $h_ratio) / 10;
+			$w = 1 if $w < 1;
 			print $fh "\t<rect x=\"$x\" y=\"$y\" width=\"$w\" height=\"$h\" style=\"fill:$color;fill-opacity:0.2;stroke:black;stroke-width:$sw\"/>\n";
 			return 1;
 		}

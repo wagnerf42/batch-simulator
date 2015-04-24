@@ -8,12 +8,12 @@ use Log::Log4perl qw(get_logger);
 use Trace;
 use Backfilling;
 
-my ($cluster_size, $backfilling_variant, $socket_file, $json_file) = @ARGV;
+my ($cluster_size, $backfilling_variant, $delay, $socket_file, $json_file) = @ARGV;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger();
 
-my $schedule = Backfilling->new_simulation($cluster_size, $backfilling_variant, $socket_file, $json_file);
+my $schedule = Backfilling->new_simulation($cluster_size, $backfilling_variant, $delay, $socket_file, $json_file);
 $schedule->run();
 
 my @results = (
