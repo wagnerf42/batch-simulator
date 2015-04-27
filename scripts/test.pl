@@ -8,23 +8,25 @@ use Trace;
 use Backfilling;
 
 my ($trace_file, $jobs_number, $cpus_number, $cluster_size) = @ARGV;
+my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger();
 
 $logger->info('reading trace');
 my $trace = Trace->new_from_swf($trace_file);
-$trace->remove_large_jobs($cpus_number);
+$trace->remove_large_jobs($cpus_number/2);
 $trace->reset_submit_times();
-$trace->keep_first_jobs($jobs_number);
-$trace->reset_jobs_numbers();
 
 $logger->info('running scheduler');
-for my $variant (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL) {
-	$logger->info("running variant $variant");
-	my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant);
+
+for my $backfilling_variant (@backfilling_variants) {
+	my $trace_random = Trace->new_from_trace($trace, $jobs_number);
+	$trace_random->reset_jobs_numbers();
+	$logger->info("running variant $backfilling_variant");
+	my $schedule = Backfilling->new($trace_random, $cpus_number, $cluster_size, $backfilling_variant);
 	$schedule->run();
-	#$schedule->tycat();
+	$schedule->tycat();
 }
 
 $logger->info('done');
