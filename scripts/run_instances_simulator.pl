@@ -22,7 +22,7 @@ my $jobs_number = 300;
 my $cpus_number = 512;
 my $cluster_size = 16;
 my $threads_number = 3;
-my $instances = 9;
+my $instances = 1;
 my $delay = 15;
 my @communication_values = (1, 100000, 1000000000);
 my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
@@ -112,7 +112,7 @@ sub run_instance {
 
 		for my $communication_value (@communication_values) {
 			my $json_file = "$experiment_folder/$instance-$communication_value.json";
-			$trace_instance->save_json($json_file, $cpus_number, $communication_values[$instance]);
+			$trace_instance->save_json($json_file, $cpus_number, $communication_value);
 
 			for my $backfilling_variant (@backfilling_variants) {
 				my $schedule_thread = threads->create(\&run_schedule, $backfilling_variant, $socket_file, $json_file);
