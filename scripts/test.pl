@@ -8,7 +8,8 @@ use Trace;
 use Backfilling;
 
 my ($trace_file, $jobs_number, $cpus_number, $cluster_size) = @ARGV;
-my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
+my @backfilling_variants = (BASIC);
+#my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger();

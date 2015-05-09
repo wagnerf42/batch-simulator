@@ -197,7 +197,6 @@ sub unassign {
 	delete $self->{starting_time};
 
 	if (defined $self->{assigned_processors_ids}) {
-		$self->{assigned_processors_ids}->free_allocated_memory();
 		delete $self->{assigned_processors_ids};
 	}
 
@@ -210,7 +209,6 @@ sub assign_to {
 	my $assigned_processors = shift;
 
 	$self->{starting_time} = $starting_time;
-	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
 	$self->{assigned_processors_ids} = $assigned_processors;
 
 	return;
@@ -275,14 +273,6 @@ sub clusters_required {
 	my $cluster_size = shift;
 
 	return POSIX::ceil($self->requested_cpus() / $cluster_size);
-}
-
-sub DESTROY {
-	my $self = shift;
-
-	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
-
-	return;
 }
 
 1;
