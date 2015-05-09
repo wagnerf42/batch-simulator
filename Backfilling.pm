@@ -228,12 +228,7 @@ sub reassign_jobs_two_positions {
 			$logger->debug("enough processors for job " . $job->job_number());
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
 
-			my $new_processors;
-			if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
-				$logger->debug("could start job " . $job->job_number());
-				$new_processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
-			}
-
+			my $new_processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
 			if (defined $new_processors) {
 				$logger->debug("reassigning job " . $job->job_number() . " processors $new_processors");
 				$job->assign_to($self->{current_time}, $new_processors);
