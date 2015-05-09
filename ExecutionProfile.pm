@@ -14,6 +14,7 @@ use Util qw(float_equal float_precision);
 use Profile;
 use ProcessorRange;
 use BinarySearchTree;
+use Debug;
 
 use overload '""' => \&stringification;
 
@@ -72,7 +73,7 @@ sub get_free_processors_for {
 	my $left_processors = $profile->processors()->copy_range();
 	my $requested_time = $job->requested_time();
 
-	#my $logger = get_logger('ExecutionProfile::get_free_processors_for');
+	my $logger = get_logger('ExecutionProfile::get_free_processors_for');
 
 	$self->{profile_tree}->nodes_loop($starting_time, undef,
 		sub {
@@ -80,19 +81,28 @@ sub get_free_processors_for {
 
 			# Stop if we have enough profiles
 			if ($duration >= $requested_time) {
-				#$logger->debug('enough profiles');
+				##DEBUG_BEGIN
+				$logger->debug('enough profiles');
+				##DEBUG_END
+
 				return 0;
 			}
 
 			# Profiles must all be contiguous
 			unless (float_equal($starting_time + $duration, $profile->starting_time())) {
-				#$logger->debug('profile not contiguous');
+				##DEBUG_BEGIN
+				$logger->debug('profile not contiguous');
+				##DEBUG_END
+
 				return 0;
 			}
 
 			$left_processors->intersection($profile->processors());
 			if ($left_processors->size() < $job->requested_cpus()) {
-				#$logger->debug('empty intersection');
+				##DEBUG_BEGIN
+				$logger->debug('empty intersection');
+				##DEBUG_END
+
 				return 0;
 			}
 
@@ -102,7 +112,10 @@ sub get_free_processors_for {
 
 	# It is possible that not all processors were found
 	if (($left_processors->size() < $job->requested_cpus()) or ((not float_equal($duration, $requested_time)) and ($duration < $requested_time))) {
-		#$logger->debug('size less than requested');
+		##DEBUG_BEGIN
+		$logger->debug('size less than requested');
+		##DEBUG_END
+
 		$left_processors->free_allocated_memory();
 		return;
 	}
@@ -182,13 +195,17 @@ sub remove_job {
 	);
 	Profile::set_comparison_function('default');
 
-	$logger->debug("impacted profiles: @impacted_profiles") if $logger->is_debug();
+	##DEBUG_BEGIN
+	$logger->debug("impacted profiles: @impacted_profiles");
+	##DEBUG_END
 
 	# No impacted profiles
 	unless (@impacted_profiles) {
 		my $start = max($current_time, $starting_time); #avoid starting in the past
 
+		##DEBUG_BEGIN
 		$logger->debug('no impacted profiles');
+		##DEBUG_END
 
 		# Only remove if it is still there
 		if ((not float_equal($job_ending_time, $start)) and ($job_ending_time > $start)) {
@@ -200,7 +217,9 @@ sub remove_job {
 
 	# Split at the first profile
 	if ((not float_equal($impacted_profiles[0]->starting_time(), $starting_time)) and ($impacted_profiles[0]->starting_time() < $starting_time)) {
+		##DEBUG_BEGIN
 		$logger->debug('split at the first profile');
+		##DEBUG_END
 
 		#remove
 		my $first_profile = shift @impacted_profiles;
@@ -219,7 +238,9 @@ sub remove_job {
 
 	# Split at the last profile
 	if ($impacted_profiles[-1]->ends_after($job_ending_time)) {
+		##DEBUG_BEGIN
 		$logger->debug('split at the last profile');
+		##DEBUG_END
 
 		#remove
 		my $first_profile = pop @impacted_profiles;
@@ -238,11 +259,15 @@ sub remove_job {
 	# Update profiles
 	my $previous_profile_ending_time = max($starting_time, $current_time);
 	for my $profile (@impacted_profiles) {
+		##DEBUG_BEGIN
 		$logger->debug("updating profile $profile");
+		##DEBUG_END
 		$profile->remove_job($job);
 
 		if ((not float_equal($profile->starting_time(), $previous_profile_ending_time)) and ($profile->starting_time() > $previous_profile_ending_time)) {
+			##DEBUG_BEGIN
 			$logger->debug("gap at [$previous_profile_ending_time, " . $profile->starting_time() . "]");
+			##DEBUG_END
 
 			my $new_profile = Profile->new($previous_profile_ending_time, $profile->starting_time(), $job->assigned_processors_ids()->copy_range());
 			$self->{profile_tree}->add_content($new_profile);
@@ -252,12 +277,16 @@ sub remove_job {
 
 	# Gap at the end
 	if ((not float_equal($job_ending_time, $previous_profile_ending_time)) and ($job_ending_time > $previous_profile_ending_time)) {
+		##DEBUG_BEGIN
 		$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
+		##DEBUG_END
 		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, $job->assigned_processors_ids()->copy_range());
 		$self->{profile_tree}->add_content($new_profile);
 	}
 
-	$logger->debug("execution profile after removal:  $self") if $logger->is_debug();
+	##DEBUG_BEGIN
+	$logger->debug("execution profile after removal:  $self");
+	##DEBUG_END
 
 	return;
 }
