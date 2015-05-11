@@ -17,13 +17,13 @@ my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my $schedule_script = 'scripts/run_schedule.pl';
 my $experiment_path = 'experiment/run_instances';
 my $database_file = 'experiment/parser.db';
-my $instances = 1;
+my $instances = 512;
 my $jobs_number = 300;
 my $cpus_number = 512;
 my $cluster_size = 16;
 my $threads_number = 6;
-my @backfilling_variants = (BASIC);
-#my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
+#my @backfilling_variants = (BASIC);
+my @backfilling_variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
 
 my $results = [];
 share($results);
@@ -62,7 +62,6 @@ my $experiment_folder = "$experiment_path/$basic_file_name";
 unless (-d $experiment_folder) {
 	mkdir $experiment_folder;
 	$logger->info("experiment folder $experiment_folder created");
-	die;
 }
 
 $logger->info("Creating queue\n");
@@ -95,7 +94,7 @@ sub run_instance {
 	while (defined(my $instance = $q->dequeue_nb())) {
 		$logger->info("Thread $id running $instance");
 
-		my $trace_instance_file = "$experiment_folder/$instance.swf";
+		my $trace_instance_file = "$experiment_path/swf/$instance.swf";
 
 		my $trace_id = $database->add_trace(undef, {
 				execution => $execution_id,
