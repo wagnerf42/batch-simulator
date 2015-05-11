@@ -8,6 +8,7 @@ use Log::Log4perl qw(get_logger);
 
 use Trace;
 use Job;
+use Debug;
 
 sub new {
 	my ($class, $database_file) = @_;
@@ -129,10 +130,18 @@ sub add_execution {
 	my ($key_string, $value_string) = $self->get_keysvalues($execution_info);
 	my $add_time_string = "(SELECT datetime(" . time() . ", 'unixepoch', 'localtime'))";
 	my $statement = "INSERT INTO executions (add_time, $key_string) VALUES ($add_time_string, '$value_string')";
+
+	##DEBUG_BEGIN
 	$logger->debug($statement);
+	##DEBUG_END
+
 	$self->{dbh}->do($statement);
 	my $execution_id = $self->get_max_id("executions");
+
+	##DEBUG_BEGIN
 	$logger->debug("added execution $execution_id");
+	##DEBUG_END
+
 	return $execution_id;
 }
 
@@ -143,10 +152,16 @@ sub add_instance {
 
 	my ($key_string, $value_string) = $self->get_keysvalues($instance_info);
 	my $statement = "INSERT INTO instances ($key_string) VALUES ('$value_string')";
+	##DEBUG_BEGIN
 	$logger->debug($statement);
+	##DEBUG_END
+
 	$self->{dbh}->do($statement);
 	my $instance_id = $self->get_max_id("instances");
+	##DEBUG_BEGIN
 	$logger->debug("added instance $instance_id");
+	##DEBUG_END
+
 	return $instance_id;
 }
 
@@ -164,9 +179,16 @@ sub add_trace {
 	my ($key_string, $value_string) = $self->get_keysvalues($trace_info);
 	my $statement = "INSERT INTO traces ($key_string) VALUES ('$value_string')";
 	$self->{dbh}->do($statement);
+
+	##DEBUG_BEGIN
 	$logger->debug($statement);
+	##DEBUG_END
+
 	my $trace_id = $self->get_max_id("traces");
+
+	##DEBUG_BEGIN
 	$logger->debug("added trace $trace_id");
+	##DEBUG_END
 
 	if (defined $trace) {
 		for my $job (@{$trace->jobs()}) {
