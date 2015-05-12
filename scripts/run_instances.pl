@@ -41,6 +41,7 @@ my $execution_id = $database->add_execution({
 		cpus_number => $cpus_number,
 		cluster_size => $cluster_size,
 		git_revision => `git rev-parse HEAD`,
+		comments => "could_start_at",
 	});
 
 $logger->info("Reading trace");
