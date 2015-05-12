@@ -272,12 +272,9 @@ sub remove_job {
 	if ((not float_equal($job_ending_time, $previous_profile_ending_time)) and ($job_ending_time > $previous_profile_ending_time)) {
 		##DEBUG_BEGIN
 		$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
-<<<<<<< HEAD
-		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, ProcessorRange->new($job->assigned_processors_ids()));
-=======
 		##DEBUG_END
-		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, $job->assigned_processors_ids()->copy_range());
->>>>>>> dev
+
+		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, ProcessorRange->new($job->assigned_processors_ids()));
 		$self->{profile_tree}->add_content($new_profile);
 	}
 
