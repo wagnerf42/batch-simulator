@@ -1,0 +1,77 @@
+\documentclass{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[francais]{babel}
+
+\usepackage{geometry}
+\geometry{hmargin=2cm,vmargin=2cm}
+
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+
+
+\begin{document}
+\begin{algorithm}
+\caption{Insertion tache}\label{insertion}
+\begin{algorithmic}[1]
+\Function{add\_task}{$du\_t, cpu\_t$}
+	\Comment{duration, number of cpu}
+	\State $start\_key\gets[0, du\_t, cpu\_t]$
+	\State $end\_key\gets[+\infty, +\infty, +\infty]$
+	\State $profile\_tree\rightarrow \textbf{node\_loop}(start\_key, end\_key, \{$
+		\State \hspace{\algorithmicindent} $starting\_time\_min\gets (freespace\rightarrow\{starting\_time\})$
+		\State \hspace{\algorithmicindent} $processor\_range\_t\gets (freespace\rightarrow\{cpu\})$
+		\State \hspace{\algorithmicindent} \Return 1
+	\State $\})$
+	\State \Comment{Remove of the range, the number of cpu}
+	\State $processor\_range\_t\gets (processor\_range\_t\rightarrow reduce\_to\_basic(cpu\_t))$
+	\State $start\_key\gets[0, 1, 1]$
+	\State $end\_key\gets[starting\_time\_min + du\_t, +\infty, +\infty]$
+	\State $profile\_tree\rightarrow \textbf{node\_loop}(start\_key, end\_key, \{$
+	\Comment{Research with contraints}
+		\State \hspace{\algorithmicindent} \textbf{push} $freespace\_impacted, freespace$
+		\State \hspace{\algorithmicindent} \Return 0
+	\State $\})$
+	
+	\For{$freespace \gets freespace\_impacted$}
+		\State \textbf{cut\_freespace}$(freespace, starting\_time\_min, du\_t, processor\_range\_t)$
+	\EndFor
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Decoupage Freespace}\label{cut_freespace}
+\begin{algorithmic}[1]
+\Function{cut\_freespace}{$freespace, start\_time, duration, processor\_range$}
+	\If{\textbf{Intersection}($freespace\rightarrow\{cpu\},processor\_range) > 0$}
+		\State $profile\_tree\rightarrow \textbf{remove}(freespace)$
+		\If{$freespace\rightarrow\{starting\_time\} < start\_time$}
+			\State \textbf{new} $freespace right\_freespace\gets(freespace\rightarrow\{starting\_time\},start\_time - freespace\rightarrow\{starting\_time\}, freespace\rightarrow\{cpu\})$
+			\State $profile\_tree\rightarrow \textbf{add}(right\_freespace)$
+		\EndIf
+		\If{$freespace\rightarrow\{starting\_time\} < (start\_time + duration)$}
+			\State \textbf{new} $freespace left\_freespace\gets(freespace\rightarrow\{starting\_time\},start\_time - freespace\rightarrow\{starting\_time\}, freespace\rightarrow\{cpu\})$
+			\State $profile\_tree\rightarrow \textbf{add}(left\_freespace)$
+		\EndIf
+		\State $range\_test \gets (freespace\rightarrow\{cpu\}\rightarrow \textbf{copy}())$
+		\State $range\_test\rightarrow \textbf{remove}(processor\_range)$
+		\If{$range\_test\rightarrow \textbf{size}() > 0$}
+			\State \textbf{new} $freespace new\_freespace\gets(freespace\rightarrow\{starting\_time\}, freespace\rightarrow\{duration\}, range\_test)$
+			\State $profile\_tree\rightarrow \textbf{add}(new\_freespace)$
+		\EndIf
+	\EndIf
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Suppression tache}\label{Remove}
+\begin{algorithmic}[1]
+\Function{remove\_task}{}
+	
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+\end{document}
