@@ -7,14 +7,13 @@ use Data::Dumper qw(Dumper);
 use Carp;
 
 use BinarySearchTree::Node;
-use POSIX;
 
 sub new {
 	my $class = shift;
 	my $sentinel = shift;
 
 	my $self = {
-		root => BinarySearchTree::Node->new($sentinel, undef, DBL_MAX),
+		root => BinarySearchTree::Node->new($sentinel, 'SENTINEL'),
 		min_valid_key => shift
 	};
 
@@ -24,35 +23,35 @@ sub new {
 
 sub add_content {
 	my $self = shift;
+	my $key = shift;
 	my $content = shift;
+	# TODO tester si key est un tableau et le creer sinon
 
-	my $node = $self->{root}->find_node($content);
+	# TODO Remove this check eventually
+	confess "already here" if $self->{root}->find_node($key);
 
-	confess "$content found in $node->{content}" if defined $node; # check to see if we are not inserting duplicated content
-
-	return $self->{root}->add($content);
+	return $self->{root}->add($key, $content);
 }
 
 sub remove_content {
 	my $self = shift;
-	my $content = shift;
+	my $key = shift;
 
-	my $node = $self->{root}->find_node($content);
-	$node->remove();
+	my $node = $self->{root}->find_node($key);
+	$node->remove() if defined $node;
 	return;
 }
 
 sub remove_node {
+	my $self = shift;
 	my $node = shift;
 	return $node->remove();
 }
 
-sub find_content {
+sub find_node {
 	my $self = shift;
 	my $key = shift;
-	my $node = $self->{root}->find_node($key);
-	return $node->content() if defined $node;
-	return;
+	return $self->{root}->find_node($key);
 }
 
 sub nodes_loop {
@@ -60,9 +59,7 @@ sub nodes_loop {
 	my $start_key = shift;
 	my $end_key = shift;
 	my $routine = shift;
-
 	$start_key = $self->{min_valid_key} unless defined $start_key;
-
 	$self->{root}->nodes_loop($start_key, $end_key, $routine);
 	return;
 }
@@ -71,6 +68,21 @@ sub save_svg {
 	my $self = shift;
 	my $filename = shift;
 	$self->{root}->save_svg($filename);
+	return;
+}
+
+sub display_subtrees {
+	my $self = shift;
+	my @nodes = ($self->{root});
+	while (@nodes) {
+		my $node = shift @nodes;
+		my $key = $node->get_key();
+		$key = join(',', @{$key}) if ref $key eq 'ARRAY';
+		print "count tree for $key is :\n";
+		my $subtree = $node->get_tree();
+		$subtree->tycat() if defined $subtree;
+		push @nodes, $_ for $node->children();
+	}
 	return;
 }
 

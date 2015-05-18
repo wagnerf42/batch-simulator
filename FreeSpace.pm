@@ -6,7 +6,7 @@ use warnings;
 use Data::Dumper qw(Dumper);
 use List::Util qw(min);
 
-use BinarySearchTree::Node2;
+use BinarySearchTree::Node;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 

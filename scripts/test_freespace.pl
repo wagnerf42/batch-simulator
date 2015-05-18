@@ -2,9 +2,9 @@
 use strict;
 use warnings;
 
-use ExecutionProfile2;
+use ExecutionProfile;
 
-my $space = ExecutionProfile2->new(10);
+my $space = ExecutionProfile->new(10);
 $space->tycat();
 $space->add_task(0,3,4);
 $space->tycat();
