@@ -25,6 +25,7 @@ sub add_content {
 	my $self = shift;
 	my $key = shift;
 	my $content = shift;
+	# TODO tester si key est un tableau et le creer sinon
 
 	# TODO Remove this check eventually
 	confess "already here" if $self->{root}->find_node($key);
@@ -34,14 +35,15 @@ sub add_content {
 
 sub remove_content {
 	my $self = shift;
-	my $content = shift;
+	my $key = shift;
 
-	my $node = $self->{root}->find_node($content);
+	my $node = $self->{root}->find_node($key);
 	$node->remove() if defined $node;
 	return;
 }
 
 sub remove_node {
+	my $self = shift;
 	my $node = shift;
 	return $node->remove();
 }
@@ -57,7 +59,6 @@ sub nodes_loop {
 	my $start_key = shift;
 	my $end_key = shift;
 	my $routine = shift;
-
 	$start_key = $self->{min_valid_key} unless defined $start_key;
 	$self->{root}->nodes_loop($start_key, $end_key, $routine);
 	return;

@@ -7,6 +7,7 @@ use parent 'Displayable';
 use warnings;
 use strict;
 use overload '""' => \&stringification;
+use overload '==' => \&equal;
 use constant {
 	LEFT => 0,
 	RIGHT => 1,
@@ -27,19 +28,17 @@ sub new {
 	bless $self, $class;
 	return $self unless defined $self->{father}; #root nodes are not counted
 
-	if((ref $self->{key}) eq 'ARRAY') {
-		my @remaining_key = @{$self->{key}};
-		shift @remaining_key;
+	my @remaining_key = @{$self->{key}};
+	shift @remaining_key;
+	#TODO trouver une solution pour le sous arbre de la sentinel
+
+	if (@remaining_key > 0) {
 		my $remaining_key;
 		my $sentinel;
-		if (@remaining_key == 1) {
-			$sentinel = -1;
-			$remaining_key = $remaining_key[0];
-		} else {
-			$sentinel = [ map {-1} @remaining_key ];
-			$remaining_key = \@remaining_key;
-		}
-		$self->{tree} = BinarySearchTree2::->new($sentinel);
+		$sentinel = [ map {-1} @remaining_key ];
+		$remaining_key = \@remaining_key;
+
+		$self->{tree} = BinarySearchTree2->new($sentinel);
 		$self->{tree}->add_content($remaining_key, 0);
 		$self->update_count($remaining_key, 1);
 	}
@@ -119,17 +118,9 @@ sub direction_of_unique_child {
 sub remaining_key {
 	my $self = shift;
 
-	if((ref $self->{key}) eq 'ARRAY') {
-		my @left_key = @{$self->{key}};
-		shift @left_key;
-		if(@left_key == 1) {
-			return $left_key[0];
-		} else {
-			return \@left_key;
-		}
-	} else {
-		return $self->{key};
-	}
+	my @left_key = @{$self->{key}};
+	shift @left_key;
+	return \@left_key;
 }
 
 sub exchange_content {
@@ -150,12 +141,14 @@ sub remove {
 	my $father = $self->{father};
 	my $remaining_key = $self->remaining_key();
 
+	print STDERR "remove ".$self."\n";
+
 	my $unique_child_direction = $self->direction_of_unique_child();
 	if ($unique_child_direction == NONE) {
 		if ($self->children_number() == 0) {
 			# no children ! very easy case
 			$father->update_count($remaining_key, -1);
-			$father->{children}->[get_node_direction($father, $self)] = undef;
+			$father->{children}->[$father->get_node_direction($self)] = undef;
 		} else {
 			#complex case : 2 children : exchange and remove
 			my $direction = int rand(2);
@@ -166,7 +159,7 @@ sub remove {
 	} else {
 		#easy case : we have only one child
 		$father->update_count($remaining_key, -1);
-		$father->{children}->[get_node_direction($father, $self)] = $self->{children}->[$unique_child_direction];
+		$father->{children}->[$father->get_node_direction($self)] = $self->{children}->[$unique_child_direction];
 		$self->{children}->[$unique_child_direction]->{father} = $father;
 	}
 	return;
@@ -231,11 +224,14 @@ sub contains_something_between {
 	my $end_key = shift;
 	my $found_someone = 0;
 
-	$self->{tree}->nodes_loop($start_key, $end_key,
-		sub {
-			$found_someone = 1;
-			return 0;
-		});
+	if ($self->{tree}) {
+		$self->{tree}->nodes_loop($start_key, $end_key,
+			sub {
+				$found_someone = 1;
+				return 0;
+			});
+	}
+
 	return $found_someone;
 }
 
@@ -244,18 +240,18 @@ sub might_contain_something_between {
 	my $start_key = shift;
 	my $end_key = shift;
 
-	return 1 unless ref $start_key eq 'ARRAY';
+	return 1 unless @{$start_key} != 1;
 
 	my @remaining_start_key = @{$start_key};
 	my @remaining_end_key = @{$end_key};
 
 	shift @remaining_start_key;
 	shift @remaining_end_key;
-	$start_key = $remaining_start_key[0] if @remaining_start_key == 1;
-	$end_key = $remaining_end_key[0] if @remaining_end_key == 1;
+
+	$start_key = \@remaining_start_key;
+	$end_key = \@remaining_end_key;
 
 	return $self->contains_something_between($start_key, $end_key);
-
 }
 
 sub nodes_loop {
@@ -325,24 +321,16 @@ sub get_direction_for {
 	my $self = shift;
 	my $key = shift;
 
-	if (ref $key eq 'ARRAY') {
-		return ($key->[0] < $self->{key}->[0]) ? LEFT : RIGHT;
-	} else {
-		return ($key < $self->{key}) ? LEFT : RIGHT;
-	}
+	return ($key->[0] < $self->{key}->[0]) ? LEFT : RIGHT;
 }
 
 sub matches_key {
 	my $self = shift;
 	my $key = shift;
 
-	if (ref $key eq 'ARRAY' and $self->{key} != -1) {
-		my $size = @{$key};
-		my $matching = grep { $key->[$_] == $self->{key}->[$_] } (0..($size-1));
-		return ($matching == $size);
-	} else {
-		return ($key == $self->{key});
-	}
+	my $size = @{$key};
+	my $matching = grep { (not defined $key->[$_] or not defined $self->{key}->[$_]) or ($key->[$_] == $self->{key}->[$_]) } (0..($size-1));
+	return ($matching == $size);
 }
 
 sub matches_range_key {
@@ -350,14 +338,9 @@ sub matches_range_key {
 	my $start_key = shift;
 	my $end_key = shift;
 
-	if (ref $self->{key} eq 'ARRAY') {
-		if ((not defined $start_key or $self->{key}->[0] >= $start_key->[0]) and (not defined $end_key or $self->{key}->[0] <= $end_key->[0])) {
-			return 1;
-		}
-	} else {
-		return ((not defined $start_key or $self->{key} >= $start_key) and (not defined $end_key or $self->{key} <= $end_key));
+	if ((not defined $start_key or $self->{key}->[0] >= $start_key->[0]) and (not defined $end_key or $self->{key}->[0] <= $end_key->[0])) {
+		return 1;
 	}
-
 	return 0;
 }
 
@@ -366,18 +349,14 @@ sub matches_range_all_keys {
 	my $start_key = shift;
 	my $end_key = shift;
 
-	if (ref $self->{key} eq 'ARRAY') {
-		my $size = @{$self->{key}};
-		for my $i (0 .. $size-1) {
-			if ((defined $start_key && $self->{key}->[$i] < $start_key->[$i]) || (defined $end_key && $self->{key}->[$i] > $end_key->[$i])) {
-				return 0;
-			}
+	my $size = @{$self->{key}};
+	for my $i (0 .. $size-1) {
+		if ((defined $start_key and defined $start_key->[$i] and $self->{key}->[$i] < $start_key->[$i]) or
+		 (defined $end_key and defined $end_key->[$i] and $self->{key}->[$i] > $end_key->[$i])) {
+			return 0;
 		}
-		return 1;
-	} else {
-		return ((not defined $start_key or $self->{key} >= $start_key) and (not defined $end_key or $self->{key} <= $end_key));
 	}
-	return 0;
+	return 1;
 }
 
 # Write information of the tree on a file
@@ -387,7 +366,7 @@ sub dot_all_content {
 
 	my $addr = refaddr $self;
 	my $key = $self->{key};
-	$key = join(',', @{$key}) if ref($key) eq 'ARRAY';
+	$key = join(',', map {(defined $_)?$_:'inf'} @{$key}) if ref($key) eq 'ARRAY';
 	my $content = $self->{content};
 
 	print $fd "$addr [label = \"$key:$content\"];\n";
@@ -421,11 +400,16 @@ sub save_svg {
 
 sub stringification {
 	my $self = shift;
-	if (ref $self->{key} eq 'ARRAY') {
-		return "@{$self->{key}}";
-	} else {
-		return "$self->{key}";
-	}
+	return join(',', map {(defined $_)?$_:'undef'} @{$self->{key}});
+}
+
+sub equal {
+	my $self = shift;
+	my $other = shift;
+
+	return 0 unless defined $other;
+	return 0 unless ($self->matches_key($other->{key}));
+	return 1;
 }
 
 1;
