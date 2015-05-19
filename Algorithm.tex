@@ -24,9 +24,9 @@
 		\State \hspace{\algorithmicindent} $processor\_range\_t\gets (freespace\rightarrow\{cpu\})$
 		\State \hspace{\algorithmicindent} \Return 1
 	\State $\})$
-	\State \Comment{Remove of the range, the number of cpu}
+	\State \Comment{Remove the number of cpu for the range}
 	\State $processor\_range\_t\gets (processor\_range\_t\rightarrow reduce\_to\_basic(cpu\_t))$
-	\State $start\_key\gets[0, 1, 1]$
+	\State $start\_key\gets[0, 0, 0]$
 	\State $end\_key\gets[starting\_time\_min + du\_t, +\infty, +\infty]$
 	\State $profile\_tree\rightarrow \textbf{node\_loop}(start\_key, end\_key, \{$
 	\Comment{Research with contraints}
@@ -69,9 +69,62 @@
 \begin{algorithm}
 \caption{Suppression tache}\label{Remove}
 \begin{algorithmic}[1]
-\Function{remove\_task}{}
-	
+\Function{remove\_task}{st\_t, d\_t, cpu\_t}
+	\Comment{Starting time, duration, cpu range}
+	\State $et\_t \gets (st\_t + d\_t)$
+	\Comment{End time of job}
+	\State $start\_key\gets[0, 0, 0]$
+	\State $end\_key\gets[st\_t + d\_t, +\infty, +\infty]$
+	\State $profile\_tree\rightarrow \textbf{node\_loop}(start\_key, end\_key, \{$
+		\State \textbf{push} $freespace\_impacted, freespace$
+		\State $st\_t2\gets (freespace\rightarrow\{starting\_time\})$
+		\State $et\_t2\gets (freespace\rightarrow\{starting\_time\} + freespace\rightarrow\{duration\})$
+		\If{$(st\_t \leq st\_t2\ \textbf{and}\ st\_t2 \leq et\_t)$}
+			\State $direction\{freespace\} \gets -1$
+		\ElsIf{$(st\_t2 \leq st\_t\ \textbf{and}\ st\_t \leq et\_t2)$}
+			\State $direction\{freespace\} \gets 1$
+		\EndIf
+		\If{$\textbf{exist}\ direction\{freespace\}$}
+			\For{$t\gets st\_t2\ \textbf{to}\ et\_t2$}
+				\If{$\textbf{exist}\ tab\{t\}$}
+					\State $\textbf{add}\ tab\{t\}\gets (freespace\rightarrow\{cpu\}\ \textbf{inter}\ tab\{t\})$
+				\Else
+					\State $\textbf{add}\ tab\{t\}\gets (freespace\rightarrow\{cpu\})$
+				\EndIf
+			\EndFor
+		\EndIf
+	\State $\}$
+	\For{$freespace \gets freespace\_impacted$}
+		\State \textbf{extend\_freespace}$(freespace)$
+	\EndFor
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
+
+\begin{algorithm}
+\caption{Augmentation Freespace}\label{extend_freespace}
+\begin{algorithmic}[1]
+\Function{extend\_freespace}{$freespace$}
+	\State $profile\_tree\rightarrow \textbf{remove}(freespace)$
+	\If{$direction\{freespace\}\ =\ 1$}
+		\State $t\_next \gets (freespace\rightarrow\{starting\_time\} + freespace\rightarrow\{duration\} )$
+	\Else
+		\State $t\_next \gets freespace\rightarrow\{starting\_time\} $
+	\EndIf
+	\State $new\_t \gets t\_next$
+	\While{$(\textbf{exist}\ tab\{new\_t\}\ \textbf{and}\ (tab\{new\_t\}\ \textbf{inter}\ freespace\rightarrow\{cpu\}) \geq freespace\rightarrow\{cpu\}\rightarrow\textbf{size}())$}
+		\State $t\_max \gets new\_t$
+		\State $new\_t \gets (new\_t + direction\{freespace\})$
+	\EndWhile
+	\If{$direction\{freespace\}\ =\ 1$}
+		\State $freespace\rightarrow\{duration\} \gets (t\_next - freespace\rightarrow\{starting\_time\})$
+	\Else
+		\State $freespace\rightarrow\{duration\} \gets (freespace\rightarrow\{starting\_time\} - new\_t + freespace\rightarrow\{duration\})$
+		\State $freespace\rightarrow\{starting\_time\} \gets new\_t$
+	\EndIf
+	\State \textbf{TODO :VERIFIER SI L'ESPACE N'EST PAS COMPRIS DANS UN AUTRE}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
 \end{document}
