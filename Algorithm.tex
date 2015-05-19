@@ -155,4 +155,20 @@
 \end{algorithmic}
 \end{algorithm}
 
+\begin{algorithm}
+\caption{Suppression des Freespaces inutiles}\label{remove_unnecessary_space}
+\begin{algorithmic}[1]
+\Function{remove\_unnecessary\_freespace}{$freespace, freespace\_list$}
+	\For{$space \gets freespace\_list$}
+		\If{$(freespace\rightarrow\{cpu\}\ \textbf{inter}\ space\rightarrow\{cpu\}) = (freespace\rightarrow\{cpu\}\rightarrow\textbf{size})$}
+			\If{$((freespace\rightarrow\{starting\_time\} \leq  space\rightarrow\{starting\_time\})\ \textbf{and}\ (freespace\rightarrow\{starting\_time\} + freespace\rightarrow\{duration\} \leq space\rightarrow\{starting\_time\} + space\rightarrow\{duration\}))$}
+				\State $profile\_tree\rightarrow \textbf{remove}(freespace)$
+				\State \textbf{return}
+			\EndIf
+		\EndIf
+	\EndFor
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
 \end{document}
