@@ -1,0 +1,155 @@
+\documentclass{report}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[francais]{babel}
+
+\usepackage{geometry}
+\geometry{hmargin=2cm,vmargin=2cm}
+
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+
+
+\begin{document}
+\begin{algorithm}
+\caption{Insertion tache}\label{insertion}
+\begin{algorithmic}[1]
+\Function{add\_task}{$du\_t, cpu\_t$}
+	\Comment{duration, number of cpu}
+	\State
+	\State On recherche le premier emplacement possible pour la tache avec au minimum la durée $du\_t$ et le nombre de cpu $cpu\_t$.
+	\State
+	\State On récupère le temps de départ $starting\_time\_min$ et la range de cpu $processor\_range\_t$ de l'emplacement.
+	\State On réduit la range de cpu $processor\_range\_t$ du nombre de cpu $cpu\_t$.
+	\State On récupère la liste de tous les emplacements potentiellement impactés : ceux dont le temps de départ est inférieur ou égale au temps de départ min $starting\_time\_min$ + la durée $du\_t$ .
+	\State 		
+	\State On ne garde que ceux pour qui :
+	\State \hspace{\algorithmicindent} l'intersection de la range de cpu avec $processor\_range\_t$ est non vide
+	\State \textbf{and}
+	\State \hspace{\algorithmicindent} dont le temps de départ + la durée $\geq starting\_time\_min$
+	\State
+	\State $tab\_resultat \gets $ vide
+	\State
+	\For{tous les emplacements restant}
+		\State On supprime l'emplacement de l'arbre des emplacements
+		\State $tab\_resultat = tab\_resultat\ \cup$ \textbf{cut\_freespace}$(emplacement, starting\_time\_min, processor\_range\_t)$
+	\EndFor
+	\State
+	\State $tab\_final \gets $ vide
+	\State
+	\For{chaque élément de $tab\_resultat$}
+		\If{\textbf{is\_necessary\_freespace}$(element, tab\_resultat)$}
+			\State $tab\_final = tab\_final\ \cup$ élément
+		\EndIf
+	\EndFor
+	\State
+	\For{chaque élément de $tab\_final$}
+		\State Ajouter à l'arbre des emplacements $element$
+	\EndFor
+	\State
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Decoupage Freespace}\label{cut_freespace}
+\begin{algorithmic}[1]
+\Function{cut\_freespace}{$freespace, start\_time, duration, processor\_range$}
+	\State $new\_emplacement \gets$ vide
+	\State
+	\If{temps de départ de $freespace$ < $start\_time$}
+		\State On crée un nouvel emplacement $left\_freespace$ avec :
+			\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+			\State \hspace{\algorithmicindent} Durée: $start\_time$ - temps de départ de $freespace$
+			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$
+		\State $new\_emplacement \gets new\_emplacement\ \cup\ left\_freespace$ 
+	\EndIf
+	\State
+	\If{l'intersection de la range de cpu de $freespace$ et $processor\_range$ < au nombre de processeurs de $freespace$}
+		\State On crée un nouvel emplacement $new\_freespace$ avec :
+			\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+			\State \hspace{\algorithmicindent} Durée: durée de $freespace$
+			\State \hspace{\algorithmicindent} Cpu : différence entre la range cpu de $freespace$ et $processor\_range$
+		\State $new\_emplacement \gets new\_emplacement\ \cup\ new\_freespace$ 
+	\EndIf
+	\State
+	\State On crée un nouvel emplacement $right\_freespace$ avec :
+		\State \hspace{\algorithmicindent} Temps de départ : $(start\_time + duration)$
+		\State \hspace{\algorithmicindent} Durée: durée de $freespace$ - (temps de départ de $freespace$ - $start\_time + (start\_time + duration))$
+		\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$
+	\State $new\_emplacement \gets new\_emplacement\ \cup\ right\_freespace$ 
+	\State
+	\State \textbf{return} $new\_emplacement$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Suppression tache}\label{Remove}
+\begin{algorithmic}[1]
+\Function{remove\_task}{st\_t, d\_t, cpu\_t}
+	\Comment{Starting time, duration, cpu range}
+	\State $et\_t \gets (st\_t + d\_t)$
+	\State
+	\State On récupère la liste de tous les emplacements qui ont un temps de départ inférieur à $(st\_t + d\_t)$ 
+	\State
+	\State On ne garde que ceux qui :
+		\State \hspace{\algorithmicindent} existent dans l'intervalle de temps $st\_t$ à $et\_t$
+	\State
+	\For{tous les emplacements restant}
+		\State On appelle la fonction \textbf{extend\_freespace}$(emplacement)$
+	\EndFor
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Augmentation Freespace}\label{extend_freespace}
+\begin{algorithmic}[1]
+\Function{extend\_freespace}{$freespace$}
+	\State
+	\If{$direction\{freespace\}\ =\ 1$}
+		\State $t\_next \gets (freespace\rightarrow\{starting\_time\} + freespace\rightarrow\{duration\} )$
+	\Else
+		\State $t\_next \gets freespace\rightarrow\{starting\_time\} $
+	\EndIf
+	\State
+	\State $new\_t \gets t\_next$
+	\While{$(\textbf{exist}\ tab\{new\_t\}\ \textbf{and}\ (tab\{new\_t\}\ \textbf{inter}\ freespace\rightarrow\{cpu\}) \geq freespace\rightarrow\{cpu\}\rightarrow\textbf{size}())$}
+		\State $t\_max \gets new\_t$
+		\State $new\_t \gets (new\_t + direction\{freespace\})$
+	\EndWhile
+	\State
+	\If{$direction\{freespace\}\ =\ 1$}
+		\State $freespace\rightarrow\{duration\} \gets (t\_next - freespace\rightarrow\{starting\_time\})$
+	\Else
+		\State $freespace\rightarrow\{duration\} \gets (freespace\rightarrow\{starting\_time\} - new\_t + freespace\rightarrow\{duration\})$
+		\State $freespace\rightarrow\{starting\_time\} \gets new\_t$
+	\EndIf
+	\State
+	\State \textbf{TODO :VERIFIER SI L'ESPACE N'EST PAS COMPRIS DANS UN AUTRE}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{Suppression des Freespaces inutiles}\label{is_necessary_freespace}
+\begin{algorithmic}[1]
+\Function{is\_necessary\_freespace}{$freespace, freespace\_list$}
+	\State
+	\For{tous les éléments de $freespace\_list$}
+		\If{éléments != $freespace$}			
+			\If{temps de départ de $freespace \geq$ temps de départ de $space$ \textbf{and} temps final de $freespace \leq$ temps final de $space$}
+				\If{(range cpu de $freespace\ \cap$ range cpu de $space$) = nombre de cpu de $freespace$}
+					\State \textbf{return 0}
+				\EndIf
+			\EndIf
+		\EndIf
+	\EndFor
+	\State \textbf{return 1}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\end{document}

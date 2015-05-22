@@ -41,6 +41,13 @@ sub stringify {
 	return "{id=$self->{id},s=$self->{starting_time},d=$self->{duration},p=$self->{processors}";
 }
 
+sub compare {
+	my $self = shift;
+	my $other = shift;
+
+	return ($self->{starting_time} != $other->{starting_time} or $self->{duration} != $other->{duration} or \$self->{processors} != \$other->{processors}) ? 0 : 1;
+}
+
 sub starting_time {
 	my $self = shift;
 	$self->{starting_time} = shift if @_;
@@ -76,7 +83,6 @@ sub duration {
 
 sub svg {
 	my ($self, $fh, $w_ratio, $h_ratio, $last_time) = @_;
-	print STDERR "$self\n";
 	my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen darkred dimgray mediumpurple midnightblue olive chartreuse darkorchid hotpink lightskyblue peru goldenrod mediumslateblue orangered darkmagenta darkgoldenrod mediumslateblue);
 
 	$self->{processors}->ranges_loop(
@@ -89,7 +95,6 @@ sub svg {
 			if ($self->{duration}!="inf") {
 				$duration = $self->{duration};
 			} else {
-				print STDERR "hello $last_time\n";
 				$duration = 100/$w_ratio + $last_time - $self->{starting_time};
 			}
 			my $w = $duration * $w_ratio;

@@ -45,24 +45,58 @@ sub add_task {
 	my $processors_number = shift;
 
 	my @impacted_nodes;
+	my $task_processor_range = undef;
 
-	my $start_key = [0, $duration, $processors_number];
+	$starting_time = (defined $starting_time) ? $starting_time : 0;
+
+	my $start_key = [$starting_time, $duration, $processors_number];
 	my $infinity = 0 + "inf";
 	my $end_key = [$infinity, $infinity, $infinity];
 	$self->{profile_tree}->nodes_loop($start_key, $end_key, sub {
 		my $node = shift;
-		push @impacted_nodes, $node;
+		$starting_time = $node->{content}->{starting_time};
+		$task_processor_range = $node->{content}->{processors}->copy_range();
+		$task_processor_range->reduce_to_basic($processors_number);
 		return 0;
 	});
 
-	if(@impacted_nodes > 0) {
-		#create the processor_range for task with the first node
-		my $task_processor_range = $impacted_nodes[0]->{content}->{processors}->copy_range();
-		$task_processor_range->reduce_to_basic($processors_number);
+	$start_key = [0, 0, 0];
+	$end_key = [$starting_time + $duration, $infinity, $infinity];
+	$self->{profile_tree}->nodes_loop($start_key, $end_key, sub {
+		my $node = shift;
 
-		$self->cut_freespace($_, $starting_time, $duration, $task_processor_range) for @impacted_nodes;
-		$task_processor_range->free_allocated_memory();
+		#If freespace is on time interval of task
+		if (($node->{content}->{starting_time} + $node->{content}->{duration}) >= $starting_time) {
+			my $test_range = $node->{content}->{processors}->copy_range();
+			$test_range->remove($task_processor_range);
+
+			#If at least a cpu of task are in cpu range of freespace
+			if ($test_range->size() < $node->{content}->{processors}->size()) {
+
+				push @impacted_nodes, $node;
+			}
+			$test_range->free_allocated_memory();
+		}
+		return 1;
+	});
+
+	my @result_tab = ();
+
+	foreach my $space (@impacted_nodes) {
+		$self->{profile_tree}->remove_content($space->{key});
+		push @result_tab, $self->cut_freespace($space, $starting_time, $duration, $task_processor_range);
 	}
+	$task_processor_range->free_allocated_memory() if defined $task_processor_range;
+
+	my @final_tab = ();
+
+	foreach my $space (@result_tab) {
+		push @final_tab, $space if ($self->is_necessary_freespace($space, \@result_tab));
+	}
+
+	$self->{profile_tree}->add_content([$_->{starting_time}, $_->{duration}, $_->{processors}->size()], $_) for @final_tab;
+
+	return;
 }
 
 sub cut_freespace {
@@ -71,33 +105,59 @@ sub cut_freespace {
 	my $task_starting_time = shift;
 	my $task_duration = shift;
 	my $task_processors = shift;
-
 	my $infinity = 0 + "inf";
 	my $freespace = $node->{content};
 
-	$self->{profile_tree}->remove_content($node->{key});
+	my @new_location = ();
 
-
-	if ($freespace->{starting_time} != $task_starting_time) {
+	if ($freespace->{starting_time} < $task_starting_time) {
 		my $left_freespace = FreeSpace->new($freespace->{starting_time}, $task_starting_time-$freespace->{starting_time}, $freespace->{processors});
-		$self->{profile_tree}->add_content([$left_freespace->{starting_time}, $left_freespace->{duration}, $left_freespace->{processors}->size()], $left_freespace);
+		push @new_location, $left_freespace;
 	}
 
-	my $duration = ($freespace->{duration} == $infinity) ? $infinity : $freespace->{duration}-$task_duration;
-	my $right_freespace = FreeSpace->new($task_starting_time+$task_duration, $duration, $freespace->{processors});
-	$self->{profile_tree}->add_content([$right_freespace->{starting_time}, $right_freespace->{duration}, $right_freespace->{processors}->size() - $task_processors->size()], $right_freespace);
+	my $new_processors_range = $freespace->{processors}->copy_range();
+	$new_processors_range->remove($task_processors);
 
-	if ($task_processors->size() <= $freespace->{processors}->size()) {
-		my $new_processors_range = $freespace->{processors}->copy_range();
-		$new_processors_range->remove($task_processors);
-		if ($new_processors_range->size() > 0) {
-			my $new_freespace = FreeSpace->new($freespace->{starting_time}, $freespace->{duration}, $new_processors_range);
-			$self->{profile_tree}->add_content([$new_freespace->{starting_time}, $new_freespace->{duration}, $new_freespace->{processors}->size()], $new_freespace);
+	if ($new_processors_range->size() > 0) {
+		my $new_freespace = FreeSpace->new($freespace->{starting_time}, $freespace->{duration}, $new_processors_range);
+		push @new_location, $new_freespace;
+	} else {
+		$new_processors_range->free_allocated_memory();
+	}
+
+	my $duration = ($freespace->{duration} == $infinity) ? $infinity : $freespace->{duration} - ($freespace->{starting_time} + ($task_starting_time + $task_duration));
+	my $right_freespace = FreeSpace->new($task_starting_time+$task_duration, $duration, $freespace->{processors});
+	push @new_location, $right_freespace;
+
+	return @new_location;
+}
+
+sub extend_freespace {
+	#TODO
+	return;
+}
+
+sub is_necessary_freespace {
+	my $self = shift;
+	my $freespace = shift;
+	my $tab_freespace = shift;
+
+	foreach my $space (@{$tab_freespace}) {
+		if (!($space->compare($freespace))) {
+			if (($freespace->{starting_time} >= $space->{starting_time}) and
+				(($freespace->{starting_time} + $freespace->{duration}) <= ($space->{starting_time} + $space->{duration}))) {
+
+				my $test_processors_range = $freespace->{processors}->copy_range();
+				$test_processors_range->intersection($space->{processors});
+
+				return 0 if ($test_processors_range->size() == $freespace->{processors}->size());
+
+				$test_processors_range->free_allocated_memory();
+			}
 		}
 	}
 
-	#free memory of freespace unused
-	#$freespace->{processors}->free_allocated_memory();
+	return 1;
 }
 
 sub stringification {
