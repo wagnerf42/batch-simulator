@@ -44,7 +44,7 @@ sub add_task {
 	my $duration = shift;
 	my $processors_number = shift;
 
-	my @impacted_nodes;
+	my @impacted_nodes = ();
 	my $task_processor_range = undef;
 
 	$starting_time = (defined $starting_time) ? $starting_time : 0;
@@ -130,6 +130,40 @@ sub cut_freespace {
 	push @new_location, $right_freespace;
 
 	return @new_location;
+}
+
+sub remove_task {
+	my $self = shift;
+	my $starting_time = shift;
+	my $duration = shift;
+	my $cpu_range = shift;
+	my @impacted_nodes = ();
+
+	my $start_key = [0, 0, 0];
+	my $infinity = 0 + "inf";
+	my $end_key = [$starting_time + $duration, $infinity, $infinity];
+
+	$self->{profile_tree}->nodes_loop($start_key, $end_key, sub {
+		my $node = shift;
+		push @impacted_nodes, $node if (($node->{content}->{starting_time} + $node->{content}->{duration}) >= $starting_time);
+		return 1;
+	});
+
+	my @result_tab = ();
+
+	foreach my $space (@impacted_nodes) {
+		push @result_tab, $self->extend_freespace($space, $starting_time, $duration, $cpu_range);
+	}
+
+	my @final_tab = ();
+
+	foreach my $space (@impacted_nodes) {
+		push @final_tab, $self->is_necessary_freespace($space, $starting_time, $duration, $cpu_range);
+	}
+
+	$self->{profile_tree}->add_content([$_->{starting_time}, $_->{duration}, $_->{processors}->size()], $_) for @final_tab;
+
+	return;
 }
 
 sub extend_freespace {
