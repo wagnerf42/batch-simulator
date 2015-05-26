@@ -146,7 +146,7 @@
 \caption{Suite}
 \begin{algorithmic}[1]
 \algrestore{bkbreak}
-	\ElsIf{(temps de départ de $freespace\ \leq$ temps de départ de $task$ \textbf{or} temps de départ de $task\ \leq$ temps de départ de $frespace$) \textbf{and} (temps final de $freespace\ \leq$ temps final de $task$ \textbf{or} temps final de $task\ \leq$ temps final de $frespace$)}
+	\Else
 		\If{temps de départ de $freespace$ < temps de départ de $task$}
 			\If{temps final de $freespace\ \leq$ temps final de $task$}
 				\State On crée un nouvel emplacement $new\_freespace$ avec :
