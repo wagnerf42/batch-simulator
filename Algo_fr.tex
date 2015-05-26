@@ -76,7 +76,7 @@
 	\State
 	\State On crée un nouvel emplacement $right\_freespace$ avec :
 		\State \hspace{\algorithmicindent} Temps de départ : $(start\_time + duration)$
-		\State \hspace{\algorithmicindent} Durée: durée de $freespace$ - (temps de départ de $freespace$ - $start\_time + (start\_time + duration))$
+		\State \hspace{\algorithmicindent} Durée : durée de $freespace$ - (temps de départ de $freespace$ - $start\_time + (start\_time + duration))$
 		\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$
 	\State $new\_emplacement \gets new\_emplacement\ \cup\ right\_freespace$ 
 	\State
@@ -107,28 +107,96 @@
 \begin{algorithm}
 \caption{Augmentation Freespace}\label{extend_freespace}
 \begin{algorithmic}[1]
-\Function{extend\_freespace}{$freespace$}
+\Function{extend\_freespace}{$freespace, task$}
+	\State $new\_emplacement \gets$ vide
 	\State
-	\If{$direction\{freespace\}\ =\ 1$}
-		\State $t\_next \gets (freespace\rightarrow\{starting\_time\} + freespace\rightarrow\{duration\} )$
-	\Else
-		\State $t\_next \gets freespace\rightarrow\{starting\_time\} $
+	\If{temps de départ de $freespace$ = temps final de $task$}
+		\If{les cpu de $freespace$ et $task$ sont les mêmes}
+			\State On modifie l'emplacement $freespace$ avec :
+			\State \hspace{\algorithmicindent} Temps de départ : celui de $task$
+			\State \hspace{\algorithmicindent} Durée: Durée de $task$ + durée de $freespace$
+			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$
+		\State $new\_emplacement \gets new\_emplacement\ \cup\ freespace$  
+		\Else
+			\State On crée un nouvel emplacement $left\_freespace$ avec :
+			\State \hspace{\algorithmicindent} Temps de départ : celui de $task$
+			\State \hspace{\algorithmicindent} Durée: Durée de $task$ + durée de $freespace$
+			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cap$ cpu de $task$
+		\State $new\_emplacement \gets new\_emplacement\ \cup\ left\_freespace \cup\ freespace$
+		\EndIf
+	\ElsIf{temps de départ de $task$ = temps final de $freespace$}
+		\If{les cpu de $freespace$ et $task$ sont les mêmes}
+			\State On modifie l'emplacement $freespace$ avec :
+			\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+			\State \hspace{\algorithmicindent} Durée: Durée de $task$ + durée de $freespace$
+			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$
+		\State $new\_emplacement \gets new\_emplacement\ \cup\ freespace$  
+		\Else
+			\State On crée un nouvel emplacement $right\_freespace$ avec :
+			\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+			\State \hspace{\algorithmicindent} Durée: Durée de $task$ + durée de $freespace$
+			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cap$ cpu de $task$
+		\State $new\_emplacement \gets new\_emplacement\ \cup\ right\_freespace \cup\ freespace$
+		\EndIf
+\algstore{bkbreak}
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[h]
+\caption{Suite}
+\begin{algorithmic}[1]
+\algrestore{bkbreak}
+	\ElsIf{(temps de départ de $freespace\ \leq$ temps de départ de $task$ \textbf{or} temps de départ de $task\ \leq$ temps de départ de $frespace$) \textbf{and} (temps final de $freespace\ \leq$ temps final de $task$ \textbf{or} temps final de $task\ \leq$ temps final de $frespace$)}
+		\If{temps de départ de $freespace$ < temps de départ de $task$}
+			\If{temps final de $freespace\ \leq$ temps final de $task$}
+				\State On crée un nouvel emplacement $new\_freespace$ avec :
+					\State \hspace{\algorithmicindent} Temps de départ : celui de $task$
+					\State \hspace{\algorithmicindent} Durée: (temps de départ de $task$ - temps de départ de $freespace$) + durée de $freespace$
+					\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cup$ cpu de $task$
+			\Else
+				\State On crée un nouvel emplacement $new\_freespace$ avec :
+					\State \hspace{\algorithmicindent} Temps de départ : celui de $task$
+					\State \hspace{\algorithmicindent} Durée: durée de $task$
+					\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cup$ cpu de $task$
+			\EndIf
+			\State $new\_emplacement \gets new\_emplacement\ \cup\ new\_freespace \cup\ freespace$
+		\ElsIf{temps de départ de $task$ < temps de départ de $freespace$}
+			\If{temps final de $freespace\ \leq$ temps final de $task$}
+				\State On crée un nouvel emplacement $new\_freespace$ avec :
+					\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+					\State \hspace{\algorithmicindent} Durée: durée de $freespace$
+					\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cup$ cpu de $task$
+			\Else
+				\State On crée un nouvel emplacement $new\_freespace$ avec :
+					\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+					\State \hspace{\algorithmicindent} Durée: (temps de départ de $freespace$ - temps de départ de $task$) + durée de $task$
+					\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cup$ cpu de $task$
+			\EndIf
+			\State $new\_emplacement \gets new\_emplacement\ \cup\ new\_freespace \cup\ freespace$
+		\Else
+			\If{temps final de $freespace\ <$ temps final de $task$}
+				\State On crée un nouvel emplacement $new\_freespace$ avec :
+					\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+					\State \hspace{\algorithmicindent} Durée: durée de $freespace$
+					\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cup$ cpu de $task$
+				\State $new\_emplacement \gets new\_emplacement\ \cup\ new\_freespace \cup\ freespace$
+			\ElsIf{temps final de $task\ <$ temps final de $freespace$}
+				\State On crée un nouvel emplacement $new\_freespace$ avec :
+					\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+					\State \hspace{\algorithmicindent} Durée: durée de $task$
+					\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cup$ cpu de $task$
+				\State $new\_emplacement \gets new\_emplacement\ \cup\ new\_freespace \cup\ freespace$
+			\Else
+				\State On modifie l'emplacement $freespace$ avec :
+			\State \hspace{\algorithmicindent} Temps de départ : celui de $freespace$
+			\State \hspace{\algorithmicindent} Durée: Durée de $freespace$
+			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cup$ cpu de $task$
+				\State $new\_emplacement \gets new\_emplacement\ \cup\ freespace$	
+			\EndIf
+		\EndIf
 	\EndIf
 	\State
-	\State $new\_t \gets t\_next$
-	\While{$(\textbf{exist}\ tab\{new\_t\}\ \textbf{and}\ (tab\{new\_t\}\ \textbf{inter}\ freespace\rightarrow\{cpu\}) \geq freespace\rightarrow\{cpu\}\rightarrow\textbf{size}())$}
-		\State $t\_max \gets new\_t$
-		\State $new\_t \gets (new\_t + direction\{freespace\})$
-	\EndWhile
-	\State
-	\If{$direction\{freespace\}\ =\ 1$}
-		\State $freespace\rightarrow\{duration\} \gets (t\_next - freespace\rightarrow\{starting\_time\})$
-	\Else
-		\State $freespace\rightarrow\{duration\} \gets (freespace\rightarrow\{starting\_time\} - new\_t + freespace\rightarrow\{duration\})$
-		\State $freespace\rightarrow\{starting\_time\} \gets new\_t$
-	\EndIf
-	\State
-	\State \textbf{TODO :VERIFIER SI L'ESPACE N'EST PAS COMPRIS DANS UN AUTRE}
+	\State \textbf{return} $new\_emplacement$
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
