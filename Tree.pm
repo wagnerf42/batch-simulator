@@ -2,6 +2,8 @@ package Tree;
 use strict;
 use warnings;
 
+# Constructors
+
 sub new {
 	my $class = shift;
 	my $content = shift;
@@ -15,6 +17,8 @@ sub new {
 	return $self;
 }
 
+# Public routines
+
 sub add_child {
 	my $self = shift;
 	my $child = shift;
@@ -24,6 +28,8 @@ sub add_child {
 	return;
 
 }
+
+# Getters and setters
 
 sub children {
 	my $self = shift;

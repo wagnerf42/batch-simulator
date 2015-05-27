@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 
-use Log::Log4perl qw(get_logger);
+use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 use Time::HiRes qw(time);
 
 use Platform;
@@ -15,5 +15,7 @@ my @available_cpus = (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11);
 
 my $platform = Platform->new(\@levels, \@available_cpus);
 $platform->build_structure();
-print Dumper($platform->{structure});
+print Dumper($platform->{root});
+die;
+my @selected_cpus = $platform->choose_cpus(3);
 
