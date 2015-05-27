@@ -38,30 +38,30 @@ sub new {
 	return $self;
 }
 
-sub add_task {
+sub find_place {
 	my $self = shift;
-	my $starting_time = shift;
-	my $duration = shift;
-	my $processors_number = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+	my $place;
 
-	my @impacted_nodes = ();
-	my $task_processor_range = undef;
-
-	$starting_time = (defined $starting_time) ? $starting_time : 0;
-
-	my $start_key = [$starting_time, $duration, $processors_number];
-	my $infinity = 0 + "inf";
-	my $end_key = [$infinity, $infinity, $infinity];
 	$self->{profile_tree}->nodes_loop($start_key, $end_key, sub {
 		my $node = shift;
-		$starting_time = $node->{content}->{starting_time};
-		$task_processor_range = $node->{content}->{processors}->copy_range();
-		$task_processor_range->reduce_to_basic($processors_number);
+		$place = $node;
 		return 0;
 	});
 
-	$start_key = [0, 0, 0];
-	$end_key = [$starting_time + $duration, $infinity, $infinity];
+	return $place;
+}
+
+sub find_impacted_place_by_add_task {
+	my $self = shift;
+	my $start_key = shift;
+	my $end_key = shift;
+	my $starting_time = shift;
+	my $task_processor_range = shift;
+
+	my @impacted_nodes;
+
 	$self->{profile_tree}->nodes_loop($start_key, $end_key, sub {
 		my $node = shift;
 
@@ -80,23 +80,48 @@ sub add_task {
 		return 1;
 	});
 
-	my @result_tab = ();
+	return @impacted_nodes;
+}
 
-	foreach my $space (@impacted_nodes) {
+sub add_task {
+	my $self = shift;
+	my $starting_time = shift;
+	my $duration = shift;
+	my $processors_number = shift;
+
+	my @impacted_nodes;
+	my $task_processor_range;
+
+	my $start_key = [$starting_time, $duration, $processors_number];
+	my $infinity = 0 + "inf";
+	my $end_key = [$infinity, $infinity, $infinity];
+
+	my $node = $self->find_place($start_key, $end_key);
+
+	#Take information of node
+	$starting_time = $node->{content}->{starting_time};
+	$task_processor_range = $node->{content}->{processors}->copy_range();
+	$task_processor_range->reduce_to_basic($processors_number);
+
+	$start_key = [0, 0, 0];
+	$end_key = [$starting_time + $duration, $infinity, $infinity];
+	@impacted_nodes = $self->find_impacted_place_by_add_task($start_key, $end_key, $starting_time, $task_processor_range);
+
+	my @created_spaces;
+	for my $space (@impacted_nodes) {
 		$self->{profile_tree}->remove_content($space->{key});
-		push @result_tab, $self->cut_freespace($space, $starting_time, $duration, $task_processor_range);
+		push @created_spaces, $self->cut_freespace($space, $starting_time, $duration, $task_processor_range);
 	}
-	$task_processor_range->free_allocated_memory() if defined $task_processor_range;
+	$task_processor_range->invert($self->{processors_number});
 
-	my @final_tab = ();
-
-	foreach my $space (@result_tab) {
-		push @final_tab, $space if ($self->is_necessary_freespace($space, \@result_tab));
+	my @remaining_useful_spaces;
+	for my $space (@created_spaces) {
+		push @remaining_useful_spaces, $space if ($self->is_necessary_freespace($space, \@created_spaces));
 	}
 
-	$self->{profile_tree}->add_content([$_->{starting_time}, $_->{duration}, $_->{processors}->size()], $_) for @final_tab;
+	$self->{profile_tree}->add_content([$_->{starting_time}, $_->{duration}, $_->{processors}->size()], $_) for @remaining_useful_spaces;
 
-	return;
+	return $task_processor_range;
 }
 
 sub cut_freespace {
@@ -108,11 +133,11 @@ sub cut_freespace {
 	my $infinity = 0 + "inf";
 	my $freespace = $node->{content};
 
-	my @new_location = ();
+	my @new_locations;
 
 	if ($freespace->{starting_time} < $task_starting_time) {
 		my $left_freespace = FreeSpace->new($freespace->{starting_time}, $task_starting_time-$freespace->{starting_time}, $freespace->{processors});
-		push @new_location, $left_freespace;
+		push @new_locations, $left_freespace;
 	}
 
 	my $new_processors_range = $freespace->{processors}->copy_range();
@@ -120,16 +145,16 @@ sub cut_freespace {
 
 	if ($new_processors_range->size() > 0) {
 		my $new_freespace = FreeSpace->new($freespace->{starting_time}, $freespace->{duration}, $new_processors_range);
-		push @new_location, $new_freespace;
+		push @new_locations, $new_freespace;
 	} else {
 		$new_processors_range->free_allocated_memory();
 	}
 
 	my $duration = ($freespace->{duration} == $infinity) ? $infinity : $freespace->{duration} - ($freespace->{starting_time} + ($task_starting_time + $task_duration));
 	my $right_freespace = FreeSpace->new($task_starting_time+$task_duration, $duration, $freespace->{processors});
-	push @new_location, $right_freespace;
+	push @new_locations, $right_freespace;
 
-	return @new_location;
+	return @new_locations;
 }
 
 sub remove_task {
@@ -137,7 +162,7 @@ sub remove_task {
 	my $starting_time = shift;
 	my $duration = shift;
 	my $cpu_range = shift;
-	my @impacted_nodes = ();
+	my @impacted_nodes;
 
 	my $start_key = [0, 0, 0];
 	my $infinity = 0 + "inf";
@@ -149,44 +174,105 @@ sub remove_task {
 		return 1;
 	});
 
-	my @result_tab = ();
-
-	foreach my $space (@impacted_nodes) {
-		push @result_tab, $self->extend_freespace($space, $starting_time, $duration, $cpu_range);
+	my @created_spaces;
+	for my $space (@impacted_nodes) {
+		$self->{profile_tree}->remove_content($space->{key});
+		push @created_spaces, $self->extend_freespace($space, $starting_time, $duration, $cpu_range);
 	}
 
-	my @final_tab = ();
-
-	foreach my $space (@impacted_nodes) {
-		push @final_tab, $self->is_necessary_freespace($space, $starting_time, $duration, $cpu_range);
+	my @remaining_useful_spaces;
+	for my $space (@created_spaces) {
+		push @remaining_useful_spaces, $space if ($self->is_necessary_freespace($space, \@created_spaces));
 	}
 
-	$self->{profile_tree}->add_content([$_->{starting_time}, $_->{duration}, $_->{processors}->size()], $_) for @final_tab;
+	$self->{profile_tree}->add_content([$_->{starting_time}, $_->{duration}, $_->{processors}->size()], $_) for @remaining_useful_spaces;
 
 	return;
 }
 
 sub extend_freespace {
-	#TODO
-	return;
+	my $self = shift;
+	my $node = shift;
+	my $starting_time = shift;
+	my $duration = shift;
+	my $cpu_range = shift;
+
+	my $freespace = $node->{content};
+
+	my @new_locations;
+
+	if ($freespace->{starting_time} == ($starting_time + $duration) or
+		($starting_time == ($freespace->{starting_time} + $freespace->{duration}))) {
+			my $new_processors_range = $freespace->{processors}->copy_range();
+			$new_processors_range->remove($cpu_range);
+			my $new_duration;
+			my $infinity = 0 + "inf";
+
+			if ($freespace->{duration} == $infinity) {
+				$new_duration = $infinity;
+			} else {
+				$new_duration = ($freespace->{duration} + $duration);
+			}
+
+			#If they have the same CPU range
+			if ($freespace->{processors}->size() == $cpu_range->size() and $new_processors_range == 0) {
+				my $new_freespace = FreeSpace->new(min($freespace->{starting_time}, $starting_time),
+					$new_duration, $freespace->{processors});
+				push @new_locations, $new_freespace;
+			} else {
+				my $new_range = $cpu_range->copy_range();
+				$new_range->intersection($freespace->{processors});
+				my $new_freespace = FreeSpace->new(min($freespace->{starting_time}, $starting_time),
+					$new_duration, $new_range);
+				push @new_locations, $new_freespace;
+				push @new_locations, $freespace;
+			}
+			$new_processors_range->free_allocated_memory();
+
+	} else {
+		my $new_duration;
+		my $infinity = 0 + "inf";
+
+		if ($freespace->{duration} == $infinity) {
+			$new_duration = $duration - max($freespace->{starting_time}, $starting_time);
+		} else {
+			$new_duration = min($freespace->{duration}, $duration) - max($freespace->{starting_time}, $starting_time);
+		}
+
+		my $new_range = $cpu_range->copy_range();
+		$new_range->add($freespace->{processors});
+
+		my $new_freespace = FreeSpace->new(max($freespace->{starting_time}, $starting_time),
+			$new_duration,
+			$new_range);
+
+		push @new_locations, $new_freespace;
+		push @new_locations, $freespace;
+	}
+
+	return @new_locations;
 }
 
 sub is_necessary_freespace {
 	my $self = shift;
 	my $freespace = shift;
-	my $tab_freespace = shift;
+	my $freespaces = shift;
 
-	foreach my $space (@{$tab_freespace}) {
+	my $infinity = 0 + "inf";
+
+	for my $space (@{$freespaces}) {
 		if (!($space->compare($freespace))) {
-			if (($freespace->{starting_time} >= $space->{starting_time}) and
-				(($freespace->{starting_time} + $freespace->{duration}) <= ($space->{starting_time} + $space->{duration}))) {
+			if ($freespace->{starting_time} >= $space->{starting_time}) {
+				if (($space->{duration} == $infinity) or ($space->{duration} != $infinity and $freespace->{duration} != $infinity and
+					($freespace->{starting_time} + $freespace->{duration} <= $space->{starting_time} + $space->{duration}))) {
 
-				my $test_processors_range = $freespace->{processors}->copy_range();
-				$test_processors_range->intersection($space->{processors});
+					my $test_processors_range = $freespace->{processors}->copy_range();
+					$test_processors_range->intersection($space->{processors});
 
-				return 0 if ($test_processors_range->size() == $freespace->{processors}->size());
+					return 0 if ($test_processors_range->size() == $freespace->{processors}->size());
 
-				$test_processors_range->free_allocated_memory();
+					$test_processors_range->free_allocated_memory();
+				}
 			}
 		}
 	}

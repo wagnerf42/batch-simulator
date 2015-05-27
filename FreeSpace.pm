@@ -37,8 +37,8 @@ sub new {
 
 sub stringify {
 	my $self = shift;
-	return "{id=$self->{id},s=$self->{starting_time},d=infini,p=$self->{processors}" if ($self->{duration} == "inf");
-	return "{id=$self->{id},s=$self->{starting_time},d=$self->{duration},p=$self->{processors}";
+	return "{id=$self->{id},s=$self->{starting_time},d=infini,p=$self->{processors}}" if ($self->{duration} == "inf");
+	return "{id=$self->{id},s=$self->{starting_time},d=$self->{duration},p=$self->{processors}}";
 }
 
 sub compare {
