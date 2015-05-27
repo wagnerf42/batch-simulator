@@ -4,7 +4,7 @@ use warnings;
 
 use Log::Log4perl qw(get_logger);
 use Data::Dumper;
-use List::Util qw(min max);
+use List::Util qw(min max sum);
 
 use Tree;
 
@@ -99,7 +99,7 @@ sub _combinations {
 	return $requested_cpus if ($node == $last_child); 
 
 	my @remaining_children = @children[($node + 1)..$last_child];
-	my $remaining_size = $tree->content() - $children[$node]->content();
+	my $remaining_size = sum (map {$_->content()} @children[($node + 1)..$last_child]);
 	
 	my $minimum_cpus = max(0, $requested_cpus - $remaining_size);
 	my $maximum_cpus = min($children[$node]->content(), $requested_cpus);
