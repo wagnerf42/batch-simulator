@@ -33,4 +33,12 @@ sub children {
 	return $self->{children};
 }
 
+sub content {
+	my $self = shift;
+	my $content = shift;
+
+	$self->{content} = $content if defined $content;
+	return $self->{content};
+}
+
 1;

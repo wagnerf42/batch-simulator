@@ -2,68 +2,67 @@ package Platform;
 use strict;
 use warnings;
 
+use Log::Log4perl qw(get_logger);
+
+use Tree;
+
 sub new {
 	my $class = shift;
 	my $levels = shift;
+	my $available_cpus = shift;
 
 	my $self = {
 		levels => $levels,
+		available_cpus => $available_cpus,
 	};
 
 	bless $self, $class;
 	return $self;
 }
 
-sub average_distance {
-	my $self = shift;
-	my $available_cpus = shift;
-	my $required_cpus = shift;
-
-	my @path;
-
-	return $self->_reduce($available_cpus, $required_cpus, 0, \@path);
-}
-
 sub build_structure {
 	my $self = shift;
-	my $available_cpus = shift;
 
-	$self->{structure} = [];
-
-	for my $level (0..(scalar @{$self->{levels}} - 2)) {
-		$self->{structure}->[$level] = [];
-		for my $node (0..($self->{levels}->[$level] - 1)) {
-			$self->{structure}->[$level]->[$node] = {
-				size => 0,
-				#distance => [],
-			};
-		}
-	}
-
-	my $maximum_cpus_number = $self->{levels}->[$#{$self->{levels}}];
-
-	for my $cpu (@{$available_cpus}) {
-		for my $level (0..(scalar @{$self->{levels}} - 2)) {
-			my $children_number = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
-			my $cpus_per_children = $maximum_cpus_number/$children_number;
-			my $position = $cpu/$cpus_per_children;
-
-			$self->{structure}->[$level]->[$position]->{size}++;
-		}
-	}
-
+	$self->{structure} = $self->_build(0, 0);
+	return;
 }
 
-sub combinations {
+sub _build {
 	my $self = shift;
-	my $node = shift;
 	my $level = shift;
-	my $required_cpus = shift;
+	my $node = shift;
+
+	my $logger = get_logger('Platform::_build');
+
+	if ($level == scalar @{$self->{levels}} - 2) {
+		$logger->debug("last level, returning");
+		return Tree->new(1);
+	}
+
+	$logger->debug("running for level $level node $node");
+
+	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
+	$logger->debug("next level nodes: $next_level_nodes");
+
+	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
+	$logger->debug("next level ids: @next_level_nodes_ids");
+
+	my @children = map {$self->_build($level + 1, $_)} (@next_level_nodes_ids); 
+
+	$logger->debug("continuing level $level node $node");
+
+	my $total_size = 0;
+	$total_size += $_->content() for (@children);
+	$logger->debug("total size $total_size");
+
+	my $tree = Tree->new($total_size);
+	$tree->children(\@children);
+	return $tree;
 }
 
-sub _reduce {
+sub structure {
+	my $self = shift;
+	return $self->{structure};
 }
-
-
 
 1;
