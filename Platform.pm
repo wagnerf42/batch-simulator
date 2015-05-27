@@ -55,7 +55,7 @@ sub _build {
 
 	my $logger = get_logger('Platform::_build');
 
-	if ($level == scalar @{$self->{levels}} - 2) {
+	if ($level == scalar @{$self->{levels}} - 1) {
 		$logger->debug("last level, returning");
 		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
 		return Tree->new($cpu_is_available);
