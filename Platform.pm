@@ -5,6 +5,7 @@ use warnings;
 use Log::Log4perl qw(get_logger);
 use Data::Dumper;
 use List::Util qw(min max sum);
+use POSIX;
 
 use Tree;
 
@@ -39,11 +40,7 @@ sub choose_cpus {
 
 	my $logger = get_logger('Platform::choose_cpus');
 
-	my @combinations = $self->_combinations($self->{root}, $requested_cpus, 0);
-	print Dumper(@combinations);
-	#my @solutions = map {} 
-
-	return;
+	return $self->_choose_cpus($self->{root}, 0, $requested_cpus);
 }
 
 # Internal routines
@@ -116,6 +113,50 @@ sub _combinations {
 	}
 
 	return @combinations;
+}
+
+sub _choose_cpus {
+	my $self = shift;
+	my $tree = shift;
+	my $level = shift;
+	my $requested_cpus = shift;
+
+	my $logger = get_logger('Platform::_choose_cpus');
+
+	# No needed CPUs
+	return 0 unless $requested_cpus;
+
+	# Leaf/CPU
+	return 0 if ($level == scalar @{$self->{levels}} - 1);
+
+	my @children = @{$tree->children()};
+	my $last_child = $#children;
+	my @combinations = $self->_combinations($tree, $requested_cpus, 0);
+	my $max_depth = scalar @{$self->{levels}} - 1;
+
+	my $best_combination;
+	my $best_combination_score = LONG_MAX;
+
+	for my $combination (@combinations) {
+		my @combination_parts = split('-', $combination);
+		my $score = 0;
+
+		for my $child_id (0..$last_child) {
+			my $child_size = $children[$child_id]->content();
+			my $child_requested_cpus = $combination_parts[$child_id];
+
+			$score += $self->_choose_cpus($children[$child_id], $level + 1, $child_requested_cpus);
+			$score += $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * ($max_depth - $level) * 2;
+		}
+
+		if ($score < $best_combination_score) {
+			$best_combination_score = $score;
+			$best_combination = $combination;
+		}
+	}
+	
+	$logger->debug("returning score $best_combination_score for combination $best_combination");
+	return $best_combination_score;
 }
 
 # Getters and setters
