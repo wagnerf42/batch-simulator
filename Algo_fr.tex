@@ -99,9 +99,7 @@
 	\State
 	\State $tab\_resultat \gets$ vide
 	\State
-	\For{tous les emplacements restant}
-		\State $tab\_resultat = tab\_resultat\ \cup$ \textbf{extend\_freespace}$(emplacement)$
-	\EndFor
+	\State $tab\_resultat = tab\_resultat\ \cup$ \textbf{extend\_freespace}$($liste des emplacements + task$)$
 	\State
 	\State $tab\_final \gets $ vide
 	\State
@@ -122,30 +120,39 @@
 \begin{algorithm}
 \caption{Augmentation Freespace}\label{extend_freespace}
 \begin{algorithmic}[1]
-\Function{extend\_freespace}{$freespace, task$}
+\Function{extend\_freespace}{$freespaces$}
 	\State $new\_emplacements \gets$ vide
+	\State $events \gets$ vide
 	\State
-	\If{(temps de départ de $freespace$ = temps final de $task$) \textbf{or}(temps de départ de $task$ = temps final de $freespace$)}
-		\If{les cpu de $freespace$ et $task$ sont les mêmes}
-			\State On modifie l'emplacement $freespace$ avec :
-			\State \hspace{\algorithmicindent} Temps de départ : temps de départ \textbf{min}($task, freespace$)
-			\State \hspace{\algorithmicindent} Durée: Durée de $task$ + durée de $freespace$
-			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$
-		\State $new\_emplacements \gets new\_emplacements\ \cup\ freespace$  
-		\Else
-			\State On crée un nouvel emplacement $new\_freespace$ avec :
-			\State \hspace{\algorithmicindent} Temps de départ : temps de départ \textbf{min}($task, freespace$)
-			\State \hspace{\algorithmicindent} Durée: Durée de $task$ + durée de $freespace$
-			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cap$ cpu de $task$
-		\State $new\_emplacements \gets new\_emplacements\ \cup\ new\_freespace \cup\ freespace$
+	\For{chaque éléments de $freespaces$}
+		\State Ajoute à $events$ au temps de départ de éléments dans "start" l'élément en question.
+		\State Ajoute à $events$ au temps final de éléments dans "end" l'élément en question.
+	\EndFor
+	\State
+	\For{chaque éléments de $events$}
+		\State Ajoute élément à $liste\_events$	
+	\EndFor
+	\State
+	\State On trie par ordre croissant $liste\_events$
+	\State $temps\_init \gets$ premier temps de $liste\_events$
+	\State $cpu\_init \gets$ vide
+	\State
+	\For{chaque éléments de $liste\_events$}
+		\State $temps \gets$ temps de élément
+		\If{éléments est de type "start"}
+			\State $cpu \gets cpu\ \cup$ cpu de élément
+		\ElsIf{éléments est de type "end"}
+			\State $cpu \gets cpu\ -$ cpu de élément
 		\EndIf
-	\Else
-		\State On crée un nouvel emplacement $new\_freespace$ avec :
-			\State \hspace{\algorithmicindent} Temps de départ : temps de départ \textbf{max}($freespace, task$)
-			\State \hspace{\algorithmicindent} Durée: temps de départ \textbf{max}($freespace, task$) - temps final \textbf{min}($freespace, task$)
-			\State \hspace{\algorithmicindent} Cpu : Cpu de $freespace$ $\cup$ cpu de $task$
-		\State $new\_emplacements \gets new\_emplacements\ \cup\ new\_freespace \cup\ freespace$
-	\EndIf
+		\If{$cpu\_init\ \neq\ cpu\ \textbf{and}\ temps\_init\ \neq\ temps$}			\State On crée un nouvel emplacement $new\_freespace$ avec :
+				\State \hspace{\algorithmicindent} Temps de départ : $temps\_init$
+				\State \hspace{\algorithmicindent} Durée : $temps\ -\ temps\_init$
+				\State \hspace{\algorithmicindent} Cpu : $cpu\_init$
+			\State $new\_emplacement \gets new\_emplacement\ \cup\ new\_freespace$ 
+			\State $temps\_init \gets temps$
+		\EndIf
+		\State $cpu\_init \gets cpu$
+	\EndFor
 	\State
 	\State \textbf{return} $new\_emplacements$
 \EndFunction
