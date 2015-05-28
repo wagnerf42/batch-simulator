@@ -97,9 +97,13 @@
 	\State On ne garde que ceux qui :
 		\State \hspace{\algorithmicindent} existent dans l'intervalle de temps $st\_t$ à $et\_t$
 	\State
+	\For{tous les emplacements restant}
+		\State On supprime l'emplacement de l'arbre des emplacements	
+	\EndFor
+	\State
 	\State $tab\_resultat \gets$ vide
 	\State
-	\State $tab\_resultat = tab\_resultat\ \cup$ \textbf{extend\_freespace}$($liste des emplacements + task$)$
+	\State $tab\_resultat =$\textbf{extend\_freespace}$($liste des emplacements + task$)$
 	\State
 	\State $tab\_final \gets $ vide
 	\State
@@ -124,9 +128,12 @@
 	\State $new\_emplacements \gets$ vide
 	\State $events \gets$ vide
 	\State
-	\For{chaque éléments de $freespaces$}
-		\State Ajoute à $events$ au temps de départ de éléments dans "start" l'élément en question.
-		\State Ajoute à $events$ au temps final de éléments dans "end" l'élément en question.
+	\State \(\triangleright\) $events$ est une table de hachage de temps
+	\State \(\triangleright\) chaque temps a deux listes de $freespace$, 'start' et 'end'
+	\State
+	\For{chaque éléments $f$ de $freespaces$}
+		\State Ajoute à $events$ au temps de départ de $f$, $f$ dans la liste "start"
+		\State Ajoute à $events$ au temps final de $f$, $f$ dans la liste "end"
 	\EndFor
 	\State
 	\For{chaque éléments de $events$}
@@ -135,15 +142,19 @@
 	\State
 	\State On trie par ordre croissant $liste\_events$
 	\State $temps\_init \gets$ premier temps de $liste\_events$
-	\State $cpu\_init \gets$ vide
+	\State $cpu\_init \gets$ premier range cpu de $liste\_events$
 	\State
-	\For{chaque éléments de $liste\_events$}
-		\State $temps \gets$ temps de élément
-		\If{éléments est de type "start"}
-			\State $cpu \gets cpu\ \cup$ cpu de élément
-		\ElsIf{éléments est de type "end"}
-			\State $cpu \gets cpu\ -$ cpu de élément
-		\EndIf
+	\For{chaque éléments $temps$ de $liste\_events$}
+		\State $cpu \gets\ cpu\_init$
+		\State
+		\For{chaque éléments $f$ de $ev.temps.start$}
+			\State $cpu \gets cpu\ \cup$ cpu de $f$
+		\EndFor
+		\State
+		\For{chaque éléments $f$ de $ev.temps.end$}
+			\State $cpu \gets cpu\ -$ cpu de $f$
+		\EndFor
+		\State
 		\If{$cpu\_init\ \neq\ cpu\ \textbf{and}\ temps\_init\ \neq\ temps$}			\State On crée un nouvel emplacement $new\_freespace$ avec :
 				\State \hspace{\algorithmicindent} Temps de départ : $temps\_init$
 				\State \hspace{\algorithmicindent} Durée : $temps\ -\ temps\_init$
