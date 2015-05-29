@@ -10,14 +10,23 @@ use Data::Dumper;
 
 Log::Log4perl::init('log4perl.conf');
 
-my $logger = get_logger('test_platform.pl');
+my $logger = get_logger('test');
 
 my @levels = (1, 2, 4, 32);
 my @available_cpus = (0..31);
 
-my $platform = Platform->new(\@levels, \@available_cpus, 4);
-$platform->build_structure();
-#print Dumper($platform->{root});
-my @selected_cpus = $platform->choose_cpus(6);
-$logger->info("cpus: @selected_cpus");
+for my $i (0..23) {
+	my $position = int(rand(32 - $i));
+	splice(@available_cpus, $position, 1);
+}
+
+$logger->debug("available cpus: @available_cpus");
+
+for my $norm (1, 2, 3, 4, 5, 6) {
+	my $platform = Platform->new(\@levels, \@available_cpus, $norm);
+	$platform->build_structure();
+	#print Dumper($platform->{root});
+	my @selected_cpus = $platform->choose_cpus(6);
+	$logger->info("norm: $norm, cpus: @selected_cpus");
+}
 
