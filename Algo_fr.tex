@@ -125,7 +125,7 @@
 \caption{Augmentation Freespace}\label{extend_freespace}
 \begin{algorithmic}[1]
 \Function{extend\_freespace}{$freespaces$}
-	\State $new\_emplacements \gets$ vide
+	\State $new\_location \gets$ vide
 	\State $events \gets$ vide
 	\State
 	\State \(\triangleright\) $events$ est une table de hachage de temps
@@ -136,36 +136,48 @@
 		\State Ajoute à $events$ au temps final de $f$, $f$ dans la liste "end"
 	\EndFor
 	\State
-	\For{chaque éléments de $events$}
-		\State Ajoute élément à $liste\_events$	
+	\For{chaque clef de $events$}
+		\State Ajoute clef à $times$	
 	\EndFor
 	\State
-	\State On trie par ordre croissant $liste\_events$
-	\State $temps\_init \gets$ premier temps de $liste\_events$
-	\State $cpu\_init \gets$ premier range cpu de $liste\_events$
+	\State On trie par ordre croissant $times$
+	\State $time\_init \gets$ premier temps de $times$
+	\State $cpu\_init \gets$ premier range cpu au premier temps $times$
 	\State
-	\For{chaque éléments $temps$ de $liste\_events$}
-		\State $cpu \gets\ cpu\_init$
+	\For{chaque éléments $time$ de $times$}
+		\State $cpu \gets$ vide
 		\State
-		\For{chaque éléments $f$ de $ev.temps.start$}
-			\State $cpu \gets cpu\ \cup$ cpu de $f$
+		\For{chaque éléments $f$ de $ev.time.start$}
+			\State Ajout à la liste $ranges$ la range cpu de $f$
 		\EndFor
 		\State
 		\For{chaque éléments $f$ de $ev.temps.end$}
-			\State $cpu \gets cpu\ -$ cpu de $f$
+			\State Supprime de la liste $ranges$ la range cpu de $f$
 		\EndFor
 		\State
-		\If{$cpu\_init\ \neq\ cpu\ \textbf{and}\ temps\_init\ \neq\ temps$}			\State On crée un nouvel emplacement $new\_freespace$ avec :
-				\State \hspace{\algorithmicindent} Temps de départ : $temps\_init$
-				\State \hspace{\algorithmicindent} Durée : $temps\ -\ temps\_init$
+		\For{chaque éléments $c$ de $ranges$}
+			\State $cpu \rightarrow\textbf{add}(c)$
+		\EndFor
+		\State
+		\If{$cpu\_init$ $\neq$ $cpu$ \textbf{and} $time\_init\ \neq\ time$}
+			\State On crée un nouvel emplacement $new\_freespace$ avec :
+				\State \hspace{\algorithmicindent} Temps de départ : $time\_init$
+				\State \hspace{\algorithmicindent} Durée : $time\ -\ time\_init$
 				\State \hspace{\algorithmicindent} Cpu : $cpu\_init$
-			\State $new\_emplacement \gets new\_emplacement\ \cup\ new\_freespace$ 
-			\State $temps\_init \gets temps$
+			\State $new\_location \gets new\_location\ \cup\ new\_freespace$ 
+			\State $time\_init \gets time$
 		\EndIf
+		\State $last\_cpu \gets cpu\_init$
 		\State $cpu\_init \gets cpu$
 	\EndFor
 	\State
-	\State \textbf{return} $new\_emplacements$
+	\State On crée un nouvel emplacement $new\_freespace$ avec :
+		\State \hspace{\algorithmicindent} Temps de départ : $time\_init$
+		\State \hspace{\algorithmicindent} Durée : $time\ -\ time\_init$
+		\State \hspace{\algorithmicindent} Cpu : $last\_cpu$
+	\State $new\_location \gets new\_location\ \cup\ new\_freespace$ 
+	\State
+	\State \textbf{return} $new\_location$
 \EndFunction
 \end{algorithmic}
 \end{algorithm}

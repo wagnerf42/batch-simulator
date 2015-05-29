@@ -206,7 +206,7 @@ sub extend_freespace {
 
 	for my $space (@{$freespaces}) {
 		push @{$events{$space->{starting_time}}{start}}, $space;
-
+		
 		push @{$events{$space->{starting_time} + $space->{duration}}{end}}, $space;
 	}
 
