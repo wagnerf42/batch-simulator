@@ -140,8 +140,6 @@ sub remove {
 	my $father = $self->{father};
 	my $remaining_key = $self->remaining_key();
 
-	print STDERR "remove ".$self."\n";
-
 	my $unique_child_direction = $self->direction_of_unique_child();
 	if ($unique_child_direction == NONE) {
 		if ($self->children_number() == 0) {

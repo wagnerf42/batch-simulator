@@ -46,6 +46,7 @@ sub find_place {
 
 	$self->{profile_tree}->nodes_loop($start_key, $end_key, sub {
 		my $node = shift;
+
 		$place = $node;
 		return 0;
 	});
@@ -72,7 +73,6 @@ sub find_impacted_place_by_add_task {
 
 			#If at least a cpu of task are in cpu range of freespace
 			if ($test_range->size() < $node->{content}->{processors}->size()) {
-
 				push @impacted_nodes, $node;
 			}
 			$test_range->free_allocated_memory();
@@ -121,7 +121,7 @@ sub add_task {
 
 	$self->{profile_tree}->add_content([$_->{starting_time}, $_->{duration}, $_->{processors}->size()], $_) for @remaining_useful_spaces;
 
-	return $task_processor_range;
+	return FreeSpace->new($starting_time, $duration, $task_processor_range);
 }
 
 sub cut_freespace {
@@ -163,22 +163,29 @@ sub remove_task {
 	my $duration = shift;
 	my $cpu_range = shift;
 	my @impacted_nodes;
+	my @impacted_freespaces;
 
 	my $start_key = [0, 0, 0];
 	my $infinity = 0 + "inf";
-	my $end_key = [$starting_time + $duration, $infinity, $infinity];
+	my $end_key = [$starting_time + $duration + 1, $infinity, $infinity];
 
 	$self->{profile_tree}->nodes_loop($start_key, $end_key, sub {
 		my $node = shift;
-		push @impacted_nodes, $node if (($node->{content}->{starting_time} + $node->{content}->{duration}) >= $starting_time);
+		if (($node->{content}->{starting_time} + $node->{content}->{duration}) >= $starting_time) {
+			push @impacted_nodes, $node;
+			push @impacted_freespaces, $node->{content};
+		}
 		return 1;
 	});
 
-	my @created_spaces;
 	for my $space (@impacted_nodes) {
 		$self->{profile_tree}->remove_content($space->{key});
-		push @created_spaces, $self->extend_freespace($space, $starting_time, $duration, $cpu_range);
 	}
+
+	my $task_freespace = FreeSpace->new($starting_time, $duration, $cpu_range);
+	push @impacted_freespaces, $task_freespace;
+
+	my @created_spaces = $self->extend_freespace(\@impacted_freespaces);
 
 	my @remaining_useful_spaces;
 	for my $space (@created_spaces) {
@@ -192,63 +199,67 @@ sub remove_task {
 
 sub extend_freespace {
 	my $self = shift;
-	my $node = shift;
-	my $starting_time = shift;
-	my $duration = shift;
-	my $cpu_range = shift;
-
-	my $freespace = $node->{content};
+	my $freespaces = shift;
 
 	my @new_locations;
+	my %events;
 
-	if ($freespace->{starting_time} == ($starting_time + $duration) or
-		($starting_time == ($freespace->{starting_time} + $freespace->{duration}))) {
-			my $new_processors_range = $freespace->{processors}->copy_range();
-			$new_processors_range->remove($cpu_range);
-			my $new_duration;
-			my $infinity = 0 + "inf";
+	for my $space (@{$freespaces}) {
+		push @{$events{$space->{starting_time}}{start}}, $space;
 
-			if ($freespace->{duration} == $infinity) {
-				$new_duration = $infinity;
-			} else {
-				$new_duration = ($freespace->{duration} + $duration);
-			}
+		push @{$events{$space->{starting_time} + $space->{duration}}{end}}, $space;
+	}
 
-			#If they have the same CPU range
-			if ($freespace->{processors}->size() == $cpu_range->size() and $new_processors_range == 0) {
-				my $new_freespace = FreeSpace->new(min($freespace->{starting_time}, $starting_time),
-					$new_duration, $freespace->{processors});
-				push @new_locations, $new_freespace;
-			} else {
-				my $new_range = $cpu_range->copy_range();
-				$new_range->intersection($freespace->{processors});
-				my $new_freespace = FreeSpace->new(min($freespace->{starting_time}, $starting_time),
-					$new_duration, $new_range);
-				push @new_locations, $new_freespace;
-				push @new_locations, $freespace;
-			}
-			$new_processors_range->free_allocated_memory();
+	my @times;
+	push @times, $_ for keys %events;
+	@times = sort {$a <=> $b} @times;
 
-	} else {
-		my $new_duration;
-		my $infinity = 0 + "inf";
+	my @range_list;
+	my $init_time = $times[0];
+	my $time;
+	my $last_cpu;
+	my $init_cpu = $events{$times[0]}{start}->[0]->{processors};
 
-		if ($freespace->{duration} == $infinity) {
-			$new_duration = $duration - max($freespace->{starting_time}, $starting_time);
-		} else {
-			$new_duration = min($freespace->{duration}, $duration) - max($freespace->{starting_time}, $starting_time);
+	for my $t (@times) {
+		my $cpu;
+		$time = $t;
+
+		for my $f (@{$events{$time}{start}}) {
+			push @range_list, $f->{processors};
 		}
 
-		my $new_range = $cpu_range->copy_range();
-		$new_range->add($freespace->{processors});
+		for my $f (@{$events{$time}{end}}) {
+			@range_list = grep { "$_" ne "$f->{processors}" } @range_list;
+		}
 
-		my $new_freespace = FreeSpace->new(max($freespace->{starting_time}, $starting_time),
-			$new_duration,
-			$new_range);
+		for my $r (@range_list) {
+			if (!defined $cpu) {
+				$cpu = $r->copy_range();
+			} else {
+				$cpu->add($r);
+			}
+		}
 
-		push @new_locations, $new_freespace;
-		push @new_locations, $freespace;
+		if (defined $cpu) {
+			my $test_range = $cpu->copy_range();
+			$test_range->intersection($init_cpu);
+			if (max($cpu->size(), $init_cpu->size()) != $test_range->size() and $time != $init_time) {
+				my $new_freespace = FreeSpace->new($init_time, $time - $init_time , $init_cpu);
+				push @new_locations, $new_freespace;
+				$init_time = $time;
+			}
+		} elsif (defined $init_cpu and $time != $init_time) {
+			my $new_freespace = FreeSpace->new($init_time, $time - $init_time , $init_cpu);
+			push @new_locations, $new_freespace;
+			$init_time = $time;
+		}
+
+		$last_cpu = $init_cpu;
+		$init_cpu = $cpu;
 	}
+
+	my $new_freespace = FreeSpace->new($init_time, $time - $init_time , $last_cpu);
+	push @new_locations, $new_freespace;
 
 	return @new_locations;
 }
@@ -300,7 +311,7 @@ sub save_svg {
 	$time = 0 unless defined $time;
 
 	my @freespaces;
-	my $last_ending_time = 0;
+	my $last_starting_time = 0;
 	my $infinity = 0 + "inf";
 	$self->{profile_tree}->nodes_loop([0,0,0], [$infinity, $infinity, $infinity],
 		sub {
@@ -308,26 +319,26 @@ sub save_svg {
 			#test for sentinel
 			return 1 if ($node->{key}->[0] == -1);
 			my $freespace = $node->{content};
-			my $ending_time = $freespace->ending_time();
-			$last_ending_time = $ending_time if $ending_time != $infinity and $ending_time > $last_ending_time;
+			my $starting_time = $freespace->{starting_time};
+			$last_starting_time = $starting_time if $starting_time > $last_starting_time;
 			print STDERR "freespace is $freespace\n";
 			push @freespaces, $freespace;
 			return 1;
 		});
 
-	$last_ending_time = 10 unless $last_ending_time ;
+	$last_starting_time = ($last_starting_time > 0) ? $last_starting_time + ($last_starting_time * 50)/100 : 10;
 
 	open(my $filehandle, '>', "$svg_filename") or die "unable to open $svg_filename";
 
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
-	my $w_ratio = 800/$last_ending_time;
+	my $w_ratio = 800/$last_starting_time;
 	my $h_ratio = 600/$self->{processors_number};
 
 	# red line at the current time
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
 
-	$_->svg($filehandle, $w_ratio, $h_ratio, $last_ending_time) for @freespaces;
+	$_->svg($filehandle, $w_ratio, $h_ratio, $last_starting_time) for @freespaces;
 
 	print $filehandle "</svg>\n";
 	close $filehandle;
