@@ -38,8 +38,6 @@ sub choose_cpus {
 	my $self = shift;
 	my $requested_cpus = shift;
 
-	my $logger = get_logger('Platform::choose_cpus');
-
 	my $min_distance = $self->_min_distance($self->{root}, 0, $requested_cpus);
 	return $self->_choose_cpus($self->{root}, $requested_cpus);
 }
@@ -51,13 +49,10 @@ sub _build {
 	my $level = shift;
 	my $node = shift;
 
-	my $logger = get_logger('Platform::_build');
-
 	#TODO Change this so that setting up the available CPUs is a separate
 	#step. The idea is to only do it in the end. Then I can use the tree
 	#structure to do it in log time.
 	if ($level == scalar @{$self->{levels}} - 1) {
-		$logger->debug("last level, returning");
 		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
 		my $tree_content = {total_size => $cpu_is_available, id => $node};
 		return Tree->new($tree_content);
@@ -82,14 +77,11 @@ sub _combinations {
 	my $requested_cpus = shift;
 	my $node = shift;
 
-	my $logger = get_logger('Platform::_combinations');
-	#$logger->debug("running for requested cpus $requested_cpus node $node");
-
 	my @children = @{$tree->children()};
 	my $last_child = $#children;
 
 	# Last node
-	return $requested_cpus if ($node == $last_child); 
+	return $requested_cpus if ($node == $last_child);
 
 	my @remaining_children = @children[($node + 1)..$last_child];
 	my $remaining_size = sum (map {$_->content()->{total_size}} @children[($node + 1)..$last_child]);
@@ -115,8 +107,6 @@ sub _min_distance {
 	my $tree = shift;
 	my $level = shift;
 	my $requested_cpus = shift;
-
-	my $logger = get_logger('Platform::_choose_cpus');
 
 	# No needed CPUs
 	return 0 unless $requested_cpus;
@@ -152,8 +142,6 @@ sub _min_distance {
 	}
 
 	$tree->content()->{$requested_cpus} = \%best_combination;
-
-	$logger->debug("returning score $best_combination{score} for combination $best_combination{combination}");
 	return $best_combination{score};
 }
 
@@ -161,8 +149,6 @@ sub _choose_cpus {
 	my $self = shift;
 	my $tree = shift;
 	my $requested_cpus = shift;
-
-	my $logger = get_logger('Platform::_choose_cpus');
 
 	# No requested cpus
 	return unless $requested_cpus;
