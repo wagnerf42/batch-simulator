@@ -15,10 +15,12 @@ sub new {
 	my $class = shift;
 	my $levels = shift;
 	my $available_cpus = shift;
+	my $norm = shift;
 
 	my $self = {
 		levels => $levels,
 		available_cpus => $available_cpus,
+		norm => $norm,
 	};
 
 	bless $self, $class;
@@ -39,6 +41,7 @@ sub choose_cpus {
 	my $requested_cpus = shift;
 
 	my $min_distance = $self->_min_distance($self->{root}, 0, $requested_cpus);
+	print STDERR "$min_distance\n";
 	return $self->_choose_cpus($self->{root}, $requested_cpus);
 }
 
@@ -60,7 +63,7 @@ sub _build {
 
 	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
 	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
-	my @children = map {$self->_build($level + 1, $_)} (@next_level_nodes_ids); 
+	my @children = map {$self->_build($level + 1, $_)} (@next_level_nodes_ids);
 
 	my $total_size = 0;
 	$total_size += $_->content()->{total_size} for (@children);
@@ -132,7 +135,7 @@ sub _min_distance {
 			my $child_requested_cpus = $combination_parts[$child_id];
 
 			$score += $self->_min_distance($children[$child_id], $level + 1, $child_requested_cpus);
-			$score += $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * ($max_depth - $level) * 2;
+			$score += $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * pow(($max_depth - $level) * 2, $self->{norm});
 		}
 
 		if ($score < $best_combination{score}) {

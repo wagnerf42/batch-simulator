@@ -12,10 +12,10 @@ Log::Log4perl::init('log4perl.conf');
 
 my $logger = get_logger('test_platform.pl');
 
-my @levels = (1, 2, 16, 256);
-my @available_cpus = (0..255);
+my @levels = (1, 2, 4, 32);
+my @available_cpus = (0..31);
 
-my $platform = Platform->new(\@levels, \@available_cpus);
+my $platform = Platform->new(\@levels, \@available_cpus, 4);
 $platform->build_structure();
 #print Dumper($platform->{root});
 my @selected_cpus = $platform->choose_cpus(6);
