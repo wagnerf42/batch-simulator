@@ -16,5 +16,6 @@ my @available_cpus = (0..5);
 my $platform = Platform->new(\@levels, \@available_cpus);
 $platform->build_structure();
 #print Dumper($platform->{root});
-my @selected_cpus = $platform->choose_cpus(2);
+my @selected_cpus = $platform->choose_cpus(1);
+print Dumper(@selected_cpus);
 
