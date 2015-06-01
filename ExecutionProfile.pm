@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use Data::Dumper;
+use Scalar::Util qw(refaddr);
 use List::Util qw(min max);
 use Log::Log4perl qw(get_logger);
 
@@ -201,12 +202,12 @@ sub extend_freespace {
 	my $self = shift;
 	my $freespaces = shift;
 
+	my $infinity = 0 + "inf";
 	my @new_locations;
 	my %events;
 
 	for my $space (@{$freespaces}) {
 		push @{$events{$space->{starting_time}}{start}}, $space;
-		
 		push @{$events{$space->{starting_time} + $space->{duration}}{end}}, $space;
 	}
 
@@ -214,22 +215,19 @@ sub extend_freespace {
 	push @times, $_ for keys %events;
 	@times = sort {$a <=> $b} @times;
 
+	my %ranges;
 	my @range_list;
-	my $init_time = $times[0];
-	my $time;
-	my $last_cpu;
-	my $init_cpu = $events{$times[0]}{start}->[0]->{processors};
 
 	for my $t (@times) {
 		my $cpu;
-		$time = $t;
-
-		for my $f (@{$events{$time}{start}}) {
-			push @range_list, $f->{processors};
-		}
+		my $time = $t;
 
 		for my $f (@{$events{$time}{end}}) {
 			@range_list = grep { "$_" ne "$f->{processors}" } @range_list;
+		}
+
+		for my $f (@{$events{$time}{start}}) {
+			push @range_list, $f->{processors};
 		}
 
 		for my $r (@range_list) {
@@ -240,26 +238,52 @@ sub extend_freespace {
 			}
 		}
 
-		if (defined $cpu) {
-			my $test_range = $cpu->copy_range();
-			$test_range->intersection($init_cpu);
-			if (max($cpu->size(), $init_cpu->size()) != $test_range->size() and $time != $init_time) {
-				my $new_freespace = FreeSpace->new($init_time, $time - $init_time , $init_cpu);
-				push @new_locations, $new_freespace;
-				$init_time = $time;
+		if (!%ranges) {
+			my $new_range = $cpu->copy_range();
+			my $ref = refaddr $new_range;
+			if ($time != $infinity) {
+				push @{$ranges{$ref}{range}}, $new_range;
+				$ranges{$ref}{start} = $time;
 			}
-		} elsif (defined $init_cpu and $time != $init_time) {
-			my $new_freespace = FreeSpace->new($init_time, $time - $init_time , $init_cpu);
-			push @new_locations, $new_freespace;
-			$init_time = $time;
-		}
+		} else {
+			for my $r (keys %ranges) {
+				if ($ranges{$r}{start} != $infinity)
+				{
+					if (defined $cpu) {
+						my $test_range = $ranges{$r}{range}->[0]->copy_range();
+						$test_range->intersection($cpu);
 
-		$last_cpu = $init_cpu;
-		$init_cpu = $cpu;
+						if ($test_range->size() < $ranges{$r}{range}->[0]->size()) {
+							my $new_freespace = FreeSpace->new($ranges{$r}{start}, $time - $ranges{$r}{start} , $ranges{$r}{range}->[0]);
+							push @new_locations, $new_freespace;
+
+							my $new_range = $test_range->copy_range();
+							my $ref = refaddr $new_range;
+							push @{$ranges{$ref}{range}}, $test_range;
+							$ranges{$ref}{start} = $ranges{$r}{start};
+							delete $ranges{$r};
+
+						} elsif ($test_range->size() < $cpu->size()) {
+							my $new_range = $cpu->copy_range();
+							my $ref = refaddr $new_range;
+							push @{$ranges{$ref}{range}}, $new_range;
+							$ranges{$ref}{start} = $time;
+						}
+					} else {
+						my $new_freespace = FreeSpace->new($ranges{$r}{start}, $time - $ranges{$r}{start} , $ranges{$r}{range}->[0]);
+						push @new_locations, $new_freespace;
+						delete $ranges{$r};
+					}
+				}
+			}
+		}
 	}
 
-	my $new_freespace = FreeSpace->new($init_time, $time - $init_time , $last_cpu);
-	push @new_locations, $new_freespace;
+	#Create infinity freespace
+	for my $r (keys %ranges) {
+		my $new_freespace = FreeSpace->new($ranges{$r}{start}, $infinity , $ranges{$r}{range});
+		push @new_locations, $new_freespace;
+	}
 
 	return @new_locations;
 }
