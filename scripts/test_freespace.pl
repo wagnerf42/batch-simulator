@@ -27,5 +27,9 @@ print STDERR "__________________AJOUT tache de durée 1 avec 3 cpu\n";
 $space->tycat();
 $task2 = $space->add_task(0,4,5);
 print STDERR "__________________AJOUT tache de durée 4 avec 5 cpu\n";
+$space->tycat();
+my $task3 = $space->add_task(0,10,3);
+print STDERR "__________________AJOUT tache de durée 10 avec 4 cpu\n";
+$space->tycat();
 
 print STDERR "Done\n";
