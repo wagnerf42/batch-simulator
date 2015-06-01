@@ -12,7 +12,7 @@ Log::Log4perl::init('log4perl.conf');
 
 my $logger = get_logger('test');
 
-my @levels = (1, 2, 4, 32);
+my @levels = (1, 4, 32);
 my @available_cpus = (0..31);
 
 for my $i (0..23) {
@@ -22,8 +22,13 @@ for my $i (0..23) {
 
 $logger->debug("available cpus: @available_cpus");
 
+my $platform = Platform->new(\@levels, \@available_cpus, 1);
+$platform->build_structure();
+my @selected_cpus = $platform->choose_cpus2_max_distance(6);
+$logger->info("cpus: @selected_cpus");
+
 for my $norm (1, 2, 3, 4, 5, 6) {
-	my $platform = Platform->new(\@levels, \@available_cpus, $norm);
+	$platform = Platform->new(\@levels, \@available_cpus, $norm);
 	$platform->build_structure();
 	#print Dumper($platform->{root});
 	my @selected_cpus = $platform->choose_cpus(6);
