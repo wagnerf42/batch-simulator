@@ -36,6 +36,13 @@ sub build_structure {
 	return;
 }
 
+sub build_structure2 {
+	my $self = shift;
+
+	$self->{root} = $self->_build2(0, 0);
+	return;
+}
+
 sub choose_cpus {
 	my $self = shift;
 	my $requested_cpus = shift;
@@ -44,17 +51,13 @@ sub choose_cpus {
 	return $self->_choose_cpus($self->{root}, $requested_cpus);
 }
 
-sub choose_cpus2_max_distance {
+sub choose_cpus2 {
 	my $self = shift;
 	my $requested_cpus = shift;
 
-	return $self->_choose_cpus2_max_distance($self->{root}, $requested_cpus);
+	return $self->_choose_cpus2($self->{root}, $requested_cpus);
 }
 
-
-sub choose_cpus2_avg_distance {
-
-}
 
 # Internal routines
 
@@ -81,6 +84,38 @@ sub _build {
 
 	my $tree_content = {total_size => $total_size};
 	my $tree = Tree->new($tree_content);
+	$tree->children(\@children);
+	return $tree;
+}
+
+sub _build2 {
+	my $self = shift;
+	my $level = shift;
+	my $node = shift;
+
+	if ($level == scalar @{$self->{levels}} - 1) {
+		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
+		my $content = {total_size => $cpu_is_available, id => $node, distance => 0};
+		return Tree->new($content);
+	}
+
+	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
+	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
+	my $max_depth = scalar @{$self->{levels}} - 1;
+	my @children = map {$self->_build2($level + 1, $_)} (@next_level_nodes_ids);
+
+	my $total_size = 0;
+	my $total_distance = 0;
+
+	for my $child (@children) {
+		my $content = $child->content();
+		$total_size += $content->{total_size};
+		$total_distance += $content->{distance} + $content->{total_size} * ($total_size - $content->{total_size}) * ($max_depth - $level) * 2;
+	}
+
+
+	my $content = {total_size => $total_size, distance => $total_distance};
+	my $tree = Tree->new($content);
 	$tree->children(\@children);
 	return $tree;
 }
@@ -178,7 +213,7 @@ sub _choose_cpus {
 	return map {$self->_choose_cpus($_, shift @combination_parts)} (@children);
 }
 
-sub _choose_cpus2_max_distance {
+sub _choose_cpus2 {
 	my $self = shift;
 	my $tree = shift;
 	my $requested_cpus = shift;
@@ -197,7 +232,7 @@ sub _choose_cpus2_max_distance {
 	for my $child (@children) {
 		die 'reached child with size 0' unless ($child->content()->{total_size});
 
-		my @child_cpus = $self->_choose_cpus2_max_distance($child, min($child->content()->{total_size}, $remaining_cpus));
+		my @child_cpus = $self->_choose_cpus2($child, min($child->content()->{total_size}, $remaining_cpus));
 		push @selected_cpus, @child_cpus;
 		$remaining_cpus -= scalar @child_cpus;
 
@@ -209,7 +244,6 @@ sub _choose_cpus2_max_distance {
 
 	die 'should not reach this point';
 }
-
 
 # Getters and setters
 

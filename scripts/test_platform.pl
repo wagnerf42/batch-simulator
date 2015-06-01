@@ -12,26 +12,31 @@ Log::Log4perl::init('log4perl.conf');
 
 my $logger = get_logger('test');
 
-my @levels = (1, 4, 32);
-my @available_cpus = (0..31);
+my @levels = (1, 2, 8);
+my @available_cpus = (0..($levels[$#levels] - 1));
 
-for my $i (0..23) {
-	my $position = int(rand(32 - $i));
+my $removed_cpus_number = 0;
+my $required_cpus = 4;
+
+for my $i (0..($removed_cpus_number - 1)) {
+	my $position = int(rand($levels[$#levels] - 1 - $i));
 	splice(@available_cpus, $position, 1);
 }
 
 $logger->debug("available cpus: @available_cpus");
 
 my $platform = Platform->new(\@levels, \@available_cpus, 1);
-$platform->build_structure();
-my @selected_cpus = $platform->choose_cpus2_max_distance(6);
+$platform->build_structure2();
+print Dumper($platform->{root});
+my @selected_cpus = $platform->choose_cpus2($required_cpus);
 $logger->info("cpus: @selected_cpus");
+die;
 
 for my $norm (1, 2, 3, 4, 5, 6) {
 	$platform = Platform->new(\@levels, \@available_cpus, $norm);
 	$platform->build_structure();
 	#print Dumper($platform->{root});
-	my @selected_cpus = $platform->choose_cpus(6);
+	my @selected_cpus = $platform->choose_cpus($required_cpus);
 	$logger->info("norm: $norm, cpus: @selected_cpus");
 }
 
