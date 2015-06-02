@@ -47,17 +47,17 @@
 \caption{Decoupage Freespace}\label{cut_freespace}
 \begin{algorithmic}[1]
 \Function{cut\_freespace}{$freespace, start\_time, duration, processor\_range$}
-	\If{\textbf{Intersection}($freespace\rightarrow\{cpu\},processor\_range) > 0$}
+	\If{($freespace\rightarrow\{cpu\}\ \textbf{inter}\ processor\_range) > 0$}
 		\State $profile\_tree\rightarrow \textbf{remove}(freespace)$
 		\State
 		\If{$freespace\rightarrow\{starting\_time\} < start\_time$}
-			\State \textbf{new} $freespace\ right\_freespace\gets(freespace\rightarrow\{starting\_time\},start\_time - freespace\rightarrow\{starting\_time\}, freespace\rightarrow\{cpu\})$
-			\State $profile\_tree\rightarrow \textbf{add}(right\_freespace)$
+			\State \textbf{new} $freespace\ left\_freespace\gets(freespace\rightarrow\{starting\_time\},start\_time - freespace\rightarrow\{starting\_time\}, freespace\rightarrow\{cpu\})$
+			\State $profile\_tree\rightarrow \textbf{add}(left\_freespace)$
 		\EndIf
 		\State
 		\If{$freespace\rightarrow\{starting\_time\} < (start\_time + duration)$}
-			\State \textbf{new} $freespace\ left\_freespace\gets((start\_time + duration),freespace\rightarrow\{duration\} - (start\_time + duration) - freespace\rightarrow\{starting\_time\}, freespace\rightarrow\{cpu\})$
-			\State $profile\_tree\rightarrow \textbf{add}(left\_freespace)$
+			\State \textbf{new} $freespace\ right\_freespace\gets((start\_time + duration),freespace\rightarrow\{duration\} - (start\_time + duration) - freespace\rightarrow\{starting\_time\}, freespace\rightarrow\{cpu\})$
+			\State $profile\_tree\rightarrow \textbf{add}(right\_freespace)$
 		\EndIf
 		\State
 		\State $range\_test \gets (freespace\rightarrow\{cpu\}\rightarrow \textbf{copy}())$
