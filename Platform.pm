@@ -27,12 +27,6 @@ sub new {
 	return $self;
 }
 
-# Public routines
-
-# Internal routines
-
-# Getters and setters
-
 # Version 1
 # This is the exact version of the algorithm. It builds a list of all the
 # possible combination of CPUs and checks to see which one is the best. Takes a
@@ -203,7 +197,7 @@ sub _choose_cpus2 {
 	# Leaf node/CPU
 	return $tree->content()->{id} if (defined $tree->content()->{id});
 
-	my @children = sort {$b->content()->{total_size} <=> $a->content()->{total_size}} (@{$tree->children()});
+	my @children = sort {_compare_content($a->content(), $b->content())} (@{$tree->children()});
 	my $remaining_cpus = $requested_cpus;
 	my @selected_cpus;
 
@@ -223,6 +217,14 @@ sub _choose_cpus2 {
 	}
 
 	die 'should not reach this point';
+}
+
+sub _compare_content {
+	my $a = shift;
+	my $b = shift;
+
+	return $a->{distance} <=> $b->{distance} if ($a->{total_size} == $b->{total_size});
+	return $b->{total_size} <=> $a->{total_size};
 }
 
 sub _build2 {
