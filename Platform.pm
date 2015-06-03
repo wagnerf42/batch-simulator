@@ -29,17 +29,19 @@ sub new {
 
 # Public routines
 
+# Internal routines
+
+# Getters and setters
+
+# Version 1
+# This is the exact version of the algorithm. It builds a list of all the
+# possible combination of CPUs and checks to see which one is the best. Takes a
+# long time in normal sized platforms.
+
 sub build_structure {
 	my $self = shift;
 
 	$self->{root} = $self->_build(0, 0);
-	return;
-}
-
-sub build_structure2 {
-	my $self = shift;
-
-	$self->{root} = $self->_build2(0, 0);
 	return;
 }
 
@@ -51,15 +53,24 @@ sub choose_cpus {
 	return $self->_choose_cpus($self->{root}, $requested_cpus);
 }
 
-sub choose_cpus2 {
+sub _choose_cpus {
 	my $self = shift;
+	my $tree = shift;
 	my $requested_cpus = shift;
 
-	return $self->_choose_cpus2($self->{root}, $requested_cpus);
+	# No requested cpus
+	return unless $requested_cpus;
+
+	my @children = @{$tree->children()};
+
+	# Leaf node/CPU
+	return $tree->content()->{id} if (defined $tree->content()->{id});
+
+	my $best_combination = $tree->content()->{$requested_cpus};
+	my @combination_parts = split('-', $best_combination->{combination});
+
+	return map {$self->_choose_cpus($_, shift @combination_parts)} (@children);
 }
-
-
-# Internal routines
 
 sub _build {
 	my $self = shift;
@@ -84,38 +95,6 @@ sub _build {
 
 	my $tree_content = {total_size => $total_size};
 	my $tree = Tree->new($tree_content);
-	$tree->children(\@children);
-	return $tree;
-}
-
-sub _build2 {
-	my $self = shift;
-	my $level = shift;
-	my $node = shift;
-
-	if ($level == scalar @{$self->{levels}} - 1) {
-		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
-		my $content = {total_size => $cpu_is_available, id => $node, distance => 0};
-		return Tree->new($content);
-	}
-
-	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
-	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
-	my $max_depth = scalar @{$self->{levels}} - 1;
-	my @children = map {$self->_build2($level + 1, $_)} (@next_level_nodes_ids);
-
-	my $total_size = 0;
-	my $total_distance = 0;
-
-	for my $child (@children) {
-		my $content = $child->content();
-		$total_size += $content->{total_size};
-		$total_distance += $content->{distance} + $content->{total_size} * ($total_size - $content->{total_size}) * ($max_depth - $level) * 2;
-	}
-
-
-	my $content = {total_size => $total_size, distance => $total_distance};
-	my $tree = Tree->new($content);
 	$tree->children(\@children);
 	return $tree;
 }
@@ -194,23 +173,24 @@ sub _min_distance {
 	return $best_combination{score};
 }
 
-sub _choose_cpus {
+# Version 2
+# This version is not exact. The idea is to give a good answer even if it's not
+# the best.  What it does is sort the children of the top of the tree by size
+# and pick the largest branches.  This helps decrease the fragmentation of the
+# solution and gives a good solution.
+
+sub build_structure2 {
 	my $self = shift;
-	my $tree = shift;
+
+	$self->{root} = $self->_build2(0, 0);
+	return;
+}
+
+sub choose_cpus2 {
+	my $self = shift;
 	my $requested_cpus = shift;
 
-	# No requested cpus
-	return unless $requested_cpus;
-
-	my @children = @{$tree->children()};
-
-	# Leaf node/CPU
-	return $tree->content()->{id} if (defined $tree->content()->{id});
-
-	my $best_combination = $tree->content()->{$requested_cpus};
-	my @combination_parts = split('-', $best_combination->{combination});
-
-	return map {$self->_choose_cpus($_, shift @combination_parts)} (@children);
+	return $self->_choose_cpus2($self->{root}, $requested_cpus);
 }
 
 sub _choose_cpus2 {
@@ -245,6 +225,36 @@ sub _choose_cpus2 {
 	die 'should not reach this point';
 }
 
-# Getters and setters
+sub _build2 {
+	my $self = shift;
+	my $level = shift;
+	my $node = shift;
+
+	if ($level == scalar @{$self->{levels}} - 1) {
+		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
+		my $content = {total_size => $cpu_is_available, id => $node, distance => 0};
+		return Tree->new($content);
+	}
+
+	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
+	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
+	my $max_depth = scalar @{$self->{levels}} - 1;
+	my @children = map {$self->_build2($level + 1, $_)} (@next_level_nodes_ids);
+
+	my $total_size = 0;
+	my $total_distance = 0;
+
+	for my $child (@children) {
+		my $content = $child->content();
+		$total_size += $content->{total_size};
+		$total_distance += $content->{distance} + $content->{total_size} * ($total_size - $content->{total_size}) * ($max_depth - $level) * 2;
+	}
+
+
+	my $content = {total_size => $total_size, distance => $total_distance};
+	my $tree = Tree->new($content);
+	$tree->children(\@children);
+	return $tree;
+}
 
 1;
