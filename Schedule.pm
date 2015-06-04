@@ -35,7 +35,8 @@ sub new {
 		uses_external_simulator => 0
 	};
 
-	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
+	my $required_cpus = $self->{trace}->needed_cpus();
+	die "not enough processors : $required_cpus > $self->{processors_number}" if $required_cpus > $self->{processors_number};
 	$self->{trace}->unassign_jobs(); # make sure the trace is clean
 
 	$self->{cluster_size} = $self->{processors_number} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{processors_number});
