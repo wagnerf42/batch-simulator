@@ -5,7 +5,7 @@ use warnings;
 use XML::Smart;
 use List::Util qw(sum);
 
-my ($platform) = @ARGV;
+my ($platform, $output_file) = @ARGV;
 
 my @platform_parts = split('-', $platform);
 
@@ -39,10 +39,10 @@ for my $cluster (0..($platform_parts[$#platform_parts] - 1)) {
 	};
 
 	$xml->{platform}{AS}{ASroute}[$cluster] = {
-		src => "L-$cluster",
+		src => "C-$cluster",
 		dst => "AS_Tree",
 		gw_src => "R-$#platform_parts-$cluster",
-		gw_dst => 'R-',
+		gw_dst => 'R-' . ($#platform_parts - 1) . '-' . (int $cluster/($platform_parts[$#platform_parts]/$platform_parts[$#platform_parts - 1])),
 		link_ctn => {id => "L-$cluster"},
 	}
 }
@@ -54,7 +54,7 @@ $xml->{platform}{AS}{AS} = {
 };
 
 # Build levels
-for my $level (0..($#platform_parts - 1)) {
+for my $level (0..($#platform_parts - 2)) {
 	my $links_number = $platform_parts[$level + 1]/$platform_parts[$level];
 	my $nodes_number = $platform_parts[$level];
 
@@ -74,59 +74,14 @@ for my $level (0..($#platform_parts - 1)) {
 	}
 }
 
-$xml->save('test.xml');
-open(my $file, 'test.xml');
+# Generate the routers for the next level
+push @{$xml->{platform}{AS}{AS}{router}}, {id => 'R-' . ($#platform_parts - 1) . "-$_"} for (0..($platform_parts[$#platform_parts]/$platform_parts[$#platform_parts - 1]) - 1);
+
+$xml->save($output_file);
+
+open(my $file, $output_file);
 while (my $row = <$file>) {
 	chomp $row;
 	print "$row\n";
-}
-
-die;
-
-# Switches
-my $switches_number = sum @platform_parts[0..($#platform_parts - 1)];
-$xml->{platform}{AS}{AS}{router}[$_] = {id => "AS_Tree_s" . $_} for (0..($switches_number - 1));
-
-# Routers for clusters
-my $routers_number = $platform_parts[$#platform_parts];
-$xml->{platform}{AS}{AS}{router}[$_] = {id => "AS_Tree_r" . ($_ - $switches_number)} for ($switches_number..($switches_number + $routers_number - 1));
-
-# Links
-my $total_links_number = 0;
-for my $level (0..($#platform_parts - 1)) {
-	my $links_number = $platform_parts[$level + 1]/$platform_parts[$level];
-
-	$xml->{platform}{AS}{AS}{link}[$total_links_number + $_] = {
-		id => "AS_Tree_l" . ($total_links_number + $_),
-		bandwidth => "1.25GBps",
-		latency => "24us"
-	} for (0..($links_number - 1));
-
-	$xml->{platform}{AS}{AS}{route} = {
-		src => "",
-		dst => "",
-	};
-
-	$total_links_number += $links_number;
-	last;
-}
-
-sub _build_level {
-	my $level = shift;
-	my $node = shift;
-
-	return if ($level == $#platform_parts);
-
-	my $children_number = $platform_parts[$level + 1]/$platform_parts[$level];
-	print STDERR "$level-$node-$children_number\n";
-
-	# Create the switch as a router
-	push @{$xml->{platform}{AS}{AS}{router}}, {id => "S-$level-$node"};
-
-	for my $node (0..($children_number - 1)) {
-		# Create the link
-		push @{$xml->{platform}{AS}{AS}{link}}, {id => "L-$level-$node", bandwidth => "1GBps", latency => "1ms"};
-		_build_level($level + 1, $node);
-	}
 }
 
