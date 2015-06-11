@@ -5,10 +5,8 @@ use warnings;
 use XML::Smart;
 use List::Util qw(sum);
 
-my ($platform, $output_file) = @ARGV;
-
+my ($platform) = @ARGV;
 my @platform_parts = split('-', $platform);
-
 my $xml = XML::Smart->new();
 
 $xml->{platform} = {version => 3};
@@ -19,9 +17,40 @@ $xml->{platform}{AS} = {
 	routing => "Full",
 };
 
+# Tree system
+$xml->{platform}{AS}{AS} = {
+	id => "AS_Tree",
+	routing => "Floyd",
+};
+
+# Push the first router
+push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-0-0"};
+
+# Build levels
+for my $level (1..$#platform_parts) {
+	my $nodes_number = $platform_parts[$level];
+
+	for my $node_number (0..($nodes_number - 1)) {
+		push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-$level-$node_number"};
+
+		my $father_node = int $node_number/($platform_parts[$level]/$platform_parts[$level - 1]);
+		push @{$xml->{platform}{AS}{AS}{link}}, {
+			id => "L-$level-$node_number",
+			bandwidth => "1.25GBps",
+			latency => "24us",
+		};
+
+		push @{$xml->{platform}{AS}{AS}{route}}, {
+			src => 'R-' . ($level - 1) . "-$father_node",
+			dst => "R-$level-$node_number",
+			link_ctn => {id => "L-$level-$node_number"},
+		};
+	}
+}
+
 # Clusters
 for my $cluster (0..($platform_parts[$#platform_parts] - 1)) {
-	$xml->{platform}{AS}{cluster}[$cluster] = {
+	push @{$xml->{platform}{AS}{cluster}}, {
 		id => "C-$cluster",
 		prefix => "",
 		suffix => "",
@@ -29,59 +58,24 @@ for my $cluster (0..($platform_parts[$#platform_parts] - 1)) {
 		power => "286.087kf",
 		bw => "125MBps",
 		lat => "24us",
-		router_id => "R-$#platform_parts-$cluster",
+		router_id => "R-$cluster",
 	};
 
-	$xml->{platform}{AS}{link}[$cluster] = {
+	push @{$xml->{platform}{AS}{link}}, {
 		id => "L-$cluster",
 		bandwidth => "1.25GBps",
 		latency => "24us",
 	};
 
-	$xml->{platform}{AS}{ASroute}[$cluster] = {
+	push @{$xml->{platform}{AS}{ASroute}}, {
 		src => "C-$cluster",
+		gw_src => "R-$cluster",
 		dst => "AS_Tree",
-		gw_src => "R-$#platform_parts-$cluster",
-		gw_dst => 'R-' . ($#platform_parts - 1) . '-' . (int $cluster/($platform_parts[$#platform_parts]/$platform_parts[$#platform_parts - 1])),
+		gw_dst => "R-$#platform_parts-$cluster",
 		link_ctn => {id => "L-$cluster"},
 	}
 }
 
-# Tree system
-$xml->{platform}{AS}{AS} = {
-	id => "AS_Tree",
-	routing => "Floyd",
-};
-
-# Build levels
-for my $level (0..($#platform_parts - 2)) {
-	my $links_number = $platform_parts[$level + 1]/$platform_parts[$level];
-	my $nodes_number = $platform_parts[$level];
-
-	for my $node_number (0..($nodes_number - 1)) {
-		push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-$level-$node_number"};
-
-		for my $base_link_number (0..($links_number - 1)) {
-			my $link_number = $node_number * $links_number + $base_link_number;
-			push @{$xml->{platform}{AS}{AS}{link}}, {id => "L-$level-$link_number" , bandwidth => "1.25GBps", latency => "24us"};
-
-			push @{$xml->{platform}{AS}{AS}{route}}, {
-				src => "R-$level-$node_number",
-				dst => 'R-' . ($level + 1) . "-$link_number",
-				link_ctk => {id => "L-$level-$link_number"},
-			};
-		}
-	}
-}
-
-# Generate the routers for the next level
-push @{$xml->{platform}{AS}{AS}{router}}, {id => 'R-' . ($#platform_parts - 1) . "-$_"} for (0..($platform_parts[$#platform_parts]/$platform_parts[$#platform_parts - 1]) - 1);
-
-$xml->save($output_file);
-
-open(my $file, $output_file);
-while (my $row = <$file>) {
-	chomp $row;
-	print "$row\n";
-}
-
+print "<?xml version=\'1.0\'?>\n";
+print "<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">\n";
+print $xml->data(noheader => 1, nometagen => 1);
