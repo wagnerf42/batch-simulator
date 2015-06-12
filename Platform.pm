@@ -6,6 +6,7 @@ use Log::Log4perl qw(get_logger);
 use Data::Dumper;
 use List::Util qw(min max sum);
 use POSIX;
+use XML::Smart;
 
 use Tree;
 
@@ -27,7 +28,7 @@ sub new {
 	return $self;
 }
 
-# Version 1
+# Platform structure generation code
 # This is the exact version of the algorithm. It builds a list of all the
 # possible combination of CPUs and checks to see which one is the best. Takes a
 # long time in normal sized platforms.
@@ -167,96 +168,82 @@ sub _min_distance {
 	return $best_combination{score};
 }
 
-# Version 2
-# This version is not exact. The idea is to give a good answer even if it's not
-# the best.  What it does is sort the children of the top of the tree by size
-# and pick the largest branches.  This helps decrease the fragmentation of the
-# solution and gives a good solution.
+# Platform XML generation code
+# This code will be used to generate platform files and host files to be used
+# with SMPI initially.
+sub build_platform_xml {
+	my $levels = shift;
 
-sub build_structure2 {
-	my $self = shift;
+	my @platform_parts = split('-', $levels);
+	my $xml = XML::Smart->new();
 
-	$self->{root} = $self->_build2(0, 0);
-	return;
-}
+	$xml->{platform} = {version => 3};
 
-sub choose_cpus2 {
-	my $self = shift;
-	my $requested_cpus = shift;
+	# Root system
+	$xml->{platform}{AS} = {
+		id => "AS_Root",
+		routing => "Full",
+	};
 
-	return $self->_choose_cpus2($self->{root}, $requested_cpus);
-}
+	# Tree system
+	$xml->{platform}{AS}{AS} = {
+		id => "AS_Tree",
+		routing => "Floyd",
+	};
 
-sub _choose_cpus2 {
-	my $self = shift;
-	my $tree = shift;
-	my $requested_cpus = shift;
+	# Push the first router
+	push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-0-0"};
 
-	#print STDERR "new call $requested_cpus\n";
+	# Build levels
+	for my $level (1..$#platform_parts) {
+		my $nodes_number = $platform_parts[$level];
 
-	# Leaf node/CPU
-	return $tree->content()->{id} if (defined $tree->content()->{id});
+		for my $node_number (0..($nodes_number - 1)) {
+			push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-$level-$node_number"};
 
-	my @children = sort {_compare_content($a->content(), $b->content())} (@{$tree->children()});
-	my $remaining_cpus = $requested_cpus;
-	my @selected_cpus;
+			my $father_node = int $node_number/($platform_parts[$level]/$platform_parts[$level - 1]);
+			push @{$xml->{platform}{AS}{AS}{link}}, {
+				id => "L-$level-$node_number",
+				bandwidth => "1.25GBps",
+				latency => "24us",
+			};
 
-	#print STDERR 'children sizes ' . join(' ', map {$_->content()->{total_size}} (@children)) . "\n";
-
-	for my $child (@children) {
-		die 'reached child with size 0' unless ($child->content()->{total_size});
-
-		my @child_cpus = $self->_choose_cpus2($child, min($child->content()->{total_size}, $remaining_cpus));
-		push @selected_cpus, @child_cpus;
-		$remaining_cpus -= scalar @child_cpus;
-
-		#print STDERR "child: @child_cpus selected: @selected_cpus\n";
-		#print STDERR "remaining: $remaining_cpus\n";
-
-		return @selected_cpus if (scalar @selected_cpus == $requested_cpus);
+			push @{$xml->{platform}{AS}{AS}{route}}, {
+				src => 'R-' . ($level - 1) . "-$father_node",
+				dst => "R-$level-$node_number",
+				link_ctn => {id => "L-$level-$node_number"},
+			};
+		}
 	}
 
-	die 'should not reach this point';
-}
+	# Clusters
+	for my $cluster (0..($platform_parts[$#platform_parts] - 1)) {
+		push @{$xml->{platform}{AS}{cluster}}, {
+			id => "C-$cluster",
+			prefix => "",
+			suffix => "",
+			radical => ($cluster * 16) . '-' . (($cluster + 1) * 16 - 1),
+			power => "286.087kf",
+			bw => "125MBps",
+			lat => "24us",
+			router_id => "R-$cluster",
+		};
 
-sub _compare_content {
-	my $a = shift;
-	my $b = shift;
+		push @{$xml->{platform}{AS}{link}}, {
+			id => "L-$cluster",
+			bandwidth => "1.25GBps",
+			latency => "24us",
+		};
 
-	return $a->{distance} <=> $b->{distance} if ($a->{total_size} == $b->{total_size});
-	return $b->{total_size} <=> $a->{total_size};
-}
-
-sub _build2 {
-	my $self = shift;
-	my $level = shift;
-	my $node = shift;
-
-	if ($level == scalar @{$self->{levels}} - 1) {
-		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
-		my $content = {total_size => $cpu_is_available, id => $node, distance => 0};
-		return Tree->new($content);
+		push @{$xml->{platform}{AS}{ASroute}}, {
+			src => "C-$cluster",
+			gw_src => "R-$cluster",
+			dst => "AS_Tree",
+			gw_dst => "R-$#platform_parts-$cluster",
+			link_ctn => {id => "L-$cluster"},
+		}
 	}
 
-	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
-	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
-	my $max_depth = scalar @{$self->{levels}} - 1;
-	my @children = map {$self->_build2($level + 1, $_)} (@next_level_nodes_ids);
-
-	my $total_size = 0;
-	my $total_distance = 0;
-
-	for my $child (@children) {
-		my $content = $child->content();
-		$total_size += $content->{total_size};
-		$total_distance += $content->{distance} + $content->{total_size} * ($total_size - $content->{total_size}) * ($max_depth - $level) * 2;
-	}
-
-
-	my $content = {total_size => $total_size, distance => $total_distance};
-	my $tree = Tree->new($content);
-	$tree->children(\@children);
-	return $tree;
+	return "<?xml version=\'1.0\'?>\n" . "<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">\n" . $xml->data(noheader => 1, nometagen => 1);
 }
-
 1;
