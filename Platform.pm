@@ -108,7 +108,7 @@ sub _combinations {
 
 	my @remaining_children = @children[($node + 1)..$last_child];
 	my $remaining_size = sum (map {$_->content()->{total_size}} @children[($node + 1)..$last_child]);
-	
+
 	my $minimum_cpus = max(0, $requested_cpus - $remaining_size);
 	my $maximum_cpus = min($children[$node]->content()->{total_size}, $requested_cpus);
 
@@ -175,6 +175,7 @@ sub build_platform_xml {
 	my $self = shift;
 
 	my @platform_parts = @{$self->{levels}};
+	my $cluster_size = $platform_parts[$#platform_parts]/$platform_parts[$#platform_parts - 1];
 	my $xml = XML::Smart->new();
 
 	$xml->{platform} = {version => 3};
@@ -195,7 +196,7 @@ sub build_platform_xml {
 	push @{$xml->{platform}{AS}{AS}{router}}, {id => "R-0-0"};
 
 	# Build levels
-	for my $level (1..$#platform_parts) {
+	for my $level (1..($#platform_parts - 1)) {
 		my $nodes_number = $platform_parts[$level];
 
 		for my $node_number (0..($nodes_number - 1)) {
@@ -217,12 +218,12 @@ sub build_platform_xml {
 	}
 
 	# Clusters
-	for my $cluster (0..($platform_parts[$#platform_parts] - 1)) {
+	for my $cluster (0..($platform_parts[$#platform_parts - 1] - 1)) {
 		push @{$xml->{platform}{AS}{cluster}}, {
 			id => "C-$cluster",
 			prefix => "",
 			suffix => "",
-			radical => ($cluster * 16) . '-' . (($cluster + 1) * 16 - 1),
+			radical => ($cluster * $cluster_size) . '-' . (($cluster + 1) * $cluster_size - 1),
 			power => "286.087kf",
 			bw => "125MBps",
 			lat => "24us",
@@ -239,7 +240,7 @@ sub build_platform_xml {
 			src => "C-$cluster",
 			gw_src => "R-$cluster",
 			dst => "AS_Tree",
-			gw_dst => "R-$#platform_parts-$cluster",
+			gw_dst => 'R-' . ($#platform_parts - 1) . "-$cluster",
 			link_ctn => {id => "L-$cluster"},
 		}
 	}
@@ -264,7 +265,6 @@ sub save_hostfile {
 	my $filename = shift;
 
 	open(my $file, '>', $filename);
-
 	print $file join("\n", @{$cpus}) . "\n";
 
 	return;
