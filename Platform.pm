@@ -172,9 +172,9 @@ sub _min_distance {
 # This code will be used to generate platform files and host files to be used
 # with SMPI initially.
 sub build_platform_xml {
-	my $levels = shift;
+	my $self = shift;
 
-	my @platform_parts = split('-', $levels);
+	my @platform_parts = @{$self->{levels}};
 	my $xml = XML::Smart->new();
 
 	$xml->{platform} = {version => 3};
@@ -244,6 +244,30 @@ sub build_platform_xml {
 		}
 	}
 
-	return "<?xml version=\'1.0\'?>\n" . "<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">\n" . $xml->data(noheader => 1, nometagen => 1);
+	$self->{xml} = $xml;
+	return;
 }
+
+sub save_platform_xml {
+	my $self = shift;
+	my $filename = shift;
+
+	open(my $file, '>', $filename);
+
+	print $file "<?xml version=\'1.0\'?>\n" . "<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">\n" . $self->{xml}->data(noheader => 1, nometagen => 1);
+
+	return;
+}
+
+sub save_hostfile {
+	my $cpus = shift;
+	my $filename = shift;
+
+	open(my $file, '>', $filename);
+
+	print $file join("\n", @{$cpus}) . "\n";
+
+	return;
+}
+
 1;
