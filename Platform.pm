@@ -270,4 +270,11 @@ sub save_hostfile {
 	return;
 }
 
+sub generate_all_combinations {
+	my $self = shift;
+	my $requested_cpus = shift;
+
+	return $self->_combinations($self->{root}, $requested_cpus, 0);
+}
+
 1;
