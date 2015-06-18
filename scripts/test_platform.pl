@@ -12,10 +12,10 @@ Log::Log4perl::init('log4perl.conf');
 
 my $logger = get_logger('test');
 
-my @levels = (1, 2, 4, 32);
+my @levels = (1, 2, 6, 96);
 my @available_cpus = (0..($levels[$#levels] - 1));
 
-my $removed_cpus_number = 16;
+my $removed_cpus_number = 0;
 my $required_cpus = 8;
 
 for my $i (0..($removed_cpus_number - 1)) {

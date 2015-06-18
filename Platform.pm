@@ -183,7 +183,7 @@ sub build_platform_xml {
 	# Root system
 	$xml->{platform}{AS} = {
 		id => "AS_Root",
-		routing => "Full",
+		routing => "Floyd",
 	};
 
 	# Tree system
