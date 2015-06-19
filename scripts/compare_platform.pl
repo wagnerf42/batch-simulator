@@ -3,54 +3,36 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
-use Time::HiRes qw(time);
-use Algorithm::Permute;
 use Data::Dumper;
 use threads;
 use Thread::Queue;
+use threads::shared;
 
 use Platform;
 
 Log::Log4perl::init('log4perl.conf');
-
 my $logger = get_logger('test');
 
-my @levels = (1, 2, 4, 32);
-my @available_cpus = (0..($levels[$#levels] - 1));
 my @benchmarks = ('benchmarks/cg.B.8', 'benchmarks/ft.B.8', 'benchmarks/lu.B.8');
 my $execution_id = 1;
-my $removed_cpus_number = 24;
 my $required_cpus = 8;
-my $threads_number = 1;
+my $threads_number = 6;
+my $permutations_file_name = '/tmp/permutations';
+my $target_permutations_number = 10;
 
-for my $i (0..($removed_cpus_number - 1)) {
-	my $position = int(rand($levels[$#levels] - 1 - $i));
-	splice(@available_cpus, $position, 1);
+my $results = [];
+share($results);
+
+open(my $file, '<', $permutations_file_name);
+my @permutations;
+while (defined(my $permutation = <$file>)) {
+	chomp($permutation);
+	push @permutations, $permutation;
 }
-
-# Put everything in the log file
-$logger->info("platform: @levels");
-$logger->info("available cpus: @available_cpus");
-$logger->info("removed cpus: $removed_cpus_number");
-$logger->info("required cpus: $required_cpus");
-
-my $platform = Platform->new(\@levels, \@available_cpus, 1);
-$platform->build_structure();
-$platform->build_platform_xml();
-$platform->save_platform_xml('platform.xml');
-
-my $iterator = Algorithm::Permute->new(\@available_cpus);
-my $permutation_number = 0;
 
 $logger->info("creating queue\n");
 my $q = Thread::Queue->new();
-while (my @permutation = $iterator->next()) {
-	$logger->info("permutation $permutation_number: @permutation");
-	$q->enqueue($permutation_number);
-
-	$permutation_number++;
-	last if ($permutation_number == 3);
-}
+$q->enqueue([$_, int rand($#permutations)]) for (0..($target_permutations_number - 1));
 $q->end();
 
 $logger->info("creating threads");
@@ -58,6 +40,38 @@ my @threads = map { threads->create(\&run_instance, $_) } (0..($threads_number -
 
 $logger->debug("waiting for threads to finish");
 $_->join() for (@threads);
+
+write_results();
+
+sub run_instance {
+	my $id = shift;
+
+	my $hosts_file_name = "/tmp/hosts-$id";
+	my $logger = get_logger('compare_platform::run_instance');
+
+	while (defined(my $instance = $q->dequeue_nb())) {
+		my ($instance_number, $position) = @{$instance};
+		my @permutation_parts = split('-', $permutations[$position]);
+		write_host_file(\@permutation_parts, $hosts_file_name);
+
+		my $results_instance = [];
+		share($results_instance);
+
+		$logger->info("thread $id runing $instance_number");
+
+		for my $benchmark_number (0..$#benchmarks) {
+			my $result = `./smpireplay.sh $required_cpus $hosts_file_name $benchmarks[$benchmark_number]`;
+			my ($simulation_time) = ($result =~ /Simulation time (\d*\.\d*)/);
+			$results_instance->[$benchmark_number] = $simulation_time;
+		}
+
+		$results_instance->[$#benchmarks + 1] = $position;
+		$results->[$instance_number] = $results_instance;
+	}
+
+	unlink($hosts_file_name);
+	return;
+}
 
 sub write_host_file {
 	my $permutation = shift;
@@ -69,33 +83,21 @@ sub write_host_file {
 	return;
 }
 
-sub run_instance {
-	my $id = shift;
-
-	my $hostfile = "permutation-$id";
-	my $filename = "compare_platform-$execution_id-$id.log";
-
-	open(my $file, '>', $filename);
-
-	while (defined(my $instance = $q->dequeue_nb())) {
-		#write_host_file($instance, $hostfile);
-
-		continue;
-
-		for my $benchmark (@benchmarks) {
-			print "permutation @{$instance} $benchmark\n" ;
-			my $result = `echo ./smpireplay.sh $required_cpus $hostfile $benchmark`;
-			print $file $result;
-		}
-	}
-
-	#unlink($hostfile);
-
-	return;
+sub get_log_file {
+	return "compare_platform.log";
 }
 
-sub get_log_file {
-	return "compare_platform-$execution_id.log";
+sub write_results {
+	open(my $file, '>', "compare_platform-$execution_id.csv");
+	print $file "PERMUTATION " . join(' ' , @benchmarks) . "\n";
+
+	for my $permutation_number (0..($target_permutations_number - 1)) {
+		my @results_temp = @{$results->[$permutation_number]}[0..$#benchmarks];
+		my $position = $results->[$permutation_number]->[$#benchmarks + 1];
+		print $file join(' ', $permutations[$position], @results_temp) . "\n";
+	}
+
+	return;
 }
 
 
