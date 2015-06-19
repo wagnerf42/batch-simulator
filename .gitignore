@@ -4,3 +4,4 @@ log4perl.conf
 experiment
 batch-simulator.log
 *.out
+*.swp
