@@ -1,9 +1,10 @@
 #!/bin/sh
 CPUS=$1
-HOSTFILE=$2
-BENCHMARK=$3
+PLATFORMFILE=$2
+HOSTFILE=$3
+BENCHMARK=$4
 
-smpirun -np $CPUS -platform platform.xml -hostfile $HOSTFILE \
+smpirun -np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
 	--cfg=smpi/privatize_global_variables:yes \
 	--cfg=smpi/running_power:120Gf \
 	--cfg=smpi/display_timing:1 \
