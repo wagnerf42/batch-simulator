@@ -15,10 +15,10 @@ my $logger = get_logger('test');
 
 my @levels = (1, 2, 4, 8);
 my @available_cpus = (0..($levels[$#levels] - 1));
-my $removed_cpus_number = 24;
+my $removed_cpus_number = 0;
 my $required_cpus = 8;
-my $permutations_file_name = "/tmp/permutations";
-my $execution_id = 1;
+my $permutations_file_name = "permutations";
+my $execution_id = 3;
 
 for my $i (0..($removed_cpus_number - 1)) {
 	my $position = int(rand($levels[$#levels] - 1 - $i));
