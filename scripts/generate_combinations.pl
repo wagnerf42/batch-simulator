@@ -15,8 +15,7 @@ my $logger = get_logger('test');
 
 my @levels = (1, 2, 4, 8);
 #my @available_cpus = (0..($levels[$#levels] - 1));
-my @available_cpus = (0, 1, 2, 3, 4, 5, 6, 7);
-#my $removed_cpus_number = 24;
+my @available_cpus = (0, 1, 2, 4, 5);
 my $required_cpus = 4;
 my $permutations_file_name = "permutations";
 
@@ -25,12 +24,8 @@ $logger->info("platform: @levels");
 $logger->info("available cpus: @available_cpus");
 $logger->info("required cpus: $required_cpus");
 
-my $platform = Platform->new(\@levels, \@available_cpus, 1);
-$platform->build_structure();
-$platform->build_platform_xml();
-$platform->save_platform_xml('platform.xml');
-
 my @combinations = generate_combinations();
+print Dumper(@combinations);
 save_permutations();
 
 sub generate_combinations {
