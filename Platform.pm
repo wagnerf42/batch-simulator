@@ -205,8 +205,8 @@ sub build_platform_xml {
 			my $father_node = int $node_number/($platform_parts[$level]/$platform_parts[$level - 1]);
 			push @{$xml->{platform}{AS}{AS}{link}}, {
 				id => "L-$level-$node_number",
-				bandwidth => "1GBps",
-				latency => "24us",
+				bandwidth => "1.24E9",
+				latency => "1.0E-4",
 			};
 
 			push @{$xml->{platform}{AS}{AS}{route}}, {
@@ -225,15 +225,15 @@ sub build_platform_xml {
 			suffix => "",
 			radical => ($cluster * $cluster_size) . '-' . (($cluster + 1) * $cluster_size - 1),
 			power => "120Gf",
-			bw => "1GBps",
-			lat => "24us",
+			bw => "1.25E9",
+			lat => "1.0E-4",
 			router_id => "R-$cluster",
 		};
 
 		push @{$xml->{platform}{AS}{link}}, {
 			id => "L-$cluster",
-			bandwidth => "1GBps",
-			latency => "24us",
+			bandwidth => "1.25E9",
+			latency => "1.0E-4",
 		};
 
 		push @{$xml->{platform}{AS}{ASroute}}, {
