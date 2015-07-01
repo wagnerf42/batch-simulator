@@ -16,7 +16,7 @@ my @levels = (1, 2, 4, 16);
 #my @available_cpus = (0..($levels[$#levels] - 1));
 my @available_cpus = (0, 1, 2, 4, 5);
 my $required_cpus = 4;
-my $permutations_file_name = "permutations";
+my $combinations_file_name = "permutations";
 
 # Put everything in the log file
 $logger->info("platform: @levels");
@@ -24,13 +24,12 @@ $logger->info("available cpus: @available_cpus");
 $logger->info("required cpus: $required_cpus");
 
 my @combinations = generate_unique_combinations(8, 0, $levels[-1]/$levels[-2]);
+save_combinations();
 
 sub generate_unique_combinations {
 	my $required_cpus = shift;
 	my $start_cluster = shift;
 	my $maximum_size = shift;
-
-	print "generate($required_cpus, $start_cluster, $maximum_size)\n";
 
 	my $cluster_size = $levels[-1]/$levels[-2];
 	my $remaining_size = ($levels[-2] - $start_cluster) * $cluster_size;
@@ -53,14 +52,11 @@ sub generate_unique_combinations {
 	return @combinations;
 }
 
-sub save_permutations {
-	open(my $file, '>', $permutations_file_name);
+sub save_combinations {
+	open(my $file, '>', $combinations_file_name);
 
 	for my $combination (@combinations) {
-		my $iterator = Algorithm::Permute->new($combination);
-		while (my @permutation = $iterator->next()) {
-			print $file join('-', @permutation) . "\n";
-		}
+		print $file "$combination\n";
 	}
 }
 
