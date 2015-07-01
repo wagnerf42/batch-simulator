@@ -183,7 +183,7 @@ sub build_platform_xml {
 	# Root system
 	$xml->{platform}{AS} = {
 		id => "AS_Root",
-		routing => "Full",
+		routing => "Floyd",
 	};
 
 	# Tree system
@@ -205,7 +205,7 @@ sub build_platform_xml {
 			my $father_node = int $node_number/($platform_parts[$level]/$platform_parts[$level - 1]);
 			push @{$xml->{platform}{AS}{AS}{link}}, {
 				id => "L-$level-$node_number",
-				bandwidth => "1.25GBps",
+				bandwidth => "1GBps",
 				latency => "24us",
 			};
 
@@ -224,15 +224,15 @@ sub build_platform_xml {
 			prefix => "",
 			suffix => "",
 			radical => ($cluster * $cluster_size) . '-' . (($cluster + 1) * $cluster_size - 1),
-			power => "286.087kf",
-			bw => "125MBps",
+			power => "120Gf",
+			bw => "1GBps",
 			lat => "24us",
 			router_id => "R-$cluster",
 		};
 
 		push @{$xml->{platform}{AS}{link}}, {
 			id => "L-$cluster",
-			bandwidth => "1.25GBps",
+			bandwidth => "1GBps",
 			latency => "24us",
 		};
 
@@ -268,6 +268,13 @@ sub save_hostfile {
 	print $file join("\n", @{$cpus}) . "\n";
 
 	return;
+}
+
+sub generate_all_combinations {
+	my $self = shift;
+	my $requested_cpus = shift;
+
+	return $self->_combinations($self->{root}, $requested_cpus, 0);
 }
 
 1;

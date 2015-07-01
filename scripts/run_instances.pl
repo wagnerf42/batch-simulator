@@ -17,7 +17,7 @@ my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my $schedule_script = 'scripts/run_schedule.pl';
 my $experiment_path = 'experiment/run_instances';
 my $database_file = 'experiment/parser.db';
-my $instances = 512;
+my $instances = 6;
 my $jobs_number = 300;
 my $cpus_number = 512;
 my $cluster_size = 16;
@@ -178,6 +178,10 @@ sub catch_signal {
 	print STDERR "Received SIG$signame signal\n";
 	$_->kill('INT')->detach() for @threads;
 	return;
+}
+
+sub get_log_file {
+	return 'log4perl.log';
 }
 
 
