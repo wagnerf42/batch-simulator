@@ -12,7 +12,7 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my @levels = (1,3,6,12);
+my @levels = (1,2,4,8,16);
 my @available_cpus = (0..($levels[$#levels] - 1));
 #my @available_cpus = (0, 1, 2, 4, 5);
 my $required_cpus = 8;
@@ -24,7 +24,7 @@ $logger->info("platform: @levels");
 $logger->info("available cpus: @available_cpus");
 $logger->info("required cpus: $required_cpus");
 
-my @combinations = generate_unique_combinations(2, 0);
+my @combinations = generate_unique_combinations(6, 0);
 print Dumper(@combinations);
 die;
 save_combinations();
@@ -34,6 +34,13 @@ sub generate_unique_combinations {
 	my $level = shift;
 
 	return "$required_cpus" if ($level == $#levels - 1);
+
+	unless ($required_cpus) {
+		my $level_size = $levels[-1]/$levels[$level];
+		my $cluster_size = $levels[-1]/$levels[-2];
+		my $clusters_number = $level_size/$cluster_size;
+		return join('-', ('0') x $clusters_number);
+	}
 
 	my @next_combinations = next_combinations($required_cpus, $level + 1, 0, $required_cpus);
 	my @combinations;
@@ -77,15 +84,18 @@ sub next_combinations {
 	return if ($node_number >= $levels[$level]);
 
 	my @combinations;
-	my $total_level_size = $levels[-1]/$levels[$level];
+	my $level_size = $levels[-1]/$levels[$level];
+	my $level_arity = $levels[$level]/$levels[$level - 1];
 
-	for (my $cpus_number = min($total_level_size, $maximum_cpus); $cpus_number >= 1; $cpus_number--) {
+	for (my $cpus_number = min($level_size, $maximum_cpus); $cpus_number >= 1; $cpus_number--) {
 		if ($required_cpus - $cpus_number) {
+			my $remaining_level_size = ($level_arity - $node_number - 1) * $level_size;
+			last if ($remaining_level_size < $required_cpus - $cpus_number);
+
 			my @next_combinations = next_combinations($required_cpus - $cpus_number, $level, $node_number + 1, $cpus_number);
 			push @combinations, join('-', $cpus_number, $_) for (@next_combinations);
-
 		} else {
-			push @combinations, "$cpus_number";
+			push @combinations, join('-', "$cpus_number", ('0') x (($levels[$level]/$levels[$level - 1]) - $node_number - 1));
 		}
 	}
 	return @combinations;
