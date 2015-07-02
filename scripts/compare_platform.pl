@@ -15,7 +15,7 @@ my $logger = get_logger('test');
 
 my @benchmarks = ('benchmarks/cg.B.8', 'benchmarks/ft.B.8', 'benchmarks/lu.B.8');
 my @benchmarks_strings = ('cg.B.8', 'ft.B.8', 'lu.B.8');
-my $execution_id = 12;
+my $execution_id = 13;
 my $required_cpus = 8;
 my $threads_number = 6;
 my $base_path = "experiment/combinations/combinations-$execution_id";

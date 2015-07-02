@@ -12,7 +12,7 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my @levels = (1,2,4,8,16);
+my @levels = (1,2,4,8,64);
 my @available_cpus = (0..($levels[$#levels] - 1));
 #my @available_cpus = (0, 1, 2, 4, 5);
 my $required_cpus = 8;
@@ -24,9 +24,7 @@ $logger->info("platform: @levels");
 $logger->info("available cpus: @available_cpus");
 $logger->info("required cpus: $required_cpus");
 
-my @combinations = generate_unique_combinations(6, 0);
-print Dumper(@combinations);
-die;
+my @combinations = generate_unique_combinations($required_cpus, 0);
 save_combinations();
 
 sub generate_unique_combinations {
