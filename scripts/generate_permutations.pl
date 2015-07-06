@@ -26,7 +26,7 @@ while (my @permutation = $iterator->next()) {
 }
 
 sub get_log_file {
-	return "generate_permutations.log";
+	return "log/generate_permutations.log";
 }
 
 

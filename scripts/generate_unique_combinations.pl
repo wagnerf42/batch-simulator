@@ -12,10 +12,10 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my @levels = (1,2,4,8,64);
+my @levels = (1,2,4,16);
 my @available_cpus = (0..($levels[$#levels] - 1));
 #my @available_cpus = (0, 1, 2, 4, 5);
-my $required_cpus = 8;
+my $required_cpus = 4;
 my $combinations_file_name = "permutations";
 my $cluster_size = $levels[-1]/$levels[-2];
 
@@ -25,6 +25,7 @@ $logger->info("available cpus: @available_cpus");
 $logger->info("required cpus: $required_cpus");
 
 my @combinations = generate_unique_combinations($required_cpus, 0);
+print "@combinations\n";
 save_combinations();
 
 sub generate_unique_combinations {
@@ -117,7 +118,7 @@ sub save_combinations {
 }
 
 sub get_log_file {
-	return "log/generate_combinations.log";
+	return "log/generate_unique_combinations.log";
 }
 
 

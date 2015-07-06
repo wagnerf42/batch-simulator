@@ -15,8 +15,8 @@ Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
 my @levels = (1, 2, 4, 16);
-#my @available_cpus = (0..($levels[$#levels] - 1));
-my @available_cpus = (0, 1, 2, 4, 5);
+my @available_cpus = (0..($levels[$#levels] - 1));
+#my @available_cpus = (0, 1, 2, 4, 5);
 my $required_cpus = 4;
 my $permutations_file_name = "permutations";
 
@@ -26,7 +26,6 @@ $logger->info("available cpus: @available_cpus");
 $logger->info("required cpus: $required_cpus");
 
 my @combinations = generate_combinations();
-print Dumper(@combinations);
 save_permutations();
 
 sub generate_combinations {

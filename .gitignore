@@ -5,3 +5,5 @@ experiment
 batch-simulator.log
 *.out
 *.swp
+log
+tmp*

@@ -13,20 +13,28 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my @benchmarks = ('benchmarks/cg.B.8', 'benchmarks/ft.B.8', 'benchmarks/lu.B.8');
-my @benchmarks_strings = ('cg.B.8', 'ft.B.8', 'lu.B.8');
-my $execution_id = 13;
-my $required_cpus = 8;
+my $execution_id = 15;
+my $required_cpus = 4;
 my $threads_number = 6;
+my $benchmark_class = 'B';
+my @included_benchmarks = ('cg', 'ft', 'lu');
+my @benchmarks = map {"benchmarks/$_.$benchmark_class.$required_cpus"} (@included_benchmarks);
+my @benchmarks_strings = map {"$_.$benchmark_class.$required_cpus"} (@included_benchmarks);
 my $base_path = "experiment/combinations/combinations-$execution_id";
 my $platform_file = "$base_path/platform.xml";
 my $permutations_file = "$base_path/permutations";
+my $results_file = "$base_path/compare_platform-$execution_id.csv";
 #my $target_permutations_number = 10;
+
+$logger->info("running execution id $execution_id, $required_cpus required cpus, $threads_number threads");
+
+# Refuse to start if the results file already exists
+$logger->logdie("results file already exists at $results_file") if -e $results_file;
 
 my $results = [];
 share($results);
 
-open(my $file, '<', $permutations_file);
+open(my $file, '<', $permutations_file) or $logger->logdie("permutation file doesn't exist at $permutations_file");
 my @permutations;
 while (defined(my $permutation = <$file>)) {
 	chomp($permutation);
@@ -89,7 +97,7 @@ sub get_log_file {
 }
 
 sub write_results {
-	open(my $file, '>', "$base_path/compare_platform-$execution_id.csv");
+	open(my $file, '>', $results_file);
 	print $file "PERMUTATION " . join(' ' , @benchmarks_strings) . "\n";
 
 	for my $permutation_number (0..$#permutations) {
