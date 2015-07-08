@@ -10,7 +10,7 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my @levels = (1, 2, 4, 16);
+my @levels = (1, 2, 4, 8, 64);
 my @available_cpus = (0..($levels[-1] - 1));
 
 # Put everything in the log file

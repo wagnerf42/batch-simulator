@@ -13,15 +13,18 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my $execution_id = 19;
-my $required_cpus = 4;
+my $execution_id = 21;
+my $required_cpus = 8;
 my $threads_number = 6;
-#my $benchmark_class = 'B';
-#my @included_benchmarks = ('cg', 'ft', 'lu', 'ep', 'mg');
-#my @benchmarks = map {"benchmarks/$_.$benchmark_class.$required_cpus"} (@included_benchmarks);
-#my @benchmarks_strings = map {"$_.$benchmark_class.$required_cpus"} (@included_benchmarks);
-my $benchmarks_path = 'collective';
-my @benchmarks =  ('osu_allreduce', 'osu_alltoallv', 'osu_scatter', 'osu_allgather', 'osu_gather', 'osu_reduce_scatter', 'osu_allgatherv', 'osu_barrier', 'osu_reduce', 'osu_bcast', 'osu_alltoall');
+
+my $benchmark_class = 'B';
+my $benchmarks_path = 'benchmarks';
+my @included_benchmarks = ('cg', 'ft', 'lu', 'ep', 'mg');
+my @benchmarks = map {"$_.$benchmark_class.$required_cpus"} (@included_benchmarks);
+
+#my $benchmarks_path = 'collective';
+#my @benchmarks =  ('osu_allreduce', 'osu_alltoallv', 'osu_scatter', 'osu_allgather', 'osu_gather', 'osu_reduce_scatter', 'osu_allgatherv', 'osu_barrier', 'osu_reduce', 'osu_bcast', 'osu_alltoall');
+
 my $base_path = "experiment/combinations/combinations-$execution_id";
 my $platform_file = "$base_path/platform.xml";
 my $permutations_file = "$base_path/permutations";
