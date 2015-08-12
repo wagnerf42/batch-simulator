@@ -11,19 +11,25 @@ use threads::shared;
 use Platform;
 
 Log::Log4perl::init('log4perl.conf');
-my $logger = get_logger('test');
+my $logger = get_logger('compare_platform');
 
-my $execution_id = 21;
+my $execution_id = 28;
 my $required_cpus = 8;
 my $threads_number = 6;
 
 my $benchmark_class = 'B';
 my $benchmarks_path = 'benchmarks';
-my @included_benchmarks = ('cg', 'ft', 'lu', 'ep', 'mg');
+my @included_benchmarks = ('cg', 'lu');
 my @benchmarks = map {"$_.$benchmark_class.$required_cpus"} (@included_benchmarks);
 
 #my $benchmarks_path = 'collective';
 #my @benchmarks =  ('osu_allreduce', 'osu_alltoallv', 'osu_scatter', 'osu_allgather', 'osu_gather', 'osu_reduce_scatter', 'osu_allgatherv', 'osu_barrier', 'osu_reduce', 'osu_bcast', 'osu_alltoall');
+
+#my $benchmarks_path = '.';
+#my @benchmarks = ('osu_latency_4');
+
+#my $benchmarks_path = 'mpi-benchmarks';
+#my @benchmarks = ('osu_bw');
 
 my $base_path = "experiment/combinations/combinations-$execution_id";
 my $platform_file = "$base_path/platform.xml";
