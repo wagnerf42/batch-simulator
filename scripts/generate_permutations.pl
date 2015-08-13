@@ -26,7 +26,7 @@ for my $permutation (@all_permutations) {
 	}
 }
 
-print Dumper(@final_permutations);
+print join("\n", @final_permutations);
 
 sub equivalent_permutations {
 	my $permutation = shift;
