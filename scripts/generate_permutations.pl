@@ -12,14 +12,19 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('generate_permutations');
 
+my $cluster_size = 2;
+my @permutations;
+
 while (<>) {
 	chomp;
 	my @cpus = split('-', $_);
 	my $iterator = Algorithm::Permute->new(\@cpus);
 	while (my @permutation = $iterator->next()) {
-		print join('-', @permutation) . "\n";
+		push @permutations, \@permutation;
 	}
 }
+
+print Dumper(@permutations);
 
 sub get_log_file {
 	return "log/generate_permutations.log";
