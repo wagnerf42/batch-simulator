@@ -13,7 +13,7 @@ Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('generate_permutations');
 
 my ($cluster_size, $permutation) = @ARGV;
-my @cpus = split('-', $permutation);
+my @cpus = reverse split('-', $permutation);
 my @all_permutations = permutations(\@cpus);
 my @duplicated_permutations;
 my @final_permutations;
