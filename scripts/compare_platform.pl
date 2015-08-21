@@ -13,34 +13,44 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('compare_platform');
 
-my $execution_id = 29;
+my $execution_id = 38;
 my $required_cpus = 8;
 my $threads_number = 6;
 
-my $benchmark_class = 'B';
-my $benchmarks_path = 'benchmarks';
-my @included_benchmarks = ('cg', 'lu');
-my @benchmarks = map {"$_.$benchmark_class.$required_cpus"} (@included_benchmarks);
+my @benchmarks;
 
-#my $benchmarks_path = 'collective';
-#my @benchmarks =  ('osu_allreduce', 'osu_alltoallv', 'osu_scatter', 'osu_allgather', 'osu_gather', 'osu_reduce_scatter', 'osu_allgatherv', 'osu_barrier', 'osu_reduce', 'osu_bcast', 'osu_alltoall');
+my $nasa_benchmark_class = 'B';
+my $nasa_benchmarks_path = 'benchmarks';
+my @nasa_included_benchmarks = ('cg', 'lu');
+push @benchmarks, map {"$nasa_benchmarks_path/$_.$nasa_benchmark_class.$required_cpus"} (@nasa_included_benchmarks);
 
-#my $benchmarks_path = '.';
-#my @benchmarks = ('osu_latency_4');
+my $new_benchmarks_path = 'new_benchmarks';
+my @new_included_benchmarks = ('pairs', 'neighbour', 'circular');
+push @benchmarks, map {"$new_benchmarks_path/$_"} (@new_included_benchmarks);
 
-#my $benchmarks_path = 'mpi-benchmarks';
-#my @benchmarks = ('osu_bw');
+my $collective_benchmarks_path = 'collective';
+my @collective_included_benchmarks =  ('osu_allreduce', 'osu_alltoallv', 'osu_scatter', 'osu_allgather', 'osu_gather', 'osu_reduce_scatter', 'osu_allgatherv', 'osu_barrier', 'osu_reduce', 'osu_bcast', 'osu_alltoall');
+#push @benchmarks, map {"$collective_benchmarks_path/$_"} (@collective_included_benchmarks);
+
+my $mpi_benchmarks_path = 'mpi-benchmarks';
+my @mpi_benchmarks_included_benchmarks = ('osu_bw');
+#push @benchmarks, map {"$mpi_benchmarks_path/$_"} (@mpi_benchmarks_included_benchmarks);
 
 my $base_path = "experiment/combinations/combinations-$execution_id";
 my $platform_file = "$base_path/platform.xml";
 my $permutations_file = "$base_path/permutations";
 my $results_file = "$base_path/compare_platform-$execution_id.csv";
-#my $target_permutations_number = 10;
 
 $logger->info("running execution id $execution_id, $required_cpus required cpus, $threads_number threads");
+$logger->info("running benchmarks: @benchmarks");
+
+# Refuse to start if the directory or one of the files doesn't exist
+$logger->logdie("experiment directory doesn't exist at $base_path") unless (-d $base_path);
+$logger->logdie("platform file doesn't exist at $platform_file") unless (-e $platform_file);
+$logger->logdie("permutations file doesn't exist at $permutations_file") unless (-e $permutations_file);
 
 # Refuse to start if the results file already exists
-$logger->logdie("results file already exists at $results_file") if -e $results_file;
+$logger->logdie("results file already exists at $results_file") if (-e $results_file);
 
 my $results = [];
 share($results);
@@ -81,7 +91,7 @@ sub run_instance {
 		$logger->info("thread $id runing $instance");
 
 		for my $benchmark_number (0..$#benchmarks) {
-			my $result = `./smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks_path/$benchmarks[$benchmark_number]`;
+			my $result = `./smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]`;
 			my ($simulation_time) = ($result =~ /Simulation time (\d*\.\d*)/);
 			$results_instance->[$benchmark_number] = $simulation_time;
 		}
