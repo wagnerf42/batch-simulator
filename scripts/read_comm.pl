@@ -30,5 +30,4 @@ while (my $line = <$file>) {
 	}
 }
 
-print "$source bcast $comm{'bcast'}\n";
-print "$source send (" . join(',', @{$comm{'send'}}) . ")\n";
+print "$source," . join(',', @{$comm{'send'}}) . "\n";

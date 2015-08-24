@@ -13,7 +13,7 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('compare_platform');
 
-my $execution_id = 39;
+my $execution_id = 40;
 my $required_cpus = 8;
 my $threads_number = 6;
 
@@ -21,12 +21,12 @@ my @benchmarks;
 
 my $nasa_benchmark_class = 'B';
 my $nasa_benchmarks_path = 'benchmarks';
-my @nasa_included_benchmarks = ('cg', 'lu');
+my @nasa_included_benchmarks = ('ft');
 push @benchmarks, map {"$nasa_benchmarks_path/$_.$nasa_benchmark_class.$required_cpus"} (@nasa_included_benchmarks);
 
 my $new_benchmarks_path = 'new_benchmarks';
 my @new_included_benchmarks = ('pairs', 'neighbour', 'circular');
-push @benchmarks, map {"$new_benchmarks_path/$_"} (@new_included_benchmarks);
+#push @benchmarks, map {"$new_benchmarks_path/$_"} (@new_included_benchmarks);
 
 my $collective_benchmarks_path = 'collective';
 my @collective_included_benchmarks =  ('osu_allreduce', 'osu_alltoallv', 'osu_scatter', 'osu_allgather', 'osu_gather', 'osu_reduce_scatter', 'osu_allgatherv', 'osu_barrier', 'osu_reduce', 'osu_bcast', 'osu_alltoall');
