@@ -13,7 +13,7 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('compare_platform');
 
-my $execution_id = 40;
+my $execution_id = 41;
 my $required_cpus = 8;
 my $threads_number = 6;
 
@@ -21,7 +21,7 @@ my @benchmarks;
 
 my $nasa_benchmark_class = 'B';
 my $nasa_benchmarks_path = 'benchmarks';
-my @nasa_included_benchmarks = ('ft');
+my @nasa_included_benchmarks = ('cg', 'lu', 'ft');
 push @benchmarks, map {"$nasa_benchmarks_path/$_.$nasa_benchmark_class.$required_cpus"} (@nasa_included_benchmarks);
 
 my $new_benchmarks_path = 'new_benchmarks';
