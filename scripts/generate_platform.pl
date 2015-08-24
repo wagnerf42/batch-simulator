@@ -22,7 +22,7 @@ $platform->build_platform_xml();
 $platform->save_platform_xml('platform.xml');
 
 sub get_log_file {
-	return "generate_platform.log";
+	return "log/generate_platform.log";
 }
 
 

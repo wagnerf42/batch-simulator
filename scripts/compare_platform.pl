@@ -13,7 +13,7 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('compare_platform');
 
-my $execution_id = 38;
+my $execution_id = 39;
 my $required_cpus = 8;
 my $threads_number = 6;
 
@@ -91,7 +91,7 @@ sub run_instance {
 		$logger->info("thread $id runing $instance");
 
 		for my $benchmark_number (0..$#benchmarks) {
-			my $result = `./smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]`;
+			my $result = `./scripts/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]`;
 			my ($simulation_time) = ($result =~ /Simulation time (\d*\.\d*)/);
 			$results_instance->[$benchmark_number] = $simulation_time;
 		}
