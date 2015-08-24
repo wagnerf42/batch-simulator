@@ -7,12 +7,12 @@ use POSIX qw(floor);
 my @permutations;
 my @times;
 
-my $cluster_size = 4;
+my $cluster_size = $ARGV[1];
 
 open(my $file, '<', "$ARGV[0]") or die "missing experiment file";
 <$file>;
 while (my $line = <$file>) {
-	my ($permutation, $time) = split(';', $line);
+	my ($permutation, $time) = split(' ', $line);
 	push @permutations, $permutation;
 	push @times, $time;
 }

@@ -6,6 +6,7 @@ use Algorithm::Permute;
 use Algorithm::Combinatorics qw(combinations);
 use Data::Dumper;
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
+use POSIX qw(floor);
 
 use Platform;
 
@@ -15,39 +16,19 @@ my $logger = get_logger('generate_permutations');
 my ($cluster_size, $permutation) = @ARGV;
 my @cpus = reverse split('-', $permutation);
 my @all_permutations = permutations(\@cpus);
-my @duplicated_permutations;
+my %seen_signatures;
 my @final_permutations;
 
 for my $permutation (@all_permutations) {
-	unless (grep { $_ eq $permutation } @duplicated_permutations) {
-		my @equivalent_permutations = equivalent_permutations($permutation);
-		push @duplicated_permutations, @equivalent_permutations;
+	my $permutation_signature = compute_permutation_signature($permutation);
+
+	unless (exists $seen_signatures{$permutation_signature}) {
+		$seen_signatures{$permutation_signature} = $permutation;
 		push @final_permutations, $permutation;
 	}
 }
 
 print join("\n", @final_permutations);
-
-sub equivalent_permutations {
-	my $permutation = shift;
-
-	my @permutation_cpus = split('-', $permutation);
-	my $permutation_size = scalar @permutation_cpus;
-	my $clusters_number = $permutation_size/$cluster_size;
-	my @combined_permutations;
-
-	for my $cluster (0..($clusters_number - 1)) {
-		my @cluster_cpus = @permutation_cpus[($cluster * $cluster_size)..(($cluster + 1) * $cluster_size - 1)];
-		my @cluster_permutations = permutations(\@cluster_cpus);
-		if (scalar @combined_permutations) {
-			@combined_permutations = combine_permutations(\@combined_permutations, \@cluster_permutations);
-		} else {
-			@combined_permutations = @cluster_permutations;
-		}
-	}
-
-	return @combined_permutations;
-}
 
 sub permutations {
 	my $elements = shift;
@@ -62,19 +43,29 @@ sub permutations {
 	return @permutations;
 }
 
-sub combine_permutations {
-	my $initial_permutations = shift;
-	my $additional_permutations = shift;
+sub compute_permutation_signature {
+	my $permutation = shift;
 
-	my @final_permutations;
+	my @processors = split('-', $permutation);
+	my $first_processor = shift @processors;
+	my $current_cluster = floor($first_processor/$cluster_size);
+	my $current_cpus = 1;
+	my @signature;
 
-	for my $initial_permutation (@$initial_permutations) {
-		for my $additional_permutation (@$additional_permutations) {
-			push @final_permutations, join('-', $initial_permutation, $additional_permutation);
+	push @processors, -1; #enforces last push
+
+	for my $processor (@processors) {
+		my $cluster = floor($processor/$cluster_size);
+
+		if ($current_cluster == $cluster) {
+			$current_cpus++;
+		} else {
+			push @signature, "$current_cluster($current_cpus)";
+			$current_cluster = $cluster;
+			$current_cpus = 1;
 		}
 	}
-
-	return @final_permutations;
+	return join('-', @signature);
 }
 
 sub get_log_file {
