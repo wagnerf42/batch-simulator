@@ -10,5 +10,5 @@ smpirun -ext smpi_replay \
 	--cfg=smpi/running_power:120Gf \
 	--cfg=smpi/display_timing:1 \
 	-np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
-	./smpi_replay $BENCHMARK.trace \
+	./smpi_replay $BENCHMARK-$CPUS.trace \
 	2>&1
