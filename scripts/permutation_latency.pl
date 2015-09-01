@@ -17,6 +17,7 @@ $logger->info("using cost file $cost_filename");
 $logger->info("using permutations file $permutations_filename");
 
 my @cost_matrix = read_cost();
+my @comm_matrix = read_comm_matrix();
 
 open(my $permutations_file, '<', $permutations_filename) or $logger->logdie("unable to open permutations file at $permutations_filename");
 
@@ -33,19 +34,32 @@ sub calculate_score {
 	my @permutation_parts = split('-', $permutation);
 	my $permutation_size = scalar @permutation_parts;
 
-	open(my $communication_file, '<', $communication_filename) or $logger->logdie("unable to open communication file at $communication_filename");
-
 	for my $cpu(0..($permutation_size - 1)) {
-		my $line = <$communication_file>;
-		chomp $line;
-		my @cpu_communication = split(',', $line);
+		# Cost of communication from this host
+		# MPI CPU $cpu is in host $permutation_parts[$cpu]
 		my @cpu_cost = @{$cost_matrix[$permutation_parts[$cpu]]};
+		my @cpu_communication = @{$comm_matrix[$cpu]};
+
 		for my $dst_cpu (0..($permutation_size - 1)) {
 			$communication_score += $cpu_cost[$permutation_parts[$dst_cpu]] * $cpu_communication[$dst_cpu];
 		}
 	}
 
 	return $communication_score;
+}
+
+sub read_comm_matrix {
+	my @comm_matrix;
+
+	open(my $communication_file, '<', $communication_filename) or $logger->logdie("unable to open communication file at $communication_filename");
+
+	while (my $line = <$communication_file>) {
+		chomp $line;
+		my @cpu_communication = split(' ', $line);
+		push @comm_matrix, [@cpu_communication];
+	}
+
+	return @comm_matrix;
 }
 
 sub read_cost {
