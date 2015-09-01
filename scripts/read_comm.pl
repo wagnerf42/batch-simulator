@@ -9,25 +9,20 @@ my ($input_file, $cpus_number) = @ARGV;
 
 open(my $file, '<', $input_file) or die ('unable to open file');
 
-my %comm = (
-	'bcast' => 0,
-	'send' => [(0) x $cpus_number],
-);
+my @sends_number;
 
-my $line = <$file>;
-my @line_fields = split(' ', $line);
-my $source = $line_fields[0];
-
-while (my $line = <$file>) {
-	my @fields = split(' ', $line);
-
-	next unless (defined $fields[1]);
-
-	if ($fields[1] eq 'bcast') {
-		$comm{'bcast'}++;
-	} elsif ($fields[1] eq 'send') {
-		$comm{'send'}->[$fields[2]]++;
-	}
+for my $cpu_number (0..($cpus_number - 1)) {
+	$sends_number[$cpu_number] = [(0) x $cpus_number];
 }
 
-print "$source," . join(',', @{$comm{'send'}}) . "\n";
+while (my $line = <$file>) {
+	chomp $line;
+	my @line_fields = split(' ', $line);
+	my ($source, $destination, $size) = @line_fields[4..6];
+	$sends_number[$source]->[$destination] += 1;
+}
+
+for my $cpu_number (0..($cpus_number - 1)) {
+	print join(' ', @{$sends_number[$cpu_number]}) . "\n";
+}
+
