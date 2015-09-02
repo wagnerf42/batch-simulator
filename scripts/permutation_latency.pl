@@ -4,6 +4,7 @@ use warnings;
 
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 use Data::Dumper;
+use List::Util qw(max sum);
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('compare_platform');
@@ -23,14 +24,14 @@ open(my $permutations_file, '<', $permutations_filename) or $logger->logdie("una
 
 while (my $permutation = <$permutations_file>) {
 	chomp($permutation);
-	my $communication_score = calculate_score($permutation);
-	print "$permutation $communication_score\n";
+	my ($max_score, $summ_score) = calculate_score($permutation);
+	print "$permutation $max_score $summ_score\n";
 }
 
 sub calculate_score {
 	my $permutation = shift;
 
-	my $communication_score = 0;
+	my @communication_score;
 	my @permutation_parts = split('-', $permutation);
 	my $permutation_size = scalar @permutation_parts;
 
@@ -40,12 +41,14 @@ sub calculate_score {
 		my @cpu_cost = @{$cost_matrix[$permutation_parts[$cpu]]};
 		my @cpu_communication = @{$comm_matrix[$cpu]};
 
+		$communication_score[$cpu] = 0;
+
 		for my $dst_cpu (0..($permutation_size - 1)) {
-			$communication_score += $cpu_cost[$permutation_parts[$dst_cpu]] * $cpu_communication[$dst_cpu];
+			$communication_score[$cpu] += $cpu_cost[$permutation_parts[$dst_cpu]] * $cpu_communication[$dst_cpu];
 		}
 	}
 
-	return $communication_score;
+	return (max(@communication_score), sum(@communication_score));
 }
 
 sub read_comm_matrix {
