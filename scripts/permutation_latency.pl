@@ -11,6 +11,8 @@ my $logger = get_logger('compare_platform');
 
 my ($communication_filename, $cost_filename, $permutations_filename) = @ARGV;
 
+my @alpha_values=(1, 0.75, 0.5, 0.25, 0);
+
 #open(my $communication_file, '<', $communication_filename) or $logger->logdie("unable to open communication file at $communication_file");
 
 $logger->info("using communication file $communication_filename");
@@ -24,8 +26,9 @@ open(my $permutations_file, '<', $permutations_filename) or $logger->logdie("una
 
 while (my $permutation = <$permutations_file>) {
 	chomp($permutation);
-	my ($max_score, $summ_score) = calculate_score($permutation);
-	print "$permutation $max_score $summ_score\n";
+	my ($max_score, $sum_score) = calculate_score($permutation);
+	my @combined_values = map {$_ * $max_score + (1 - $_) * $sum_score} (@alpha_values);
+	print "$permutation $max_score $sum_score " . join(' ', @combined_values) . "\n";
 }
 
 sub calculate_score {
