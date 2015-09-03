@@ -12,8 +12,7 @@ my $logger = get_logger('compare_platform');
 my ($communication_filename, $cost_filename, $permutations_filename) = @ARGV;
 
 my @alpha_values=(1, 0.75, 0.5, 0.25, 0);
-
-#open(my $communication_file, '<', $communication_filename) or $logger->logdie("unable to open communication file at $communication_file");
+my @alpha_strings = map { 'alpha' . $_ } (@alpha_values);
 
 $logger->info("using communication file $communication_filename");
 $logger->info("using cost file $cost_filename");
@@ -23,6 +22,9 @@ my @cost_matrix = read_cost();
 my @comm_matrix = read_comm_matrix();
 
 open(my $permutations_file, '<', $permutations_filename) or $logger->logdie("unable to open permutations file at $permutations_filename");
+
+
+print "PERMUTATION max sum " . join(' ', @alpha_strings) . "\n";
 
 while (my $permutation = <$permutations_file>) {
 	chomp($permutation);
