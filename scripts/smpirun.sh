@@ -4,6 +4,8 @@ PLATFORMFILE=$2
 HOSTFILE=$3
 BENCHMARK=$4
 
+# Generates a time independent trace for replaying the application
+
 smpirun -np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
 	--cfg=smpi/privatize_global_variables:yes \
 	--cfg=smpi/running_power:120Gf \

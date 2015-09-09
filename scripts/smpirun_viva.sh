@@ -4,6 +4,8 @@ PLATFORMFILE=$2
 HOSTFILE=$3
 BENCHMARK=$4
 
+# Generates a trace to be used with Viva
+
 smpirun -np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
 	--cfg=tracing:yes \
 	--cfg=tracing/uncategorized:yes \
