@@ -28,6 +28,10 @@ print "PERMUTATION max sum " . join(' ', @alpha_strings) . "\n";
 
 while (my $permutation = <$permutations_file>) {
 	chomp($permutation);
+
+	# Ignore the permutation if it's comented
+	next if ($permutation =~ /^#/);
+
 	my ($max_score, $sum_score) = calculate_score($permutation);
 	my @combined_values = map {$_ * $max_score + (1 - $_) * $sum_score} (@alpha_values);
 	print "$permutation $max_score $sum_score " . join(' ', @combined_values) . "\n";

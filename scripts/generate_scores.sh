@@ -8,7 +8,6 @@ COMM_DIR="$PWD/communication"
 SCORES_DIR="$PWD/score"
 PERMUTATIONS_FILE="/home/fernando/Documents/batch-simulator/experiment/combinations/combinations-42/permutations"
 
-ALPHA=0.33
 INPUT_FILE=$1
 
 base_name=`basename $INPUT_FILE .log`
@@ -18,5 +17,5 @@ score_name="$SCORES_DIR/$base_name.csv"
 
 grep smpi_mpi_send $INPUT_FILE > $send_name
 $SCRIPTS_DIR/read_comm.pl $send_name $CPUS_NUMBER > $comm_name
-$SCRIPTS_DIR/permutation_latency.pl $comm_name $COST_FILE $PERMUTATIONS_FILE $ALPHA > $score_name
+$SCRIPTS_DIR/permutation_latency.pl $comm_name $COST_FILE $PERMUTATIONS_FILE > $score_name
 
