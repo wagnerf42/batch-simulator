@@ -13,8 +13,8 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('generate_permutations');
 
-my ($cluster_size, $permutation) = @ARGV;
-my @cpus = reverse split('-', $permutation);
+my ($cpus_number, $cluster_size) = @ARGV;
+my @cpus = map { $_ } (0..($cpus_number - 1));
 my @all_permutations = permutations(\@cpus);
 my %seen_signatures;
 my @final_permutations;
