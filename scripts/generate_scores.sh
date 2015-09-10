@@ -7,6 +7,7 @@ SEND_LOGS_DIR="$PWD/send_logs"
 COMM_DIR="$PWD/communication"
 SCORES_DIR="$PWD/score"
 PERMUTATIONS_FILE="/home/fernando/Documents/batch-simulator/experiment/combinations/combinations-42/permutations"
+#PERMUTATIONS_FILE="/tmp/permutations"
 
 INPUT_FILE=$1
 
