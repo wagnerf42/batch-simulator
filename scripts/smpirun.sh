@@ -8,7 +8,7 @@ BENCHMARK=$4
 
 smpirun -np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
 	--cfg=smpi/privatize_global_variables:yes \
-	--cfg=smpi/running_power:120Gf \
+	--cfg=smpi/running_power:23.492E9 \
 	--cfg=smpi/display_timing:1 \
 	-trace-ti -trace-file $BENCHMARK-$CPUS.trace \
 	$BENCHMARK \
