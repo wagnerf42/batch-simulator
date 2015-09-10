@@ -53,6 +53,7 @@ sub calculate_score {
 		$communication_score[$cpu] = 0;
 
 		for my $dst_cpu (0..($permutation_size - 1)) {
+			#print "$cpu($permutation_parts[$cpu]) -> $dst_cpu($permutation_parts[$dst_cpu]) cost $cpu_cost[$permutation_parts[$dst_cpu]] * $cpu_communication[$dst_cpu]\n";
 			$communication_score[$cpu] += $cpu_cost[$permutation_parts[$dst_cpu]] * $cpu_communication[$dst_cpu];
 		}
 	}
