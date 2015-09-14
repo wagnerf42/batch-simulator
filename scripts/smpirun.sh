@@ -11,5 +11,4 @@ smpirun -np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
 	--cfg=smpi/running_power:23.492E9 \
 	--cfg=smpi/display_timing:1 \
 	-trace-ti -trace-file $BENCHMARK-$CPUS.trace \
-	$BENCHMARK \
-	2> $BENCHMARK-$CPUS.log
+	$BENCHMARK 2> $BENCHMARK-$CPUS.log

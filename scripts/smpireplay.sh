@@ -9,5 +9,4 @@ smpirun -ext smpi_replay \
 	--cfg=smpi/privatize_global_variables:yes \
 	--cfg=smpi/display_timing:1 \
 	-np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
-	./smpi_replay $BENCHMARK-$CPUS.trace \
-	2>&1
+	./smpi_replay $BENCHMARK-$CPUS.trace 2>&1

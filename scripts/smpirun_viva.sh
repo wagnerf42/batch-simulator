@@ -14,4 +14,4 @@ smpirun -np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
 	--cfg=smpi/display_timing:yes \
 	--cfg=viva/uncategorized:$BENCHMARK-$CPUS.plist \
 	--cfg=tracing/filename:$BENCHMARK-$CPUS.vtrace \
-	$BENCHMARK
+	$BENCHMARK 2>&1
