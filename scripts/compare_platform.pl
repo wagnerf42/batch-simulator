@@ -8,8 +8,6 @@ use threads;
 use Thread::Queue;
 use threads::shared;
 
-use Platform;
-
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('compare_platform');
 

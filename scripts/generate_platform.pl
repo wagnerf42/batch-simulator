@@ -10,13 +10,15 @@ use Platform;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my @levels = (1, 2, 8);
-my @available_cpus = (0..($levels[-1] - 1));
+my ($levels) = @ARGV;
+
+my @level_parts = split('-', $levels);
+my @available_cpus = (0..($level_parts[-1] - 1));
 
 # Put everything in the log file
-$logger->info("platform: @levels");
+$logger->info("platform: @level_parts");
 
-my $platform = Platform->new(\@levels, \@available_cpus, 1);
+my $platform = Platform->new(\@level_parts, \@available_cpus, 1);
 $platform->build_structure();
 $platform->build_platform_xml();
 $platform->save_platform_xml('platform.xml');

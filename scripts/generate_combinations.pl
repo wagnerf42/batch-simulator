@@ -8,8 +8,6 @@ use Data::Dumper;
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 use List::Util qw(min max);
 
-use Platform;
-
 Log::Log4perl::init('log4perl.conf');
 
 my $logger = get_logger('test');

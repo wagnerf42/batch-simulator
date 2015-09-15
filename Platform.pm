@@ -10,6 +10,13 @@ use XML::Smart;
 
 use Tree;
 
+# Default power, latency and bandwidth values
+use constant CLUSTER_POWER => "23.492E9";
+use constant CLUSTER_BANDWIDTH => "1.25E9";
+use constant CLUSTER_LATENCY => "1.0E-4";
+use constant LINK_BANDWIDTH => "1.25E9";
+use constant LINK_LATENCY => "1.0E-4";
+
 # Constructors
 
 sub new {
@@ -205,8 +212,8 @@ sub build_platform_xml {
 			my $father_node = int $node_number/($platform_parts[$level]/$platform_parts[$level - 1]);
 			push @{$xml->{platform}{AS}{AS}{link}}, {
 				id => "L-$level-$node_number",
-				bandwidth => "1.24E9",
-				latency => "1.0E-4",
+				bandwidth => LINK_BANDWIDTH,
+				latency => LINK_LATENCY,
 			};
 
 			push @{$xml->{platform}{AS}{AS}{route}}, {
@@ -224,16 +231,16 @@ sub build_platform_xml {
 			prefix => "",
 			suffix => "",
 			radical => ($cluster * $cluster_size) . '-' . (($cluster + 1) * $cluster_size - 1),
-			power => "120Gf",
-			bw => "1.25E9",
-			lat => "1.0E-4",
+			power => CLUSTER_POWER,
+			bw => CLUSTER_BANDWIDTH,
+			lat => CLUSTER_LATENCY,
 			router_id => "R-$cluster",
 		};
 
 		push @{$xml->{platform}{AS}{link}}, {
 			id => "L-$cluster",
-			bandwidth => "1.25E9",
-			latency => "1.0E-4",
+			bandwidth => LINK_BANDWIDTH,
+			latency => LINK_LATENCY,
 		};
 
 		push @{$xml->{platform}{AS}{ASroute}}, {
