@@ -19,7 +19,7 @@ my @benchmarks;
 
 my $nasa_benchmark_class = 'B';
 my $nasa_benchmarks_path = 'benchmarks';
-my @nasa_included_benchmarks = ('cg', 'lu', 'ep', 'ft', 'mg');
+my @nasa_included_benchmarks = ('cg', 'lu', 'ft');
 push @benchmarks, map {"$nasa_benchmarks_path/$_.$nasa_benchmark_class.$required_cpus"} (@nasa_included_benchmarks);
 
 my $new_benchmarks_path = 'new_benchmarks';
@@ -28,11 +28,11 @@ my @new_included_benchmarks = ('pairs', 'neighbour', 'circular');
 
 my $collective_benchmarks_path = 'collective';
 my @collective_included_benchmarks =  ('osu_allreduce', 'osu_alltoallv', 'osu_scatter', 'osu_allgather', 'osu_gather', 'osu_reduce_scatter', 'osu_allgatherv', 'osu_barrier', 'osu_reduce', 'osu_bcast', 'osu_alltoall');
-push @benchmarks, map {"$collective_benchmarks_path/$_"} (@collective_included_benchmarks);
+#push @benchmarks, map {"$collective_benchmarks_path/$_"} (@collective_included_benchmarks);
 
 my $mpi_benchmarks_path = 'mpi-benchmarks';
 my @mpi_benchmarks_included_benchmarks = ('osu_bw');
-push @benchmarks, map {"$mpi_benchmarks_path/$_"} (@mpi_benchmarks_included_benchmarks);
+#push @benchmarks, map {"$mpi_benchmarks_path/$_"} (@mpi_benchmarks_included_benchmarks);
 
 my $base_path = "experiment/combinations/combinations-$execution_id";
 my $platform_file = "$base_path/platform.xml";
@@ -89,6 +89,7 @@ sub run_instance {
 		$logger->info("thread $id runing $instance");
 
 		for my $benchmark_number (0..$#benchmarks) {
+			$logger->debug("thread $id running ./scripts/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]");
 			my $result = `./scripts/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]`;
 			my ($simulation_time) = ($result =~ /Simulation time (\d*\.\d*)/);
 			$results_instance->[$benchmark_number] = $simulation_time;
