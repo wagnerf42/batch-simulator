@@ -7,7 +7,6 @@ use Algorithm::Combinatorics qw(combinations);
 use Data::Dumper;
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 use POSIX qw(floor);
-use Term::ProgressBar;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('generate_permutations');
@@ -18,13 +17,8 @@ my @all_permutations = permutations(\@cpus);
 my %seen_signatures;
 my @final_permutations;
 
-my $bar = Term::ProgressBar->new({count => scalar @all_permutations});
-my $progress = 0;
-
 for my $permutation (@all_permutations) {
 	my $permutation_signature = compute_permutation_signature($permutation);
-
-	$bar->update($progress++);
 
 	unless (exists $seen_signatures{$permutation_signature}) {
 		$seen_signatures{$permutation_signature} = $permutation;
