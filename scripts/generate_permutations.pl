@@ -3,7 +3,6 @@ use strict;
 use warnings;
 
 use Algorithm::Permute;
-use Algorithm::Combinatorics qw(combinations);
 use Data::Dumper;
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 use POSIX qw(floor);
@@ -12,21 +11,22 @@ Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('generate_permutations');
 
 my ($cpus_number, $cluster_size) = @ARGV;
-my @cpus = map { $_ } (0..($cpus_number - 1));
-my @all_permutations = permutations(\@cpus);
+my @cpus = reverse map { $_ } (0..($cpus_number - 1));
 my %seen_signatures;
 my @final_permutations;
+my $permutation_number = 0;
 
-for my $permutation (@all_permutations) {
-	my $permutation_signature = compute_permutation_signature($permutation);
-
-	unless (exists $seen_signatures{$permutation_signature}) {
-		$seen_signatures{$permutation_signature} = $permutation;
-		push @final_permutations, $permutation;
+my $iterator = Algorithm::Permute->new(\@cpus);
+while (my @permutation_parts = $iterator->next()) {
+	my $permutation = join('-', @permutation_parts);
+	my $signature = compute_permutation_signature($permutation);
+	unless (exists $seen_signatures{$signature}) {
+		$seen_signatures{$signature} = undef;
+		print "$permutation\n";
+		#print STDERR "$permutation_number\r";
+		#$permutation_number++;
 	}
 }
-
-print join("\n", @final_permutations);
 
 sub permutations {
 	my $elements = shift;
