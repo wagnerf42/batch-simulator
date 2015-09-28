@@ -25,6 +25,7 @@ while ($chosen_permutations_number < $permutations_number) {
 		$seen_signatures{$signature} = undef;
 		$chosen_permutations_number++;
 		print "$permutation\n";
+		print STDERR "$chosen_permutations_number\r";
 	}
 }
 

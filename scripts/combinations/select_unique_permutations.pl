@@ -14,7 +14,9 @@ my %seen;
 open(my $file, '<', $file_name) or die ('unable to open file');
 
 # Ignore first line
-<$file>;
+my $first_line = <$file>;
+my @line_parts = split(' ', $first_line);
+print "$line_parts[0] $line_parts[$collumn]\n";
 
 while (my $line = <$file>) {
 	chomp $line;
@@ -22,7 +24,7 @@ while (my $line = <$file>) {
 
 	unless (exists $seen{$line_parts[$collumn]}) {
 		$seen{$line_parts[$collumn]} = undef;
-		print "$line_parts[0]\n";
+		print "$line_parts[0] $line_parts[$collumn]\n";
 	}
 }
 

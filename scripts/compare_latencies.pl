@@ -12,7 +12,7 @@ my ($execution_id, $required_cpus) = @ARGV;
 
 my $threads_number = 6;
 my @benchmarks;
-my @latencies = (1..50);
+my @latencies = map { $_/10000 } (0.001,0.01,0.1,1,10,100);
 my @permutations;
 
 my $benchmark = "benchmarks/cg.B.$required_cpus";
@@ -51,7 +51,7 @@ for my $latency (@latencies) {
 
 		write_host_file($permutation);
 
-		#$logger->debug("./scripts/smpi/smpireplay.sh $required_cpus $tmp_platform_file $hosts_file $benchmark");
+		$logger->debug("./scripts/smpi/smpireplay.sh $required_cpus $tmp_platform_file $hosts_file $benchmark");
 		my $result = `./scripts/smpi/smpireplay.sh $required_cpus $tmp_platform_file $hosts_file $benchmark`;
 		$logger->logdie("error running benchmark") unless ($result =~ /Simulation time (\d*\.\d*)/);
 
@@ -78,7 +78,51 @@ sub get_log_file {
 
 sub write_platform_file {
 	my $latency = shift;
-	my $result = `sed -e 's/EXTERNAL_LATENCY/$latency.0E-4/' $platform_file > $tmp_platform_file`;
+
+	open(my $platform_fd, '>', $tmp_platform_file);
+	print $platform_fd <<HDOC;
+<?xml version='1.0'?>
+<!DOCTYPE platform SYSTEM "http://simgrid.gforge.inria.fr/simgrid.dtd">
+<platform version="3">
+  <AS id="AS_Root" routing="Floyd">
+    <AS id="AS_Tree" routing="Floyd">
+      <router id="R-0-0"/>
+      <router id="R-1-0"/>
+      <router id="R-1-1"/>
+      <router id="R-2-0"/>
+      <router id="R-2-1"/>
+      <link bandwidth="1.25E9" id="L-1-0" latency="$latency"/>
+      <link bandwidth="1.25E9" id="L-1-1" latency="$latency"/>
+      <link bandwidth="1.25E9" id="L-2-0" latency="1.0E-6"/>
+      <link bandwidth="1.25E9" id="L-2-1" latency="1.0E-6"/>
+      <route dst="R-1-0" src="R-0-0">
+        <link_ctn id="L-1-0"/>
+      </route>
+      <route dst="R-1-1" src="R-0-0">
+        <link_ctn id="L-1-1"/>
+      </route>
+      <route dst="R-2-0" src="R-1-0">
+        <link_ctn id="L-2-0"/>
+      </route>
+      <route dst="R-2-1" src="R-1-1">
+        <link_ctn id="L-2-1"/>
+      </route>
+    </AS>
+    <cluster bw="1.25E9" id="C-0" lat="1.0E-4" power="23.492E9" prefix="" radical="0-7" router_id="R-0" suffix=""/>
+    <cluster bw="1.25E9" id="C-1" lat="1.0E-4" power="23.492E9" prefix="" radical="8-15" router_id="R-1" suffix=""/>
+    <link bandwidth="1.25E9" id="L-0" latency="1.0E-6"/>
+    <link bandwidth="1.25E9" id="L-1" latency="1.0E-6"/>
+    <ASroute dst="AS_Tree" gw_dst="R-2-0" gw_src="R-0" src="C-0">
+      <link_ctn id="L-0"/>
+    </ASroute>
+    <ASroute dst="AS_Tree" gw_dst="R-2-1" gw_src="R-1" src="C-1">
+      <link_ctn id="L-1"/>
+    </ASroute>
+  </AS>
+</platform>
+HDOC
+
 }
+
 
 

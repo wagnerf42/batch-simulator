@@ -19,7 +19,7 @@ my @benchmarks;
 
 my $nasa_benchmark_class = 'B';
 my $nasa_benchmarks_path = 'benchmarks';
-my @nasa_included_benchmarks = ('cg', 'lu', 'ft');
+my @nasa_included_benchmarks = ('cg');
 push @benchmarks, map {"$nasa_benchmarks_path/$_.$nasa_benchmark_class.$required_cpus"} (@nasa_included_benchmarks);
 
 my $new_benchmarks_path = 'new_benchmarks';
@@ -89,8 +89,8 @@ sub run_instance {
 		$logger->info("thread $id runing $instance");
 
 		for my $benchmark_number (0..$#benchmarks) {
-			$logger->debug("thread $id running ./scripts/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]");
-			my $result = `./scripts/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]`;
+			$logger->debug("thread $id running ./scripts/smpi/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]");
+			my $result = `./scripts/smpi/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]`;
 			my ($simulation_time) = ($result =~ /Simulation time (\d*\.\d*)/);
 			$results_instance->[$benchmark_number] = $simulation_time;
 		}
