@@ -4,6 +4,7 @@ use warnings;
 
 use Data::Dumper;
 use Time::HiRes qw(time);
+use IO::Handle;
 
 # Runs several benchmarks using MPI
 
@@ -40,25 +41,26 @@ while (my $permutation_line = <$permutations_fd>) {
 my @results = map {[]} (0..$#permutation_lines);
 
 open(my $output_fd, '>', $output_file) or die ('unable to open file');
-
-my @benchmark_name_parts = split('/', $benchmark);
-print $output_fd "$header_line $benchmark_name_parts[-1]\n";
+$output_fd->autoflush(1);
 
 for my $execution (0..($EXECUTIONS_NUMBER - 1)) {
 	for my $permutation_number (0..$#permutation_lines) {
 		my @line_fields = split(' ', $permutation_lines[$permutation_number]);
 		my $permutation = $line_fields[0];
 		save_hosts_file($permutation, "/tmp/hosts-$permutation_number");
+
 		my $start_time = time();
 
-		my $result = `mpirun -np $cpus_number -hostfile /tmp/hosts-$permutation_number $benchmark &>/dev/null`;
-		#print "mpirun -np $cpus_number -hostfile /tmp/hosts $benchmark &>/dev/null\n";
+		system "mpirun -np $cpus_number -hostfile /tmp/hosts-$permutation_number $benchmark";
 
 		my $execution_time = time() - $start_time;
-		print "finished permutation $permutation execution $execution in $execution_time\n";
+		print $output_fd "permutation $permutation execution $execution in $execution_time\n";
 		push @{$results[$permutation_number]}, $execution_time;
 	}
 }
+
+my @benchmark_name_parts = split('/', $benchmark);
+print $output_fd "$header_line $benchmark_name_parts[-1]\n";
 
 for my $permutation_number (0..$#permutation_lines) {
 	print $output_fd "$permutation_lines[$permutation_number] @{$results[$permutation_number]}\n";
