@@ -7,13 +7,14 @@ use Data::Dumper;
 use threads;
 use Thread::Queue;
 use threads::shared;
+use File::Slurp;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('compare_platform');
 
 my ($execution_id, $required_cpus) = @ARGV;
 
-my $threads_number = 6;
+my $threads_number = 1;
 
 my @benchmarks;
 
@@ -38,14 +39,13 @@ my $base_path = "experiment/combinations/combinations-$execution_id";
 my $platform_file = "$base_path/platform.xml";
 my $permutations_file = "$base_path/permutations";
 my $results_file = "$base_path/compare_platform-$execution_id.csv";
+my $hosts_file = "$base_path/hosts";
 
 $logger->info("running execution id $execution_id, $required_cpus required cpus, $threads_number threads");
 $logger->info("running benchmarks: @benchmarks");
 
 # Refuse to start if the directory or one of the files doesn't exist
 $logger->logdie("experiment directory doesn't exist at $base_path") unless (-d $base_path);
-$logger->logdie("platform file doesn't exist at $platform_file") unless (-e $platform_file);
-$logger->logdie("permutations file doesn't exist at $permutations_file") unless (-e $permutations_file);
 
 # Refuse to start if the results file already exists
 $logger->logdie("results file already exists at $results_file") if (-e $results_file);
@@ -53,12 +53,16 @@ $logger->logdie("results file already exists at $results_file") if (-e $results_
 my $results = [];
 share($results);
 
-open(my $file, '<', $permutations_file) or $logger->logdie("permutation file doesn't exist at $permutations_file");
+my @permutation_lines = read_file($permutations_file, chomp => 1);
+my $header = shift @permutation_lines; # remove header from file
 my @permutations;
-while (defined(my $permutation = <$file>)) {
-	chomp($permutation);
-	push @permutations, $permutation;
+
+for my $permutation_line (@permutation_lines) {
+	my @permutation_line_parts = split(' ', $permutation_line);
+	push @permutations, $permutation_line_parts[0];
 }
+
+my @hosts = read_file($hosts_file, chomp => 1);
 
 $logger->info("creating queue\n");
 my $q = Thread::Queue->new();
@@ -76,12 +80,11 @@ write_results();
 sub run_instance {
 	my $id = shift;
 
-	my $hosts_file_name = "/tmp/hosts-$id";
 	my $logger = get_logger('compare_platform::run_instance');
 
 	while (defined(my $instance = $q->dequeue_nb())) {
-		my @permutation_parts = split('-', $permutations[$instance]);
-		write_host_file(\@permutation_parts, $hosts_file_name);
+		my $instance_hosts_file = "/tmp/hosts-$instance-$id";
+		write_host_file($permutations[$instance], $instance_hosts_file);
 
 		my $results_instance = [];
 		share($results_instance);
@@ -89,27 +92,29 @@ sub run_instance {
 		$logger->info("thread $id runing $instance");
 
 		for my $benchmark_number (0..$#benchmarks) {
-			$logger->debug("thread $id running ./scripts/smpi/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]");
-			my $result = `./scripts/smpi/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmarks[$benchmark_number]`;
-			my ($simulation_time) = ($result =~ /Simulation time (\d*\.\d*)/);
-			$results_instance->[$benchmark_number] = $simulation_time;
+			#my $result = `./scripts/smpi/smpireplay.sh $required_cpus $platform_file $instance_hosts_file $benchmarks[$benchmark_number]`;
+			my $result = "Simulation time $instance.00";
+
+			unless ($result =~ /Simulation time (\d*\.\d*)/) {
+				$logger->logdie("error while running smpireplay : ./scripts/smpi/smpireplay.sh $required_cpus $platform_file $instance_hosts_file $benchmarks[$benchmark_number]");
+			}
+
+			$results_instance->[$benchmark_number] = $1;
 		}
 
 		$results->[$instance] = $results_instance;
 	}
 
-	#unlink($hosts_file_name);
 	return;
 }
 
 sub write_host_file {
 	my $permutation = shift;
-	my $file_name = shift;
+	my $output_file = shift;
 
-	open(my $file, '>', $file_name);
-
-	print $file "$_\n" for (@{$permutation});
-	return;
+	my @cpus = split('-', $permutation);
+	my @selected_hosts = map { $hosts[$_] } (@cpus);
+	write_file($output_file, map { "$_\n" } (@selected_hosts));
 }
 
 sub get_log_file {
