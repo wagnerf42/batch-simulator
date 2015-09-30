@@ -8,7 +8,7 @@ use IO::Handle;
 
 # Runs several benchmarks using MPI
 
-my ($cpus_number, $hosts_file, $permutations_file, $benchmark, $output_file) = @ARGV;
+my ($cpus_number, $hosts_file, $permutations_file, $benchmark) = @ARGV;
 
 my $EXECUTIONS_NUMBER = 3;
 
@@ -19,6 +19,9 @@ unless (scalar @ARGV == 5) {
 
 my @hosts;
 my @permutation_lines;
+
+my $output_file = "$permutations_file.csv";
+my $log_file = "$permutations_file.log";
 
 # Read the list of hosts and save it
 open(my $hosts_fd, '<', $hosts_file) or die ('unable to open file');
@@ -40,8 +43,8 @@ while (my $permutation_line = <$permutations_fd>) {
 
 my @results = map {[]} (0..$#permutation_lines);
 
-open(my $output_fd, '>', $output_file) or die ('unable to open file');
-$output_fd->autoflush(1);
+open(my $log_fd, '>', $log_file) or die ('unable to open file');
+$log_fd->autoflush(1);
 
 for my $execution (0..($EXECUTIONS_NUMBER - 1)) {
 	for my $permutation_number (0..$#permutation_lines) {
@@ -49,15 +52,17 @@ for my $execution (0..($EXECUTIONS_NUMBER - 1)) {
 		my $permutation = $line_fields[0];
 		save_hosts_file($permutation, "/tmp/hosts-$permutation_number");
 
-		my $start_time = time();
-
+		my $execution_time = time();
 		system "mpirun -np $cpus_number -hostfile /tmp/hosts-$permutation_number $benchmark";
+		$execution_time = time() - $execution_time;
 
-		my $execution_time = time() - $start_time;
-		print $output_fd "permutation $permutation execution $execution in $execution_time\n";
+		print $log_fd localtime() . ": permutation $permutation execution $execution in $execution_time\n";
 		push @{$results[$permutation_number]}, $execution_time;
 	}
 }
+
+open(my $output_fd, '>', $output_file) or die ('unable to open file');
+$output_fd->autoflush(1);
 
 my @benchmark_name_parts = split('/', $benchmark);
 print $output_fd "$header_line $benchmark_name_parts[-1]\n";
@@ -65,9 +70,6 @@ print $output_fd "$header_line $benchmark_name_parts[-1]\n";
 for my $permutation_number (0..$#permutation_lines) {
 	print $output_fd "$permutation_lines[$permutation_number] @{$results[$permutation_number]}\n";
 }
-
-close($permutations_fd);
-close($output_fd);
 
 sub save_hosts_file {
 	my $permutation = shift;
