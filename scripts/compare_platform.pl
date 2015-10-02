@@ -14,7 +14,7 @@ my $logger = get_logger('compare_platform');
 
 my ($execution_id, $required_cpus) = @ARGV;
 
-my $threads_number = 1;
+my $threads_number = 6;
 
 my @benchmarks;
 
@@ -92,8 +92,7 @@ sub run_instance {
 		$logger->info("thread $id runing $instance");
 
 		for my $benchmark_number (0..$#benchmarks) {
-			#my $result = `./scripts/smpi/smpireplay.sh $required_cpus $platform_file $instance_hosts_file $benchmarks[$benchmark_number]`;
-			my $result = "Simulation time $instance.00";
+			my $result = `./scripts/smpi/smpireplay.sh $required_cpus $platform_file $instance_hosts_file $benchmarks[$benchmark_number]`;
 
 			unless ($result =~ /Simulation time (\d*\.\d*)/) {
 				$logger->logdie("error while running smpireplay : ./scripts/smpi/smpireplay.sh $required_cpus $platform_file $instance_hosts_file $benchmarks[$benchmark_number]");

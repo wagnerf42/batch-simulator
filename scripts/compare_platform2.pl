@@ -5,16 +5,20 @@ use warnings;
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 use Data::Dumper;
 use threads;
-use Thread::Queue;
 use threads::shared;
+use Thread::Queue;
+use File::Slurp;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('compare_platform');
 
-my ($required_cpus, $platform_file, $permutations_file, $benchmark, $results_file) = @ARGV;
+my ($required_cpus, $platform_file, $hosts_file, $permutations_file, $benchmark, $results_file) = @ARGV;
+
+unless (@ARGV == 6) {
+	$logger->logdie('usage: $required_cpus, $platform_file, $hosts_file, $permutations_file, $benchmark, $results_file');
+}
 
 my $threads_number = 6;
-
 my @benchmarks;
 
 $logger->info("running with arguments @ARGV\n");
@@ -25,23 +29,12 @@ $logger->logdie("results file already exists at $results_file") if (-e $results_
 my $results = [];
 share($results);
 
-open(my $file, '<', $permutations_file) or $logger->logdie("permutation file doesn't exist at $permutations_file");
-my $header = <$file>;
-chomp($header);
-my @header_fields = split(' ', $header);
-$logger->logdie("permutation file with wrong format") unless ($header_fields[0] eq "PERMUTATION");
+my @hosts = read_file($hosts_file, chomp => 1);
+my @permutation_lines = read_file($permutations_file, chomp => 1);
+my $header = shift(@permutation_lines);
 
-my @rows;
 my $q = Thread::Queue->new();
-
-while (defined(my $row = <$file>)) {
-	chomp($row);
-	my @row_parts = split(' ', $row);
-
-	push @rows, [@row_parts];
-	$q->enqueue($#rows);
-}
-
+$q->enqueue($_) for (0..$#permutation_lines);
 $q->end();
 
 my @threads = map { threads->create(\&run_instance, $_) } (0..($threads_number - 1));
@@ -58,16 +51,16 @@ sub run_instance {
 	my $logger = get_logger('compare_platform::run_instance');
 
 	while (defined(my $instance = $q->dequeue_nb())) {
-		write_host_file($rows[$instance]->[0], $hosts_file_name);
-
-		my $results_instance = [];
-		share($results_instance);
+		write_host_file($instance, $hosts_file_name);
 
 		$logger->info("thread $id runing $instance");
-		$logger->debug("./scripts/smpi/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmark\n");
 
 		my $result = `./scripts/smpi/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmark`;
-		$logger->logdie("error running the replay") unless ($result =~ /Simulation time (\d*\.\d*)/);
+
+		unless ($result =~ /Simulation time (\d*\.\d*)/) {
+			$logger->debug("command: ./scripts/smpi/smpireplay.sh $required_cpus $platform_file $hosts_file_name $benchmark\n");
+			$logger->logdie("error running the replay");
+		}
 
 		$results->[$instance] = $1;
 	}
@@ -77,14 +70,14 @@ sub run_instance {
 }
 
 sub write_host_file {
-	my $hosts_list = shift;
+	my $instance = shift;
 	my $file_name = shift;
 
-	my @hosts = split('-', $hosts_list);
+	my $permutation_line = $permutation_lines[$instance];
+	my @permutation_line_parts = split(' ', $permutation_line);
+	my @permutation_parts = split('-', $permutation_line_parts[0]);
 
-	open(my $file, '>', $file_name);
-
-	print $file "$_\n" for (@hosts);
+	write_file($file_name, map { "$hosts[$_]\n" } (@permutation_parts));
 	return;
 }
 
@@ -93,12 +86,11 @@ sub get_log_file {
 }
 
 sub write_results {
-	open(my $file, '>', $results_file);
-	print $file "$header $benchmark\n";
-
-	for my $permutation_number (0..$#rows) {
-		print $file "@{$rows[$permutation_number]} $results->[$permutation_number]\n";
-	}
+	write_file($results_file, join("\n",
+			"$header stime",
+			map { join(' ', $permutation_lines[$_], $results->[$_]) } (0..$#permutation_lines)
+		)
+	);
 
 	return;
 }
