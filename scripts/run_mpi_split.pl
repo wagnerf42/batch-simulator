@@ -19,9 +19,6 @@ my $permutation = '0-1-2-3-4-5-6-7-8-9-10-11-12-13-14-15';
 # Read the list of hosts and save it
 my @hosts = read_file($hosts_file, chomp => 1);
 
-save_hosts_file(16, '/tmp/hosts2');
-die;
-
 open(my $output_fd, '>', $output_file) or die ('unable to open output file');
 $output_fd->autoflush(1);
 
