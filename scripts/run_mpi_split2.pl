@@ -15,11 +15,10 @@ my $logger = get_logger('run_mpi_split');
 
 my ($job_path, $benchmark_path) = @ARGV;
 
-my $executions_number = 7;
-my $cpus_number = 16;
+my $executions_number = 3;
 my $hosts_file = "$job_path/hosts";
 my $output_file = "$job_path/run_mpi_split2.csv";
-my @benchmarks = ('cg.C', 'ft.C', 'lu.B');
+my @benchmarks = ('cg.B', 'ft.B', 'lu.B');
 
 # Read the list of hosts and save it
 my @hosts = read_file($hosts_file, chomp => 1);
@@ -31,16 +30,16 @@ print $output_fd "execution benchmark cpus_number split_position execution_time\
 
 for my $execution (0..($executions_number - 1)) {
 	for my $benchmark (@benchmarks) {
-		my $benchmark_name = "$benchmark_path/$benchmark." . $cpus_number/2;
-		my $execution_time = run_command("mpirun --mca btl_tcp_if_include br0 -np " . $cpus_number/2 . " -hostfile $job_path/hosts-8a $benchmark_name");
-		print $output_fd "$execution $benchmark " . $cpus_number/2 . " 0 $execution_time\n";
+		my $benchmark_name = "$benchmark_path/$benchmark.8";
+		my $execution_time = run_command("mpirun --mca btl_tcp_if_include br0 -np 8 -hostfile $job_path/hosts-8a $benchmark_name");
+		print $output_fd "$execution $benchmark 8 0 $execution_time\n";
 
-		$execution_time = run_command("mpirun --mca btl_tcp_if_include br0 -np " . $cpus_number/2 . " -hostfile $job_path/hosts-8b $benchmark_name");
-		print $output_fd "$execution $benchmark " . $cpus_number/2 . " 8 $execution_time\n";
+		$execution_time = run_command("mpirun --mca btl_tcp_if_include br0 -np 8 -hostfile $job_path/hosts-8b $benchmark_name");
+		print $output_fd "$execution $benchmark 8 8 $execution_time\n";
 
-		$benchmark_name = "$benchmark_path/$benchmark.$cpus_number";
-		$execution_time = run_command("mpirun --mca btl_tcp_if_include br0 -np $cpus_number -hostfile $job_path/hosts-16 $benchmark_name");
-		print $output_fd "$execution $benchmark $cpus_number 8 $execution_time\n";
+		$benchmark_name = "$benchmark_path/$benchmark.16";
+		$execution_time = run_command("mpirun --mca btl_tcp_if_include br0 -np 16 -hostfile $job_path/hosts-16 $benchmark_name");
+		print $output_fd "$execution $benchmark 16 8 $execution_time\n";
 	}
 }
 
@@ -53,8 +52,13 @@ sub get_log_file {
 sub run_command {
 	my $command = shift;
 
-	my $start_time = time();
-	system $command;
+	my $logger = get_logger('run_command');
 
-	return time() - $start_time;
+	my $result = `$command`;
+
+	unless ($result =~ /Time in seconds\s*=\s*(\d*\.\d*)/) {
+		$logger->logdie("unable to retrieve execution time from command $command");
+	}
+
+	return $1;
 }
