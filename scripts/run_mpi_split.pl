@@ -11,11 +11,11 @@ use File::Slurp;
 
 my ($job_path, $benchmark_path) = @ARGV;
 
-my $executions_number = 3;
+my $executions_number = 5;
 my $cpus_number = 16;
 my $hosts_file = "$job_path/hosts";
 my $output_file = "$job_path/run_mpi_split.csv";
-my @benchmarks = ('cg.B', 'ft.B', 'lu.B');
+my @benchmarks = ('cg.C', 'ft.C', 'lu.B');
 
 # Read the list of hosts and save it
 my @hosts = read_file($hosts_file, chomp => 1);

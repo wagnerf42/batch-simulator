@@ -9,13 +9,14 @@ use File::Slurp;
 
 # Runs several benchmarks using MPI
 
-my ($job_path, $cpus_number, $benchmarks_path) = @ARGV;
+my ($job_path, $benchmarks_path) = @ARGV;
 
+my $cpus_number = 16;
 my $executions_number = 3;
 my $hosts_file = "$job_path/hosts";
 my $permutations_file = "$job_path/permutations";
 my $output_file = "$job_path/run_mpi.csv";
-my @benchmarks = ("cg.B.$cpus_number", "ft.B.$cpus_number", "lu.B.$cpus_number");
+my @benchmarks = ('cg.B', 'ft.B', 'lu.B');
 
 # Read stuff
 my @hosts = read_file($hosts_file, chomp => 1);
@@ -32,7 +33,7 @@ for my $execution (0..($executions_number - 1)) {
 			my $permutation_hosts_file = "$job_path/hosts-$permutation_number";
 			save_hosts_file($permutation, $permutation_hosts_file);
 
-			my $execution_time = run_benchmark("mpirun --mca btl_tcp_if_include br0 -np $cpus_number -hostfile $permutation_hosts_file $benchmarks_path/$benchmark");
+			my $execution_time = run_benchmark("mpirun --mca btl_tcp_if_include br0 -np $cpus_number -hostfile $permutation_hosts_file $benchmarks_path/$benchmark.$cpus_number");
 			print $output_fd "$execution $permutation $permutation_number $benchmark $execution_time\n";
 		}
 	}
