@@ -61,6 +61,10 @@ sub new {
 	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
 	$self->{current_time} = 0;
 
+	# Temporary variables to calculate the average stretch
+	$self->{processed_jobs} = 0;
+	$self->{total_bsld} = 0;
+
 	return $self;
 }
 
@@ -129,6 +133,11 @@ sub run {
 		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 			my $job = $event->payload();
+
+			# Temporary code to print the bsld for all the finished jobs
+			$self->{total_bsld} += $job->bsld();
+			$self->{processed_jobs}++;
+			print "$job " . $job->bsld() . " " . $self->{total_bsld}/$self->{processed_jobs} . "\n";
 
 			delete $self->{started_jobs}->{$job->job_number()};
 

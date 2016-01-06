@@ -3,7 +3,7 @@ package Job;
 use strict;
 use warnings;
 
-use List::Util qw(min);
+use List::Util qw(min max);
 use POSIX;
 use Log::Log4perl qw(get_logger);
 
@@ -157,6 +157,15 @@ sub flow_time {
 	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
 
 	return $self->{starting_time} + $self->{run_time} - $self->{submit_time};
+}
+
+sub bsld {
+	my $self = shift;
+	my $logger = get_logger('Job::bsld');
+
+	$logger->logdie('undefined job parameters') unless defined $self->{wait_time} and defined $self->{run_time};
+
+	return max(($self->{wait_time} + $self->{run_time})/max($self->{run_time}, 10), 1);
 }
 
 sub stretch {
