@@ -7,3 +7,4 @@ batch-simulator.log
 *.swp
 log
 tmp*
+.Rhistory
