@@ -62,15 +62,12 @@ sub new {
 	}
 
 	# Generate the UNIX socket
-	unlink($self->{socket_file});
-	$self->{server_socket} = IO::Socket::UNIX->new(
+	$self->{socket} = IO::Socket::UNIX->new(
 		Type => SOCK_STREAM(),
-		Local => $self->{socket_file},
-		Listen => 1
+		Peer => $self->{socket_file},
 	);
-	$logger->logdie("unable to create UNIX socket $self->{socket_file}") unless defined $self->{server_socket};
+	$logger->logdie("unable to find UNIX socket $self->{socket_file}") unless defined $self->{socket};
 
-	$self->{socket} = $self->{server_socket}->accept();
 	$self->{current_simulator_time} = 0;
 
 	bless $self, $class;
