@@ -150,9 +150,12 @@ sub retrieve_all {
 	$logger->debug("received message $message_content");
 	##DEBUG_END
 
+	$logger->logdie("error checking head of message: $check") unless $check=~/^(\d):(\d+(\.\d+)?)$/;
 
-	$logger->logdie("error checking head of message: $check") unless $check=~/^0:(\d+(\.\d+)?)$/;
-	$self->{current_simulator_time} = $1;
+	# Return with no events if message is using a different/newer protocol
+	return if ($1 != 0);
+
+	$self->{current_simulator_time} = $2;
 
 	my @incoming_events;
 	for my $field (@fields) {
