@@ -8,7 +8,6 @@ use File::Slurp;
 use JSON;
 use Log::Log4perl qw(get_logger);
 use Data::Dumper;
-
 use Job;
 
 =head1 NAME
