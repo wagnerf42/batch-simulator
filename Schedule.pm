@@ -143,6 +143,7 @@ sub locality_factor {
 		$optimum_clusters += $job->clusters_required($self->{cluster_size});
 	}
 
+  return 1 unless ($optimum_clusters != 0);
 	return ($used_clusters / $optimum_clusters);
 }
 
