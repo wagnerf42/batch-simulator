@@ -6,13 +6,12 @@ use warnings;
 use POSIX;
 use List::Util qw(min);
 use Log::Log4perl qw(get_logger);
+use Carp;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 
 use ProcessorRange;
 use Util qw(float_equal float_precision);
-use Debug;
-use Carp;
 
 use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 
