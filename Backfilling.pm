@@ -63,7 +63,7 @@ sub new {
 
 	# Temporary variables to calculate the average stretch
 	$self->{processed_jobs} = 0;
-	$self->{total_bsld} = 0;
+	$self->{total_bounded_stretch} = 0;
 
 	return $self;
 }
@@ -135,9 +135,9 @@ sub run {
 			my $job = $event->payload();
 
 			# Temporary code to print the bsld for all the finished jobs
-			$self->{total_bsld} += $job->bsld();
+			$self->{total_bounded_stretch} += $job->bounded_stretch();
 			$self->{processed_jobs}++;
-			print "$job " . $job->bsld() . " " . $self->{total_bsld}/$self->{processed_jobs} . "\n";
+			print "$job " . $job->bounded_stretch() . " " . $self->{total_bounded_stretch}/$self->{processed_jobs} . "\n";
 
 			delete $self->{started_jobs}->{$job->job_number()};
 

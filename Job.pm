@@ -159,13 +159,13 @@ sub flow_time {
 	return $self->{starting_time} + $self->{run_time} - $self->{submit_time};
 }
 
-sub bsld {
+sub bounded_stretch {
 	my $self = shift;
 	my $logger = get_logger('Job::bsld');
 
 	$logger->logdie('undefined job parameters') unless defined $self->{wait_time} and defined $self->{run_time};
 
-	return max(($self->{wait_time} + $self->{run_time})/max($self->{run_time}, 10), 1);
+	return max(($self->{wait_time} + $self->{run_time})/max($self->{run_time}, 60), 1);
 }
 
 sub stretch {

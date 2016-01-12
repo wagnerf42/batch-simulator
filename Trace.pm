@@ -2,7 +2,7 @@ package Trace;
 use strict;
 use warnings;
 use JSON;
-use List::Util qw(max reduce sum);
+use List::Util qw(max reduce sum min);
 use List::MoreUtils qw(natatime);
 use Storable qw(dclone);
 use POSIX qw(ceil floor);
@@ -110,10 +110,8 @@ sub new_from_swf {
 sub keep_first_jobs {
 	my $self = shift;
 	my $jobs_number = shift;
-	my $end = $jobs_number - 1;
-	my $last_available = $#{$self->{jobs}};
 
-	$end = $last_available if $last_available < $end;
+	my $end = min($#{$self->{jobs}}, $jobs_number - 1);
 	@{$self->{jobs}} = @{$self->{jobs}}[0..$end];
 
 	return;
