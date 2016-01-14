@@ -14,7 +14,8 @@ Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger();
 
 my $trace = Trace->new_from_swf($trace_file);
-$trace->remove_large_jobs($cpus_number);
+$cpus_number = $trace->needed_cpus();
+#$trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant);
