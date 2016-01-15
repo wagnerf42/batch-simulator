@@ -291,9 +291,9 @@ sub _score_function_pnorm {
 	my $requested_cpus = shift;
 	my $level = shift;
 
-	#my $max_depth = scalar@{$self->{levels}} - 1;
+	my $max_depth = scalar @{$self->{levels}} - 1;
 
-	return $child_requested_cpus * ($requested_cpus * $child_requested_cpus) * pow((@{$self->{levels}} - 1, $level) * 2, $self->{norm});
+	return $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * pow(($max_depth - $level) * 2, $self->{norm});
 }
 
 sub _score_function_level {
@@ -302,7 +302,8 @@ sub _score_function_level {
 	my $requested_cpus = shift;
 	my $level = shift;
 
-	
+	confess('sub not implemented');
+}
 
 
 1;
