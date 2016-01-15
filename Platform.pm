@@ -83,6 +83,8 @@ sub _build {
 	#TODO Change this so that setting up the available CPUs is a separate
 	#step. The idea is to only do it in the end. Then I can use the tree
 	#structure to do it in log time.
+
+	# Last level
 	if ($level == scalar @{$self->{levels}} - 1) {
 		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
 		my $tree_content = {total_size => $cpu_is_available, id => $node};
@@ -146,7 +148,9 @@ sub _score {
 	return 0 if ($level == scalar @{$self->{levels}} - 1);
 
 	# Best combination already saved
-	return $tree->content()->{$requested_cpus}->{score} if (defined $tree->content()->{$requested_cpus});
+	if (defined $tree->content()->{$requested_cpus}) {
+		return $tree->content()->{$requested_cpus}->{score};
+	}
 
 	my @children = @{$tree->children()};
 	my $last_child = $#children;
@@ -162,8 +166,7 @@ sub _score {
 			my $child_size = $children[$child_id]->content()->{total_size};
 			my $child_requested_cpus = $combination_parts[$child_id];
 
-			$score += $self->_score($children[$child_id], $level + 1, $child_requested_cpus);
-			$score += $self->_score_function_pnorm($child_requested_cpus, $requested_cpus, $level);
+			$score = $self->_score($children[$child_id], $level + 1, $child_requested_cpus);
 		}
 
 		if ($score < $best_combination{score}) {
@@ -302,7 +305,7 @@ sub _score_function_level {
 	my $requested_cpus = shift;
 	my $level = shift;
 
-	confess('sub not implemented');
+	return $level;
 }
 
 
