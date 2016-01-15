@@ -7,23 +7,8 @@ use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 
 use Platform;
 
-use Parse::RecDescent;
-
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
-
-my $bla = '((1,1),(1,(1,1)))';
-
-my $grammar = q {
-	startrule: '(' content ',' content ')'
-	content: startrule | /\d*/
-};
-
-my $parser = Parse::RecDescent->new($grammar) or die 'bad grammar';
-
-$parser->startrule($bla) or print "bad text\n";
-
-die;
 
 my ($levels) = @ARGV;
 
