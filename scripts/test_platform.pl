@@ -19,8 +19,9 @@ my @available_cpus = (0..($level_parts[-1] - 1));
 $logger->info("platform: @level_parts");
 
 my $platform = Platform->new(\@level_parts, \@available_cpus, 1);
-$platform->build_structure();
-$platform->choose_cpus(9);
+$platform->build();
+#my @chosen_cpus = $platform->choose_cpus(3);
+#$logger->info("chosen cpus: @chosen_cpus");
 
 $logger->info("script finished");
 

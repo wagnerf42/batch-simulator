@@ -40,7 +40,7 @@ sub new {
 # possible combination of CPUs and checks to see which one is the best. Takes a
 # long time in normal sized platforms.
 
-sub build_structure {
+sub build {
 	my $self = shift;
 
 	$self->{root} = $self->_build(0, 0);
@@ -52,7 +52,6 @@ sub choose_cpus {
 	my $requested_cpus = shift;
 
 	$self->_score($self->{root}, 0, $requested_cpus);
-
 	return $self->_choose_cpus($self->{root}, $requested_cpus);
 }
 
@@ -80,25 +79,22 @@ sub _build {
 	my $level = shift;
 	my $node = shift;
 
-	#TODO Change this so that setting up the available CPUs is a separate
-	#step. The idea is to only do it in the end. Then I can use the tree
-	#structure to do it in log time.
+	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
+	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
 
 	# Last level
-	if ($level == scalar @{$self->{levels}} - 1) {
+	if ($level == $#{$self->{levels}} - 1) {
 		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
-		my $tree_content = {total_size => $cpu_is_available, id => $node};
+		my $tree_content = {total_size => $next_level_nodes, nodes => [@next_level_nodes_ids], id => $node};
 		return Tree->new($tree_content);
 	}
 
-	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
-	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
 	my @children = map {$self->_build($level + 1, $_)} (@next_level_nodes_ids);
 
 	my $total_size = 0;
 	$total_size += $_->content()->{total_size} for (@children);
 
-	my $tree_content = {total_size => $total_size};
+	my $tree_content = {total_size => $total_size, id => $node};
 	my $tree = Tree->new($tree_content);
 	$tree->children(\@children);
 	return $tree;
