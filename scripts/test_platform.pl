@@ -20,8 +20,8 @@ $logger->info("platform: @level_parts");
 
 my $platform = Platform->new(\@level_parts, \@available_cpus, 1);
 $platform->build();
-#my @chosen_cpus = $platform->choose_cpus(3);
-#$logger->info("chosen cpus: @chosen_cpus");
+my @chosen_cpus = $platform->choose_cpus(2);
+$logger->info("chosen cpus: @chosen_cpus");
 
 $logger->info("script finished");
 

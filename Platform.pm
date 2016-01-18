@@ -82,9 +82,8 @@ sub _build {
 	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
 	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
 
-	# Last level
+	# Last level before the leafs/nodes
 	if ($level == $#{$self->{levels}} - 1) {
-		my $cpu_is_available = grep {$_ == $node} (@{$self->{available_cpus}});
 		my $tree_content = {total_size => $next_level_nodes, nodes => [@next_level_nodes_ids], id => $node};
 		return Tree->new($tree_content);
 	}
@@ -140,18 +139,17 @@ sub _score {
 	# No needed CPUs
 	return 0 unless $requested_cpus;
 
+	my $max_depth = $#{$self->{levels}} - 1;
+
 	# Leaf/CPU
-	return 0 if ($level == scalar @{$self->{levels}} - 1);
+	return 0 if ($level == $max_depth);
 
 	# Best combination already saved
-	if (defined $tree->content()->{$requested_cpus}) {
-		return $tree->content()->{$requested_cpus}->{score};
-	}
+	return $tree->content()->{$requested_cpus}->{score} if (defined $tree->content()->{$requested_cpus});
 
 	my @children = @{$tree->children()};
 	my $last_child = $#children;
 	my @combinations = $self->_combinations($tree, $requested_cpus, 0);
-	my $max_depth = scalar @{$self->{levels}} - 1;
 	my %best_combination = (score => LONG_MAX, combination => '');
 
 	for my $combination (@combinations) {
@@ -162,13 +160,16 @@ sub _score {
 			my $child_size = $children[$child_id]->content()->{total_size};
 			my $child_requested_cpus = $combination_parts[$child_id];
 
-			$score = $self->_score($children[$child_id], $level + 1, $child_requested_cpus);
+			my $child_score = $self->_score($children[$child_id], $level + 1, $child_requested_cpus);
+			$score = max($score, $child_score + 1);
 		}
 
 		if ($score < $best_combination{score}) {
 			$best_combination{score} = $score;
 			$best_combination{combination} = $combination;
 		}
+
+		print "$level $combination $score\n";
 	}
 
 	$tree->content()->{$requested_cpus} = \%best_combination;
@@ -294,15 +295,5 @@ sub _score_function_pnorm {
 
 	return $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * pow(($max_depth - $level) * 2, $self->{norm});
 }
-
-sub _score_function_level {
-	my $self = shift;
-	my $child_requested_cpus = shift;
-	my $requested_cpus = shift;
-	my $level = shift;
-
-	return $level;
-}
-
 
 1;
