@@ -34,6 +34,7 @@ sub new {
 		processors_number => shift,
 		cluster_size => shift,
 		reduction_algorithm => shift,
+		platform_levels => shift,
 		cmax => 0,
 		uses_external_simulator => 0
 	};

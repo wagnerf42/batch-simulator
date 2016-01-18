@@ -25,6 +25,7 @@ use constant {
 	CONTIGUOUS => 2,
 	BEST_EFFORT_LOCAL => 3,
 	LOCAL => 4,
+	PLATFORM => 5
 };
 
 our @BACKFILLING_VARIANT_STRINGS = (
@@ -33,6 +34,7 @@ our @BACKFILLING_VARIANT_STRINGS = (
 	"CONT",
 	"BELOC",
 	"LOC",
+	"PLATFORM",
 );
 
 our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL @BACKFILLING_VARIANT_STRINGS NEW_EXECUTION_PROFILE REUSE_EXECUTION_PROFILE);
@@ -58,7 +60,8 @@ sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
+	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm}, $self->{platform_levels});
+
 	$self->{current_time} = 0;
 
 	return $self;

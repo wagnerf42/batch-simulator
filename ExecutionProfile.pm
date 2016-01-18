@@ -39,11 +39,13 @@ sub new {
 	my $processors_number = shift;
 	my $cluster_size = shift;
 	my $reduction_algorithm = shift;
+	my $platform_levels = shift;
 
 	my $self = {
 		processors_number => $processors_number,
 		cluster_size => $cluster_size,
 		reduction_algorithm => $reduction_algorithm,
+		platform_levels => $platform_levels,
 	};
 
 	$self->{profile_tree} = BinarySearchTree->new(-1, 0);
@@ -121,7 +123,7 @@ sub get_free_processors_for {
 		return;
 	}
 
-	$left_processors->reduction_function($self->{reduction_algorithm}, $job->requested_cpus(), $self->{cluster_size});
+	$left_processors->reduction_function($self->{reduction_algorithm}, $job->requested_cpus(), $self->{cluster_size}, $self->{platform_levels});
 
 	if ($left_processors->is_empty()) {
 		$left_processors->free_allocated_memory();

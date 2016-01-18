@@ -22,13 +22,9 @@ use constant LINK_LATENCY => "1.0E-4";
 sub new {
 	my $class = shift;
 	my $levels = shift;
-	my $available_cpus = shift;
-	my $norm = shift;
 
 	my $self = {
 		levels => $levels,
-		available_cpus => $available_cpus,
-		norm => $norm,
 	};
 
 	bless $self, $class;
@@ -45,6 +41,33 @@ sub build {
 
 	$self->{root} = $self->_build(0, 0);
 	return;
+}
+
+sub choose_combination {
+	my $self = shift;
+	my $requested_cpus = shift;
+
+	$self->_score($self->{root}, 0, $requested_cpus);
+	return $self->_choose_combination($self->{root}, 0, $requested_cpus);
+}
+
+sub _choose_combination {
+	my $self = shift;
+	my $tree = shift;
+	my $level = shift;
+	my $requested_cpus = shift;
+
+	# Return nothing if requested_cpus is 0
+	return unless ($requested_cpus);
+
+	# Return if at the last level
+	return [$tree->content()->{id}, $requested_cpus] if ($level == $#{$self->{levels}} - 1);
+	
+	my $best_combination = $tree->content()->{$requested_cpus};
+	my @best_combination_parts = split('-', $best_combination->{combination});
+	
+	my @children = @{$tree->children()};
+	return map {$self->_choose_combination($_, $level + 1, shift @best_combination_parts)} (@children);
 }
 
 sub choose_cpus {
@@ -69,6 +92,7 @@ sub _choose_cpus {
 	return $tree->content()->{id} if (defined $tree->content()->{id});
 
 	my $best_combination = $tree->content()->{$requested_cpus};
+
 	my @combination_parts = split('-', $best_combination->{combination});
 
 	return map {$self->_choose_cpus($_, shift @combination_parts)} (@children);
@@ -171,8 +195,6 @@ sub _score {
 			$best_combination{score} = $score;
 			$best_combination{combination} = $combination;
 		}
-
-		print "$level $combination $score\n";
 	}
 
 	$tree->content()->{$requested_cpus} = \%best_combination;

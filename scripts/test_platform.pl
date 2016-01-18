@@ -6,22 +6,20 @@ use Data::Dumper;
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 
 use Platform;
+use Trace;
+use Backfilling;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my ($levels) = @ARGV;
+my ($trace_file, $cpus_number, $cluster_size) = @ARGV;
 
-my @level_parts = split('-', $levels);
-my @available_cpus = (0..($level_parts[-1] - 1));
+my $variant = 5;
+my $levels = '1-2-4-8';
 
-# Put everything in the log file
-$logger->info("platform: @level_parts");
-
-my $platform = Platform->new(\@level_parts, \@available_cpus, 1);
-$platform->build();
-my @chosen_cpus = $platform->choose_cpus(2);
-$logger->info("chosen cpus: @chosen_cpus");
+my $trace = Trace->new_from_swf($trace_file);
+my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, $levels);
+$schedule->run();
 
 $logger->info("script finished");
 
