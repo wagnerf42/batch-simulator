@@ -63,11 +63,10 @@ sub _choose_combination {
 	# Return if at the last level
 	return [$tree->content()->{id}, $requested_cpus] if ($level == $#{$self->{levels}} - 1);
 	
-	my $best_combination = $tree->content()->{$requested_cpus};
-	my @best_combination_parts = split('-', $best_combination->{combination});
+	my $best_combination = $tree->content()->{$requested_cpus}->{combination};
 	
 	my @children = @{$tree->children()};
-	return map {$self->_choose_combination($_, $level + 1, shift @best_combination_parts)} (@children);
+	return map {$self->_choose_combination($_, $level + 1, shift @{$best_combination})} (@children);
 }
 
 sub choose_cpus {
@@ -136,7 +135,7 @@ sub _combinations {
 	return $requested_cpus if ($node == $last_child);
 
 	my @remaining_children = @children[($node + 1)..$last_child];
-	my $remaining_size = sum (map {$_->content()->{total_size}} @children[($node + 1)..$last_child]);
+	my $remaining_size = sum (map {$_->content()->{total_size}} (@remaining_children));
 
 	my $minimum_cpus = max(0, $requested_cpus - $remaining_size);
 	my $maximum_cpus = min($children[$node]->content()->{total_size}, $requested_cpus);
@@ -145,10 +144,7 @@ sub _combinations {
 
 	for my $cpus_number ($minimum_cpus..$maximum_cpus) {
 		my @children_combinations = $self->_combinations($tree, $requested_cpus - $cpus_number, $node + 1);
-
-		for my $children_combination (@children_combinations) {
-			push @combinations, join('-', $cpus_number, $children_combination);
-		}
+		push @combinations, [$cpus_number, $_] for (@children_combinations);
 	}
 
 	return @combinations;
@@ -177,19 +173,18 @@ sub _score {
 	my %best_combination = (score => LONG_MAX, combination => '');
 
 	for my $combination (@combinations) {
-		my @combination_parts = split('-', $combination);
 		my $score = 0;
 
 		for my $child_id (0..$last_child) {
 			my $child_size = $children[$child_id]->content()->{total_size};
-			my $child_requested_cpus = $combination_parts[$child_id];
+			my $child_requested_cpus = $combination->[$child_id];
 
 			my $child_score = $self->_score($children[$child_id], $level + 1, $child_requested_cpus);
 			$score = max($score, $child_score);
 		}
 
 		# Add to the score if there is communication between different child nodes
-		$score += ($max_depth + 1 - $level) if (max(@combination_parts) < $requested_cpus);
+		$score += ($max_depth + 1 - $level) if (max(@{$combination}) < $requested_cpus);
 
 		if ($score < $best_combination{score}) {
 			$best_combination{score} = $score;
