@@ -38,8 +38,12 @@ sub new {
 
 sub build {
 	my $self = shift;
+	my $available_cpus = shift;
 
-	$self->{root} = $self->_build(0, 0);
+	#print Dumper($available_cpus);
+	#die;
+
+	$self->{root} = $self->_build(0, 0, $available_cpus);
 	return;
 }
 
@@ -101,17 +105,19 @@ sub _build {
 	my $self = shift;
 	my $level = shift;
 	my $node = shift;
+	my $available_cpus = shift;
 
 	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
 	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
 
 	# Last level before the leafs/nodes
 	if ($level == $#{$self->{levels}} - 1) {
-		my $tree_content = {total_size => $next_level_nodes, nodes => [@next_level_nodes_ids], id => $node};
+		my $cluster_number = floor($node/$next_level_nodes);
+		my $tree_content = {total_size => $available_cpus->[$cluster_number], nodes => [@next_level_nodes_ids], id => $node};
 		return Tree->new($tree_content);
 	}
 
-	my @children = map {$self->_build($level + 1, $_)} (@next_level_nodes_ids);
+	my @children = map {$self->_build($level + 1, $_, $available_cpus)} (@next_level_nodes_ids);
 
 	my $total_size = 0;
 	$total_size += $_->content()->{total_size} for (@children);

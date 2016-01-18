@@ -373,8 +373,18 @@ sub choose_ranges {
 	my $self = shift;
 	my $combination = shift;
 
-	print Dumper($combination);
+	my @remaining_ranges;
+
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			return 1;
+		}
+	);
+
 	die;
+	return;
+
 }
 
 sub reduce_to_platform {
@@ -383,11 +393,10 @@ sub reduce_to_platform {
 	my $cluster_size = shift;
 	my $platform_levels = shift;
 
-	my @available_cpus = $self->available_cpus_in_clusters($cluster_size);
-
+	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
 	my @level_parts = split('-', $platform_levels);
 	my $platform = Platform->new(\@level_parts);
-	$platform->build(\@available_cpus);
+	$platform->build($available_cpus);
 	my @chosen_combination = $platform->choose_combination($target_number);
 	my @chosen_ranges = $self->choose_ranges(\@chosen_combination);
 	$self->affect_ranges(\@chosen_ranges);
