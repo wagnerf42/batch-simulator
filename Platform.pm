@@ -161,8 +161,11 @@ sub _score {
 			my $child_requested_cpus = $combination_parts[$child_id];
 
 			my $child_score = $self->_score($children[$child_id], $level + 1, $child_requested_cpus);
-			$score = max($score, $child_score + 1);
+			$score = max($score, $child_score);
 		}
+
+		# Add to the score if there is communication between different child nodes
+		$score += ($max_depth + 1 - $level) if (max(@combination_parts) < $requested_cpus);
 
 		if ($score < $best_combination{score}) {
 			$best_combination{score} = $score;
