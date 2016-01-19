@@ -10,22 +10,7 @@ use Log::Log4perl qw(get_logger);
 
 use EventQueue;
 
-=head1 NAME
-
-Schedule - Basic class for schedule algorithms
-
-This class doesn't have all the logic for the schedule algorithm (i.e. it doesn't
-implement the assign_job routine). Instead, another class must inherit from it and
-complete the implementation (i.e. backfilling algorithm).
-
-=over 12
-
-=item new(trace, processors_number, cluster_size, reduction_algorithm)
-
-Creates a new Schedule object.
-
-=cut
-
+# Creates a new Schedule object.
 sub new {
 	my $class = shift;
 
@@ -74,12 +59,8 @@ sub new_simulation {
 	return $self;
 }
 
-=item run()
-
-Runs the basic schedule algorithm, calling the assign_job routine from the child class.
-
-=cut
-
+# Runs the basic schedule algorithm, calling the assign_job routine from the
+# child class.
 sub run {
 	my $self = shift;
 

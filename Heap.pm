@@ -2,23 +2,10 @@ package Heap;
 use strict;
 use warnings;
 
-=head1 NAME
+# Returns a new object of the Heap class.
 
-Heap - Heap implementation with generic manipulation routines
-
-=head2 METHODS
-
-=over 12
-
-=item new(sentinel)
-
-Returns a new object of the Heap class.
-
-The sentinel is an object or scalar that is smaller than any other object or
-scalar that the heap can store.
-
-=cut
-
+# The sentinel is an object or scalar that is smaller than any other object or
+# scalar that the heap can store.
 sub new {
 	my $class = shift;
 	my $self = {};
@@ -30,15 +17,11 @@ sub new {
 	return $self;
 }
 
-=item retrieve()
+# Returns the smallest object or scalar stored in the heap.
 
-Returns the smallest object or scalar stored in the heap.
-
-This routine removes the first element in the list and puts in its place the
-last element. Then it fixes the heap structure by moving it down as necessary.
-
-=cut
-
+# This routine removes the first element in the list and puts in its place the
+# last element. Then it fixes the heap structure by moving it down as
+# necessary.
 sub retrieve {
 	my $self = shift;
 
@@ -76,15 +59,10 @@ sub next_element {
 	return $self->{elements}->[1];
 }
 
-=item add(element)
+# Adds a new element to the heap structure.
 
-Adds a new element to the heap structure.
-
-The new element is added at the end of the structure. Then it is moved up as
-necessary to preserve the priority order between the elements in the heap.
-
-=cut
-
+# The new element is added at the end of the structure. Then it is moved up as
+# necessary to preserve the priority order between the elements in the heap.
 sub add {
 	my $self = shift;
 	my $element = shift;

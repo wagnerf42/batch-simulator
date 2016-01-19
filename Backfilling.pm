@@ -39,23 +39,10 @@ our @BACKFILLING_VARIANT_STRINGS = (
 
 our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL @BACKFILLING_VARIANT_STRINGS NEW_EXECUTION_PROFILE REUSE_EXECUTION_PROFILE);
 
-=head1 NAME
+# Creates a new Backfilling object.
 
-Backfilling - Implementation of the Backfilling algorithm
-
-=head2 METHODS
-
-=over 12
-
-=item new(trace, processors_number, cluster_size, reduction_algorithm)
-
-Creates a new Backfilling object.
-
-The parameters are redirected to the Schedule class and an execution profile is
-added.
-
-=cut
-
+# The parameters are redirected to the Schedule class and an execution profile
+# is added.
 sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
@@ -77,27 +64,22 @@ sub new_simulation {
 	return $self;
 }
 
-=item run()
+# Executed the backfilling algorithm.
 
-Executed the backfilling algorithm.
+# The backfilling algorithm uses time based events to detect when jobs are
+# submitted or finished.
 
-The backfilling algorithm uses time based events to detect when jobs are
-submitted or finished.
+# It is important to note that from the viewpoint of the algorithm, the actual
+# run time of a job is unknown until it starts (i.e. only the submitted run
+# time is used). When the job starts, the scheduler will create an ending event
+# with the real ending time of the job.
 
-It is important to note that from the viewpoint of the algorithm, the actual
-run time of a job is unknown until it starts (i.e. only the submitted run time
-is used). When the job starts, the scheduler will create an ending event with
-the real ending time of the job.
-
-Also, a particular important part of this implementation of the algorithm is
-the reassignment of jobs. When a job finishes before it's submitted ending
-time, the algorithm tries to reuse that space with jobs that were scheduled to
-start later. For every job that has been submitted but hasn't started yet, the
-algorithm either starts it now using the new space or puts it back in it's
-original position.
-
-=cut
-
+# Also, a particular important part of this implementation of the algorithm is
+# the reassignment of jobs. When a job finishes before it's submitted ending
+# time, the algorithm tries to reuse that space with jobs that were scheduled
+# to start later. For every job that has been submitted but hasn't started yet,
+# the algorithm either starts it now using the new space or puts it back in
+# it's original position.
 sub run {
 	my $self = shift;
 	my $logger = get_logger('Backfilling::run');
@@ -179,19 +161,13 @@ sub run {
 	return;
 }
 
-=item start_jobs()
+# Tries to start all jobs that have already been submitted.
+# When a job can be started, a new ending event is created and pushed into the
+# events data structure.
 
-Tries to start all jobs that have already been submitted.
-
-When a job can be started, a new ending event is created and pushed into the
-events data structure.
-
-Note on possible improvement: if jobs in the reserved jobs list are ordered by
-starting time, it may be possible to stop the loop when the first job that
-can't start now is found.
-
-=cut
-
+# Note on possible improvement: if jobs in the reserved jobs list are ordered
+# by starting time, it may be possible to stop the loop when the first job that
+# can't start now is found.
 sub start_jobs {
 	my $self = shift;
 	my @remaining_reserved_jobs;
@@ -218,16 +194,11 @@ sub start_jobs {
 	return;
 }
 
-=item reassign_jobs_two_positions()
+# Tries to reassign all the jobs that have been submitted but haven't started
+# yet.
 
-Tries to reassign all the jobs that have been submitted but haven't started
-yet.
-
-For each job in the list, the routine checks if the job can start now. If that
-is not possible, the job is returned to it's original position.
-
-=cut
-
+# For each job in the list, the routine checks if the job can start now. If that
+# is not possible, the job is returned to it's original position.
 sub reassign_jobs_two_positions {
 	my $self = shift;
 	my $logger = get_logger('Backfilling::reassign_jobs_two_positions');
@@ -269,16 +240,11 @@ sub reassign_jobs_two_positions {
 	return;
 }
 
-=item assign_job(job)
+# Finds the first place in the schedule for a job.
 
-Finds the first place in the schedule for a job.
-
-This routine uses the execution profile to find when and on which processors
-the job can be executed. It is then inserted into the list of jobs that have
-been submitted but haven't started yet.
-
-=cut
-
+# This routine uses the execution profile to find when and on which processors
+# the job can be executed. It is then inserted into the list of jobs that have
+# been submitted but haven't started yet.
 sub assign_job {
 	my $self = shift;
 	my $job = shift;

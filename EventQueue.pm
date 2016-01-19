@@ -13,23 +13,10 @@ use Job;
 
 use Debug;
 
-=head1 NAME
+# Creates a new EventQueue object.
 
-EventQueue - Implementation of the queue using an extern simulator
-
-=head2 METHODS
-
-=over 12
-
-=item new(json_file)
-
-Creates a new EventQueue object.
-
-The objects uses a JSON file to read the information about the jobs and a UNIX
-socket to receive events from the external simulator.
-
-=cut
-
+# The objects uses a JSON file to read the information about the jobs and a
+# UNIX socket to receive events from the external simulator.
 sub new {
 	my $class = shift;
 	my $logger = get_logger('EventQueue::new');
@@ -76,34 +63,19 @@ sub new {
 	return $self;
 }
 
-=item cpu_number()
-
-Returns the number of cpus in the json file
-
-=cut
-
+# Returns the number of cpus in the json file
 sub cpu_number {
 	my $self = shift;
 	return $self->{json}->{nb_res};
 }
 
-=item current_time()
-
-Returns the current time in the external simulator.
-
-=cut
-
+# Returns the current time in the external simulator.
 sub current_time {
 	my $self = shift;
 	return $self->{current_simulator_time};
 }
 
-=item set_started_jobs(jobs)
-
-Informs the external simulator that jobs have started.
-
-=cut
-
+# Informs the external simulator that jobs have started.
 sub set_started_jobs {
 	my $self = shift;
 	my $jobs = shift;
@@ -128,12 +100,7 @@ sub set_started_jobs {
 	return;
 }
 
-=item retrieve_all()
-
-Retrieves all the available events in the event queue.
-
-=cut
-
+# Retrieves all the available events in the event queue.
 sub retrieve_all {
 	my $self = shift;
 	my $logger = get_logger('EventQueue::retrieve_all');
@@ -172,16 +139,15 @@ sub retrieve_all {
 	return @incoming_events;
 }
 
-=item _recv(size)
+# Uses a loop to receive size bytes from the network.
 
-Uses a loop to receive size bytes from the network.
+# With the current implementation, the routine starts writing on an empty
+# string. The loop is used to continuously receive data from the socket. If
+# somehow the socket is closed and stops transmitting data, the routine stops
+# and returns whatever has been read up to that point.
 
-With the current implementation, the routine starts writing on an empty string. The loop is used to continuously receive data from the socket. If somehow the socket is closed and stops transmitting data, the routine stops and returns whatever has been read up to that point.
-
-The return value is an string with the received message. It can be empty if nothing was read but the socket is still working.
-
-=cut
-
+# The return value is an string with the received message. It can be empty if
+# nothing was read but the socket is still working.
 sub recv {
 	my $self = shift;
 	my $size = shift;

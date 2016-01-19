@@ -31,11 +31,10 @@ sub new {
 	return $self;
 }
 
-# Platform structure generation code
+# Platform structure generation code.
 # This is the exact version of the algorithm. It builds a list of all the
 # possible combination of CPUs and checks to see which one is the best. Takes a
 # long time in normal sized platforms.
-
 sub build {
 	my $self = shift;
 	my $available_cpus = shift;
