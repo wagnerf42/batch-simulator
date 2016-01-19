@@ -40,9 +40,6 @@ sub build {
 	my $self = shift;
 	my $available_cpus = shift;
 
-	print Dumper($available_cpus);
-	#die;
-
 	$self->{root} = $self->_build(0, 0, $available_cpus);
 	return;
 }
