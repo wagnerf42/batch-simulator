@@ -40,7 +40,7 @@ sub build {
 	my $self = shift;
 	my $available_cpus = shift;
 
-	#print Dumper($available_cpus);
+	print Dumper($available_cpus);
 	#die;
 
 	$self->{root} = $self->_build(0, 0, $available_cpus);
@@ -112,8 +112,7 @@ sub _build {
 
 	# Last level before the leafs/nodes
 	if ($level == $#{$self->{levels}} - 1) {
-		my $cluster_number = floor($node/$next_level_nodes);
-		my $tree_content = {total_size => $available_cpus->[$cluster_number], nodes => [@next_level_nodes_ids], id => $node};
+		my $tree_content = {total_size => (defined $available_cpus->[$node]) ? $available_cpus->[$node] : 0, nodes => [@next_level_nodes_ids], id => $node};
 		return Tree->new($tree_content);
 	}
 

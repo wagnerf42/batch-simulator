@@ -366,6 +366,8 @@ sub available_cpus_in_clusters {
 		}
 	);
 
+	print Dumper(@available_cpus);
+
 	return \@available_cpus;
 }
 
@@ -429,6 +431,8 @@ sub reduce_to_platform {
 	my $platform = Platform->new(\@level_parts);
 	$platform->build($available_cpus);
 	my @chosen_combination = $platform->choose_combination($target_number);
+	print "COMBINATION\n";
+	print Dumper(@chosen_combination);
 	my @chosen_ranges = $self->choose_ranges(\@chosen_combination, $cluster_size);
 	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@chosen_ranges));
 
