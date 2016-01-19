@@ -14,6 +14,8 @@ use Data::Dumper;
 require Exporter;
 our @ISA = qw(Exporter);
 
+use Platform;
+
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
@@ -30,6 +32,7 @@ our @REDUCTION_FUNCTIONS = (
 	\&reduce_to_forced_contiguous,
 	\&reduce_to_best_effort_local,
 	\&reduce_to_forced_local,
+	\&reduce_to_platform
 );
 
 our @EXPORT = qw(@REDUCTION_FUNCTIONS);
@@ -335,6 +338,95 @@ sub reduce_to_forced_local {
 	} else {
 		$self->remove_all();
 	}
+	return;
+}
+
+sub available_cpus_in_clusters {
+	my $self = shift;
+	my $cluster_size = shift;
+
+	my @available_cpus;
+
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+
+			my $start_cluster = floor($start/$cluster_size);
+			my $end_cluster = floor($end/$cluster_size);
+
+			for my $cluster ($start_cluster..$end_cluster) {
+				my $start_point_in_cluster = max($start, $cluster * $cluster_size);
+				my $end_point_in_cluster = min($end, ($cluster + 1) * $cluster_size - 1);
+
+				$available_cpus[$cluster] = 0 unless (defined $available_cpus[$cluster]);
+				$available_cpus[$cluster] += $end_point_in_cluster - $start_point_in_cluster + 1;
+			}
+
+			return 1;
+		}
+	);
+
+	return \@available_cpus;
+}
+
+sub choose_ranges {
+	my $self = shift;
+	my $combination = shift;
+	my $cluster_size = shift;
+
+	my $logger = get_logger('ProcessorRange::choose_ranges');
+
+	my $next_block = shift @{$combination};
+	my @remaining_ranges;
+
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+
+			my $start_cluster = floor($start/$cluster_size);
+			my $end_cluster = floor($end/$cluster_size);
+
+			$logger->logdie('expected cluster not found') if ($start_cluster > $next_block->[0]);
+
+			while ($end_cluster >= $next_block->[0]) {
+				# CPUs in the desired cluster
+				my $start_point_in_cluster = max($start, $next_block->[0] * $cluster_size);
+				my $end_point_in_cluster = min($end, ($next_block->[0] + 1) * $cluster_size - 1);
+
+				my $available_cpus_in_cluster = $end_point_in_cluster - $start_point_in_cluster + 1;
+				my $selected_cpus = min($available_cpus_in_cluster, $next_block->[1]);
+				$next_block->[1] -= $selected_cpus;
+				push @remaining_ranges, [$start_point_in_cluster, $start_point_in_cluster + $selected_cpus - 1];
+
+				unless ($next_block->[1]) {
+					$next_block = shift @{$combination};
+					return 0 unless (defined $next_block);
+				}
+			}
+
+			return 1;
+		}
+	);
+
+	$logger->logdie('did not find enough processors') if (@{$combination});
+
+	return @remaining_ranges;
+}
+
+sub reduce_to_platform {
+	my $self = shift;
+	my $target_number = shift;
+	my $cluster_size = shift;
+	my $platform_levels = shift;
+
+	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
+	my @level_parts = split('-', $platform_levels);
+	my $platform = Platform->new(\@level_parts);
+	$platform->build($available_cpus);
+	my @chosen_combination = $platform->choose_combination($target_number);
+	my @chosen_ranges = $self->choose_ranges(\@chosen_combination, $cluster_size);
+	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@chosen_ranges));
+
 	return;
 }
 
