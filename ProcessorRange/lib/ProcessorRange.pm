@@ -372,19 +372,48 @@ sub available_cpus_in_clusters {
 sub choose_ranges {
 	my $self = shift;
 	my $combination = shift;
+	my $cluster_size = shift;
 
+	my $logger = get_logger('ProcessorRange::choose_ranges');
+
+	print "CHOOSE RANGES\n";
+	print Dumper(@{$combination});
+
+	my $next_block = shift @{$combination};
 	my @remaining_ranges;
 
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
+
+			my $start_cluster = floor($start/$cluster_size);
+			my $end_cluster = floor($end/$cluster_size);
+
+			$logger->logdie('expected cluster not found') if ($start_cluster > $next_block->[0]);
+
+			while ($end_cluster >= $next_block->[0]) {
+				# CPUs in the desired cluster
+				my $start_point_in_cluster = max($start, $next_block->[0] * $cluster_size);
+				my $end_point_in_cluster = min($end, ($next_block->[0] + 1) * $cluster_size - 1);
+
+				my $available_cpus_in_cluster = $end_point_in_cluster - $start_point_in_cluster + 1;
+				my $selected_cpus = min($available_cpus_in_cluster, $next_block->[1]);
+				$next_block->[1] -= $selected_cpus;
+				push @remaining_ranges, [$start_point_in_cluster, $start_point_in_cluster + $selected_cpus - 1];
+
+				unless ($next_block->[1]) {
+					$next_block = shift @{$combination};
+					return 0 unless (defined $next_block);
+				}
+			}
+
 			return 1;
 		}
 	);
 
-	die;
-	return;
+	$logger->logdie('did not find enough processors') if (@{$combination});
 
+	return @remaining_ranges;
 }
 
 sub reduce_to_platform {
@@ -393,13 +422,17 @@ sub reduce_to_platform {
 	my $cluster_size = shift;
 	my $platform_levels = shift;
 
+	print "REDUCE TO PLATFORM\n";
+
 	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
 	my @level_parts = split('-', $platform_levels);
 	my $platform = Platform->new(\@level_parts);
 	$platform->build($available_cpus);
 	my @chosen_combination = $platform->choose_combination($target_number);
-	my @chosen_ranges = $self->choose_ranges(\@chosen_combination);
-	$self->affect_ranges(\@chosen_ranges);
+	my @chosen_ranges = $self->choose_ranges(\@chosen_combination, $cluster_size);
+	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@chosen_ranges));
+
+	return;
 }
 
 #returns true if all processors form a contiguous block

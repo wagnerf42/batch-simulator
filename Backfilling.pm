@@ -133,6 +133,10 @@ sub run {
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 			my $job = $event->payload();
 
+			##DEBUG_BEGIN
+			$logger->debug("job " . $job->job_number() . " ending");
+			##DEBUG_END
+
 			delete $self->{started_jobs}->{$job->job_number()};
 
 			if ($self->{uses_external_simulator}) {
@@ -280,11 +284,16 @@ sub assign_job {
 	my $job = shift;
 
 	my $logger = get_logger('Backfilling::assign_job');
+
 	##DEBUG_BEGIN
 	$logger->debug("assigning job " . $job->job_number());
 	##DEBUG_END
 
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
+
+	##DEBUG_BEGIN
+	$logger->debug("chose starting time $starting_time and processors $chosen_processors");
+	##DEBUG_END
 
 	$job->assign_to($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job);
