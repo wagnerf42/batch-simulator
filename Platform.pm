@@ -108,7 +108,11 @@ sub _build {
 
 	# Last level before the leafs/nodes
 	if ($level == $#{$self->{levels}} - 1) {
-		my $tree_content = {total_size => (defined $available_cpus->[$node]) ? $available_cpus->[$node] : 0, nodes => [@next_level_nodes_ids], id => $node};
+		my $tree_content = {
+			total_size => (defined $available_cpus->[$node]) ? $available_cpus->[$node] : 0,
+			nodes => [@next_level_nodes_ids],
+			id => $node
+		};
 		return Tree->new($tree_content);
 	}
 

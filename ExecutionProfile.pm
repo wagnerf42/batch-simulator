@@ -104,7 +104,12 @@ sub get_free_processors_for {
 		return;
 	}
 
-	$left_processors->reduction_function($self->{reduction_algorithm}, $job->requested_cpus(), $self->{cluster_size}, $self->{platform_levels});
+	$left_processors->reduction_function(
+		$self->{reduction_algorithm},
+		$job->requested_cpus(),
+		$self->{cluster_size},
+		$self->{platform_levels}
+	);
 
 	if ($left_processors->is_empty()) {
 		$left_processors->free_allocated_memory();
@@ -184,7 +189,11 @@ sub remove_job {
 
 		# Only remove if it is still there
 		if ((not float_equal($job_ending_time, $start)) and ($job_ending_time > $start)) {
-			my $new_profile = Profile->new($start, $job_ending_time, $job->assigned_processors_ids()->copy_range());
+			my $new_profile = Profile->new(
+				$start,
+				$job_ending_time,
+				$job->assigned_processors_ids()->copy_range()
+			);
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		return;
@@ -203,7 +212,11 @@ sub remove_job {
 		#split in two
 		my $first_profile_ending_time = $first_profile->ending_time();
 		$first_profile->ending_time($starting_time);
-		my $second_profile = Profile->new($starting_time, $first_profile_ending_time, $first_profile->processors()->copy_range());
+		my $second_profile = Profile->new(
+			$starting_time,
+			$first_profile_ending_time,
+			$first_profile->processors()->copy_range()
+		);
 
 		#put back
 		$self->{profile_tree}->add_content($first_profile);
@@ -222,7 +235,10 @@ sub remove_job {
 		$self->{profile_tree}->remove_content($first_profile);
 
 		#split in two
-		my $second_profile = Profile->new($job_ending_time, $first_profile->ending_time(), $first_profile->processors()->copy_range());
+		my $second_profile = Profile->new($job_ending_time,
+			$first_profile->ending_time(),
+			$first_profile->processors()->copy_range()
+		);
 		$first_profile->ending_time($job_ending_time);
 
 		#put back
@@ -244,7 +260,11 @@ sub remove_job {
 			$logger->debug("gap at [$previous_profile_ending_time, " . $profile->starting_time() . "]");
 			##DEBUG_END
 
-			my $new_profile = Profile->new($previous_profile_ending_time, $profile->starting_time(), $job->assigned_processors_ids()->copy_range());
+			my $new_profile = Profile->new(
+				$previous_profile_ending_time,
+				$profile->starting_time(),
+				$job->assigned_processors_ids()->copy_range()
+			);
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		$previous_profile_ending_time = $profile->ending_time();
@@ -255,7 +275,10 @@ sub remove_job {
 		##DEBUG_BEGIN
 		$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
 		##DEBUG_END
-		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, $job->assigned_processors_ids()->copy_range());
+		my $new_profile = Profile->new($previous_profile_ending_time,
+			$job_ending_time,
+			$job->assigned_processors_ids()->copy_range()
+		);
 		$self->{profile_tree}->add_content($new_profile);
 	}
 
@@ -365,7 +388,7 @@ sub find_first_profile_for {
 		sub {
 			my $profile = shift;
 			# Gap in the list of profiles
-			if (defined $previous_ending_time and !float_equal($previous_ending_time, $profile->starting_time())) {
+			if (defined $previous_ending_time and not float_equal($previous_ending_time, $profile->starting_time())) {
 				@included_profiles = ();
 			}
 

@@ -47,7 +47,12 @@ sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm}, $self->{platform_levels});
+	$self->{execution_profile} = ExecutionProfile->new(
+		$self->{processors_number},
+		$self->{cluster_size},
+		$self->{reduction_algorithm},
+		$self->{platform_levels}
+	);
 
 	$self->{current_time} = 0;
 
@@ -58,7 +63,12 @@ sub new_simulation {
 	my $class = shift;
 	my $self = $class->SUPER::new_simulation(@_);
 
-	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
+	$self->{execution_profile} = ExecutionProfile->new(
+		$self->{processors_number},
+		$self->{cluster_size},
+		$self->{reduction_algorithm}
+	);
+
 	$self->{current_time} = 0;
 
 	return $self;
@@ -89,7 +99,14 @@ sub run {
 
 	unless ($self->{uses_external_simulator}) {
 		$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
-		$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
+
+		$self->{events}->add(
+			Event->new(
+				SUBMISSION_EVENT,
+				$_->submit_time(),
+				$_
+			)
+		) for (@{$self->{trace}->jobs()});
 	}
 
 	$self->{run_time} = time(); # time measure
@@ -180,7 +197,14 @@ sub start_jobs {
 			$logger->debug("job " . $job->job_number() . " starting");
 			##DEBUG_END
 
-			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job)) unless ($self->{uses_external_simulator});
+			$self->{events}->add(
+				Event->new(
+					JOB_COMPLETED_EVENT,
+					$job->real_ending_time(),
+					$job
+				)
+			) unless ($self->{uses_external_simulator});
+
 			$self->{started_jobs}->{$job->job_number()} = $job;
 			push @newly_started_jobs, $job;
 		} else {
