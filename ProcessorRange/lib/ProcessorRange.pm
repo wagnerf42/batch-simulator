@@ -43,17 +43,6 @@ XSLoader::load('ProcessorRange', $VERSION);
 
 use overload '""' => \&stringification;
 
-=head1 NAME
-
-ProcessorRange - Class used to manage the list of CPU ranges that are available
-at a given time.
-
-=head2 METHODS
-
-=over 12
-
-=cut
-
 sub new {
 	my $class = shift;
 	my $self;
@@ -352,12 +341,7 @@ sub reduce_to_forced_local {
 	return;
 }
 
-=item available_cpus_in_clusters(cluster_size)
-
-Return the list of available CPUs per cluster, in a list.
-
-=cut
-
+# Returns the list of available CPUs per cluster, in a list.
 sub available_cpus_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
@@ -386,12 +370,7 @@ sub available_cpus_in_clusters {
 	return \@available_cpus;
 }
 
-=item choose_ranges(combination, cluster_size)
-
-Choose which ranges to use based on a list of clusters and numbers of CPUs.
-
-=cut
-
+# Chooses which ranges to use based on a list of clusters and numbers of CPUs.
 sub choose_ranges {
 	my $self = shift;
 	my $combination = shift;
@@ -439,17 +418,12 @@ sub choose_ranges {
 	return @remaining_ranges;
 }
 
-=item reduce_to_platform(target_number, cluster_size, platform_levels)
+# Choose which CPUs to use after enough CPUs are available for the job.
 
-Choose which CPUs to use after enough CPUs are available for the job.
-
-This subroutine is responsible for building a tree from the description of the
-platform, match it to the available CPUs from the execution profile, provite
-the best combination of CPUs amongst the different clusts and finally choose
-which CPUs from those clusters to use.
-
-=cut
-
+# This subroutine is responsible for building a tree from the description of
+# the platform, match it to the available CPUs from the execution profile,
+# provite the best combination of CPUs amongst the different clusts and finally
+# choose which CPUs from those clusters to use.
 sub reduce_to_platform {
 	my $self = shift;
 	my $target_number = shift;
@@ -467,13 +441,18 @@ sub reduce_to_platform {
 	return;
 }
 
-=item contiguous(processors_number)
+sub reduce_to_platform2 {
+	my $self = shift;
+	my $target_numer = shift;
+	my $cluster_size = shift;
+	my $platform_levels = shift;
 
-Returns true if all processors form a contiguous block. Needs processors number
-as jobs can wrap around.
+	die;
+	return;
+}
 
-=cut
-
+# Returns true if all processors form a contiguous block. Needs processors
+# number as jobs can wrap around.
 sub contiguous {
 	my $self = shift;
 	my $processors_number = shift;
