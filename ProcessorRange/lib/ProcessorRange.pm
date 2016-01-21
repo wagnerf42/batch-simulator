@@ -347,7 +347,6 @@ sub available_cpus_in_clusters {
 	my $cluster_size = shift;
 
 	my @available_cpus;
-	my $current_cluster;
 
 	$self->ranges_loop(
 		sub {
@@ -360,17 +359,13 @@ sub available_cpus_in_clusters {
 				my $start_point_in_cluster = max($start, $cluster * $cluster_size);
 				my $end_point_in_cluster = min($end, ($cluster + 1) * $cluster_size - 1);
 
-				if ((not defined $current_cluster) or ($cluster != $current_cluster)) {
-					push @available_cpus, {
-						total_size => 0,
-						cpus => []
-					};
+				$available_cpus[$cluster] = {
+					total_size => 0,
+					cpus => []
+				} unless (defined $available_cpus[$cluster]);
 
-					$current_cluster = $cluster;
-				}
-
-				$available_cpus[$#available_cpus]->{total_size} += $end_point_in_cluster - $start_point_in_cluster + 1;
-				push $available_cpus[$#available_cpus]->{cpus}, ($start_point_in_cluster..$end_point_in_cluster);
+				$available_cpus[$cluster]->{total_size} += $end_point_in_cluster - $start_point_in_cluster + 1;
+				push @{$available_cpus[$cluster]->{cpus}}, ($start_point_in_cluster..$end_point_in_cluster);
 			}
 
 			return 1;
@@ -460,21 +455,24 @@ sub choose_cpus {
 		for my $cpus_block (@{$structure_level}) {
 			if ($cpus_block->{total_size} >= $target_number) {
 				my @chosen_ranges;
-
+			
 				my $range_start = shift @{$cpus_block->{cpus}};
 				my $range_end = $range_start;
+				my $taken_cpus = 1;
 
-				while (defined $range_start) {
+				while ($taken_cpus <= $target_number) {
 					my $cpu_number = shift @{$cpus_block->{cpus}};
 
-					if ((defined $cpu_number) and ($cpu_number == $range_end + 1)) {
+					while ((defined $cpu_number) and ($cpu_number == $range_end + 1) and ($taken_cpus < $target_number)) {
 						$range_end = $cpu_number;
-
-					} else {
-						push @chosen_ranges, [$range_start, $range_end];
-						$range_start = shift @{$cpus_block->{cpus}};
-						$range_end = $range_start;
+						$taken_cpus += 1;
+						$cpu_number = shift @{$cpus_block->{cpus}};
 					}
+
+					push @chosen_ranges, [$range_start, $range_end];
+					$range_start = shift @{$cpus_block->{cpus}};
+					$taken_cpus += 1;
+					$range_end = $range_start;
 				}
 
 				return \@chosen_ranges;
