@@ -354,8 +354,7 @@ sub reduce_to_platform {
 	my $platform_levels = shift;
 
 	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
-	my @level_parts = split('-', $platform_levels);
-	my $platform = Platform->new(\@level_parts);
+	my $platform = Platform->new($platform_levels);
 	$platform->build($available_cpus);
 	my @chosen_combination = $platform->choose_combination($target_number);
 	my @chosen_ranges = $self->choose_ranges(\@chosen_combination, $cluster_size);
@@ -453,8 +452,7 @@ sub reduce_to_platform2 {
 	my $platform_levels = shift;
 
 	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
-	my @platform_levels_parts = split('-', $platform_levels);
-	my $platform = Platform->new(\@platform_levels_parts);
+	my $platform = Platform->new($platform_levels);
 	my $cpus_structure = $platform->build_structure($available_cpus);
 	my $chosen_ranges = $self->choose_cpus($cpus_structure, $target_number);
 	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
