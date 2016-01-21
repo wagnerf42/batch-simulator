@@ -341,6 +341,29 @@ sub reduce_to_forced_local {
 	return;
 }
 
+# Choose which CPUs to use after enough CPUs are available for the job.
+
+# This subroutine is responsible for building a tree from the description of
+# the platform, match it to the available CPUs from the execution profile,
+# provite the best combination of CPUs amongst the different clusts and finally
+# choose which CPUs from those clusters to use.
+sub reduce_to_platform {
+	my $self = shift;
+	my $target_number = shift;
+	my $cluster_size = shift;
+	my $platform_levels = shift;
+
+	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
+	my @level_parts = split('-', $platform_levels);
+	my $platform = Platform->new(\@level_parts);
+	$platform->build($available_cpus);
+	my @chosen_combination = $platform->choose_combination($target_number);
+	my @chosen_ranges = $self->choose_ranges(\@chosen_combination, $cluster_size);
+	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@chosen_ranges));
+
+	return;
+}
+
 # Returns the list of available CPUs per cluster, in a list.
 sub available_cpus_in_clusters {
 	my $self = shift;
@@ -423,65 +446,6 @@ sub choose_ranges {
 	return @remaining_ranges;
 }
 
-# Choose which CPUs to use after enough CPUs are available for the job.
-
-# This subroutine is responsible for building a tree from the description of
-# the platform, match it to the available CPUs from the execution profile,
-# provite the best combination of CPUs amongst the different clusts and finally
-# choose which CPUs from those clusters to use.
-sub reduce_to_platform {
-	my $self = shift;
-	my $target_number = shift;
-	my $cluster_size = shift;
-	my $platform_levels = shift;
-
-	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
-	my @level_parts = split('-', $platform_levels);
-	my $platform = Platform->new(\@level_parts);
-	$platform->build($available_cpus);
-	my @chosen_combination = $platform->choose_combination($target_number);
-	my @chosen_ranges = $self->choose_ranges(\@chosen_combination, $cluster_size);
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@chosen_ranges));
-
-	return;
-}
-
-sub choose_cpus {
-	my $self = shift;
-	my $cpus_structure = shift;
-	my $target_number = shift;
-
-	for my $structure_level (@{$cpus_structure}) {
-		for my $cpus_block (@{$structure_level}) {
-			if ($cpus_block->{total_size} >= $target_number) {
-				my @chosen_ranges;
-
-				my $range_start = shift @{$cpus_block->{cpus}};
-				my $range_end = $range_start;
-				my $taken_cpus = 0;
-
-				while ($taken_cpus < $target_number) {
-					my $cpu_number = shift @{$cpus_block->{cpus}};
-
-					while ((defined $cpu_number) and ($cpu_number == $range_end + 1) and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
-						$range_end = $cpu_number;
-						$cpu_number = shift @{$cpus_block->{cpus}};
-					}
-
-					push @chosen_ranges, [$range_start, $range_end];
-					$taken_cpus += $range_end - $range_start + 1;
-					$range_start = shift @{$cpus_block->{cpus}};
-					$range_end = $range_start;
-				}
-
-				return \@chosen_ranges;
-			}
-		}
-	}
-
-	return;
-}
-
 sub reduce_to_platform2 {
 	my $self = shift;
 	my $target_number = shift;
@@ -496,6 +460,52 @@ sub reduce_to_platform2 {
 	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
 
 	return;
+}
+
+sub choose_cpus {
+	my $self = shift;
+	my $cpus_structure = shift;
+	my $target_number = shift;
+
+	my $chosen_block;
+
+	# Find the first block with enough CPUs for the job
+	for my $structure_level (@{$cpus_structure}) {
+		for my $cpus_block (@{$structure_level}) {
+			if ($cpus_block->{total_size} >= $target_number) {
+				$chosen_block = $cpus_block;
+				last;
+			}
+		}
+	}
+
+	# Note: right now this is a best effort variant. If the execution
+	# profile says there is enough space for the job, then this subroutine
+	# finds the first block with enough space, meaning it is one of the
+	# blocks with the best possible size for the job. If this was a forced
+	# reduction, we should return an empty set of ranges.
+
+	my @chosen_ranges;
+	my $range_start = shift @{$chosen_block->{cpus}};
+	my $range_end = $range_start;
+	my $taken_cpus = 0;
+
+	while ($taken_cpus < $target_number) {
+		my $cpu_number = shift @{$chosen_block->{cpus}};
+
+		while ((defined $cpu_number) and ($cpu_number == $range_end + 1) and
+			($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
+			$range_end = $cpu_number;
+			$cpu_number = shift @{$chosen_block->{cpus}};
+		}
+
+		push @chosen_ranges, [$range_start, $range_end];
+		$taken_cpus += $range_end - $range_start + 1;
+		$range_start = shift @{$chosen_block->{cpus}};
+		$range_end = $range_start;
+	}
+
+	return \@chosen_ranges;
 }
 
 # Returns true if all processors form a contiguous block. Needs processors
