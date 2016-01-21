@@ -32,7 +32,7 @@ our @REDUCTION_FUNCTIONS = (
 	\&reduce_to_forced_contiguous,
 	\&reduce_to_best_effort_local,
 	\&reduce_to_forced_local,
-	\&reduce_to_platform
+	\&reduce_to_platform2
 );
 
 our @EXPORT = qw(@REDUCTION_FUNCTIONS);
@@ -347,6 +347,7 @@ sub available_cpus_in_clusters {
 	my $cluster_size = shift;
 
 	my @available_cpus;
+	my $current_cluster;
 
 	$self->ranges_loop(
 		sub {
@@ -359,8 +360,17 @@ sub available_cpus_in_clusters {
 				my $start_point_in_cluster = max($start, $cluster * $cluster_size);
 				my $end_point_in_cluster = min($end, ($cluster + 1) * $cluster_size - 1);
 
-				$available_cpus[$cluster] = 0 unless (defined $available_cpus[$cluster]);
-				$available_cpus[$cluster] += $end_point_in_cluster - $start_point_in_cluster + 1;
+				if ((not defined $current_cluster) or ($cluster != $current_cluster)) {
+					push @available_cpus, {
+						total_size => 0,
+						cpus => []
+					};
+
+					$current_cluster = $cluster;
+				}
+
+				$available_cpus[$#available_cpus]->{total_size} += $end_point_in_cluster - $start_point_in_cluster + 1;
+				push $available_cpus[$#available_cpus]->{cpus}, ($start_point_in_cluster..$end_point_in_cluster);
 			}
 
 			return 1;
@@ -441,13 +451,53 @@ sub reduce_to_platform {
 	return;
 }
 
+sub choose_cpus {
+	my $self = shift;
+	my $cpus_structure = shift;
+	my $target_number = shift;
+
+	for my $structure_level (@{$cpus_structure}) {
+		for my $cpus_block (@{$structure_level}) {
+			if ($cpus_block->{total_size} >= $target_number) {
+				my @chosen_ranges;
+
+				my $range_start = shift @{$cpus_block->{cpus}};
+				my $range_end = $range_start;
+
+				while (defined $range_start) {
+					my $cpu_number = shift @{$cpus_block->{cpus}};
+
+					if ((defined $cpu_number) and ($cpu_number == $range_end + 1)) {
+						$range_end = $cpu_number;
+
+					} else {
+						push @chosen_ranges, [$range_start, $range_end];
+						$range_start = shift @{$cpus_block->{cpus}};
+						$range_end = $range_start;
+					}
+				}
+
+				return \@chosen_ranges;
+			}
+		}
+	}
+
+	return;
+}
+
 sub reduce_to_platform2 {
 	my $self = shift;
-	my $target_numer = shift;
+	my $target_number = shift;
 	my $cluster_size = shift;
 	my $platform_levels = shift;
 
-	die;
+	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
+	my @platform_levels_parts = split('-', $platform_levels);
+	my $platform = Platform->new(\@platform_levels_parts);
+	my $cpus_structure = $platform->build_structure($available_cpus);
+	my $chosen_ranges = $self->choose_cpus($cpus_structure, $target_number);
+	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
+
 	return;
 }
 
