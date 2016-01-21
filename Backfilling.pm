@@ -37,7 +37,16 @@ our @BACKFILLING_VARIANT_STRINGS = (
 	"PLATFORM",
 );
 
-our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL @BACKFILLING_VARIANT_STRINGS NEW_EXECUTION_PROFILE REUSE_EXECUTION_PROFILE);
+our @EXPORT = qw(
+	BASIC
+	BEST_EFFORT_CONTIGUOUS
+	CONTIGUOUS
+	BEST_EFFORT_LOCAL
+	LOCAL
+	@BACKFILLING_VARIANT_STRINGS
+	NEW_EXECUTION_PROFILE
+	REUSE_EXECUTION_PROFILE
+);
 
 # Creates a new Backfilling object.
 
@@ -115,7 +124,8 @@ sub run {
 		if ($self->{uses_external_simulator}) {
 			$self->{current_time} = $self->{events}->current_time();
 		} else {
-			my $events_timestamp = $events[0]->timestamp(); # events coming from the heap will have the same time and type
+			# events coming from the heap will have the same time and type
+			my $events_timestamp = $events[0]->timestamp();
 			$self->{current_time} = $events_timestamp;
 		}
 
@@ -143,7 +153,8 @@ sub run {
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
 				$job->run_time($self->{current_time} - $job->starting_time());
 			} else {
-				$self->{execution_profile}->remove_job($job, $self->{current_time}) unless float_equal($job->requested_time(), $job->run_time());
+				$self->{execution_profile}->remove_job($job, $self->{current_time}) unless
+					float_equal($job->requested_time(), $job->run_time());
 			}
 		}
 
@@ -160,7 +171,8 @@ sub run {
 			}
 
 			$self->assign_job($job);
-			$logger->logdie("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
+			$logger->logdie("job " . $job->job_number() . " was not assigned") unless
+					defined $job->starting_time();
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
@@ -168,7 +180,8 @@ sub run {
 	}
 
 	# All jobs should be scheduled and started
-	$logger->logdie('there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}})) if (@{$self->{reserved_jobs}});
+	$logger->logdie('there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}}))
+		if (@{$self->{reserved_jobs}});
 
 	$self->{execution_profile}->free_profiles();
 
@@ -229,7 +242,8 @@ sub reassign_jobs_two_positions {
 
 	for my $job (@{$self->{reserved_jobs}}) {
 
-		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
+		if ($self->{execution_profile}->processors_available_at($self->{current_time})
+				>= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 

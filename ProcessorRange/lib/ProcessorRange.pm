@@ -493,8 +493,8 @@ sub choose_cpus {
 	while ($taken_cpus < $target_number) {
 		my $cpu_number = shift @{$chosen_block->{cpus}};
 
-		while ((defined $cpu_number) and ($cpu_number == $range_end + 1) and
-			($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
+		while ((defined $cpu_number) and ($cpu_number == $range_end + 1)
+				and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
 			$range_end = $cpu_number;
 			$cpu_number = shift @{$chosen_block->{cpus}};
 		}
