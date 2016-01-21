@@ -455,23 +455,22 @@ sub choose_cpus {
 		for my $cpus_block (@{$structure_level}) {
 			if ($cpus_block->{total_size} >= $target_number) {
 				my @chosen_ranges;
-			
+
 				my $range_start = shift @{$cpus_block->{cpus}};
 				my $range_end = $range_start;
-				my $taken_cpus = 1;
+				my $taken_cpus = 0;
 
-				while ($taken_cpus <= $target_number) {
+				while ($taken_cpus < $target_number) {
 					my $cpu_number = shift @{$cpus_block->{cpus}};
 
-					while ((defined $cpu_number) and ($cpu_number == $range_end + 1) and ($taken_cpus < $target_number)) {
+					while ((defined $cpu_number) and ($cpu_number == $range_end + 1) and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
 						$range_end = $cpu_number;
-						$taken_cpus += 1;
 						$cpu_number = shift @{$cpus_block->{cpus}};
 					}
 
 					push @chosen_ranges, [$range_start, $range_end];
+					$taken_cpus += $range_end - $range_start + 1;
 					$range_start = shift @{$cpus_block->{cpus}};
-					$taken_cpus += 1;
 					$range_end = $range_start;
 				}
 
