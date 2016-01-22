@@ -43,6 +43,42 @@ sub build {
 	return;
 }
 
+sub build_structure {
+	my $self = shift;
+	my $available_cpus = shift;
+
+	my $last_level = $#{$self->{levels}} - 1;
+	my @cpus_structure;
+
+	# This block is a little confusing because the levels don't make sense.
+	# I want to start filling the list from position 0 and up, but I also
+	# want the order to be from the last level of the tree to the first.
+	for my $level (0..$last_level) {
+		$cpus_structure[$level] = [];
+
+		my $nodes_per_block = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - $level];
+
+		for my $block (0..($self->{levels}->[$last_level - $level] - 1)) {
+			my $block_content = {
+				total_size => 0,
+				cpus => []
+			};
+
+			for my $cluster (($block * $nodes_per_block)..(($block + 1) * $nodes_per_block - 1)) {
+				next unless (defined $available_cpus->[$cluster]);
+
+				$block_content->{total_size} += $available_cpus->[$cluster]->{total_size};
+				push @{$block_content->{cpus}}, @{$available_cpus->[$cluster]->{cpus}};
+			}
+
+			push @{$cpus_structure[$level]}, $block_content;
+
+		}
+	}
+
+	return \@cpus_structure;
+}
+
 sub choose_combination {
 	my $self = shift;
 	my $requested_cpus = shift;
@@ -108,7 +144,11 @@ sub _build {
 
 	# Last level before the leafs/nodes
 	if ($level == $#{$self->{levels}} - 1) {
-		my $tree_content = {total_size => (defined $available_cpus->[$node]) ? $available_cpus->[$node] : 0, nodes => [@next_level_nodes_ids], id => $node};
+		my $tree_content = {
+			total_size => (defined $available_cpus->[$node]) ? $available_cpus->[$node] : 0,
+			nodes => [@next_level_nodes_ids],
+			id => $node
+		};
 		return Tree->new($tree_content);
 	}
 

@@ -14,6 +14,7 @@ use Util qw(float_equal float_precision);
 use Profile;
 use ProcessorRange;
 use BinarySearchTree;
+use Platform;
 
 use Debug;
 
@@ -90,12 +91,14 @@ sub get_free_processors_for {
 				return 0;
 			}
 
-			$duration = (defined $profile->ending_time()) ? $duration + $profile->duration() : $requested_time;
+			$duration = (defined $profile->ending_time()) ?
+					$duration + $profile->duration() : $requested_time;
 			return 1;
 		});
 
 	# It is possible that not all processors were found
-	if (($left_processors->size() < $job->requested_cpus()) or ((not float_equal($duration, $requested_time)) and ($duration < $requested_time))) {
+	if (($left_processors->size() < $job->requested_cpus()) or ((not float_equal($duration, $requested_time))
+			and ($duration < $requested_time))) {
 		##DEBUG_BEGIN
 		$logger->debug('size less than requested');
 		##DEBUG_END
@@ -104,7 +107,12 @@ sub get_free_processors_for {
 		return;
 	}
 
-	$left_processors->reduction_function($self->{reduction_algorithm}, $job->requested_cpus(), $self->{cluster_size}, $self->{platform_levels});
+	$left_processors->reduction_function(
+		$self->{reduction_algorithm},
+		$job->requested_cpus(),
+		$self->{cluster_size},
+		$self->{platform_levels}
+	);
 
 	if ($left_processors->is_empty()) {
 		$left_processors->free_allocated_memory();
@@ -184,14 +192,19 @@ sub remove_job {
 
 		# Only remove if it is still there
 		if ((not float_equal($job_ending_time, $start)) and ($job_ending_time > $start)) {
-			my $new_profile = Profile->new($start, $job_ending_time, $job->assigned_processors_ids()->copy_range());
+			my $new_profile = Profile->new(
+				$start,
+				$job_ending_time,
+				$job->assigned_processors_ids()->copy_range()
+			);
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		return;
 	}
 
 	# Split at the first profile
-	if ((not float_equal($impacted_profiles[0]->starting_time(), $starting_time)) and ($impacted_profiles[0]->starting_time() < $starting_time)) {
+	if ((not float_equal($impacted_profiles[0]->starting_time(), $starting_time))
+			and ($impacted_profiles[0]->starting_time() < $starting_time)) {
 		##DEBUG_BEGIN
 		$logger->debug('split at the first profile');
 		##DEBUG_END
@@ -203,7 +216,11 @@ sub remove_job {
 		#split in two
 		my $first_profile_ending_time = $first_profile->ending_time();
 		$first_profile->ending_time($starting_time);
-		my $second_profile = Profile->new($starting_time, $first_profile_ending_time, $first_profile->processors()->copy_range());
+		my $second_profile = Profile->new(
+			$starting_time,
+			$first_profile_ending_time,
+			$first_profile->processors()->copy_range()
+		);
 
 		#put back
 		$self->{profile_tree}->add_content($first_profile);
@@ -222,7 +239,11 @@ sub remove_job {
 		$self->{profile_tree}->remove_content($first_profile);
 
 		#split in two
-		my $second_profile = Profile->new($job_ending_time, $first_profile->ending_time(), $first_profile->processors()->copy_range());
+		my $second_profile = Profile->new(
+			$job_ending_time,
+			$first_profile->ending_time(),
+			$first_profile->processors()->copy_range()
+		);
 		$first_profile->ending_time($job_ending_time);
 
 		#put back
@@ -239,23 +260,33 @@ sub remove_job {
 		##DEBUG_END
 		$profile->remove_job($job);
 
-		if ((not float_equal($profile->starting_time(), $previous_profile_ending_time)) and ($profile->starting_time() > $previous_profile_ending_time)) {
+		if ((not float_equal($profile->starting_time(), $previous_profile_ending_time))
+				and ($profile->starting_time() > $previous_profile_ending_time)) {
 			##DEBUG_BEGIN
 			$logger->debug("gap at [$previous_profile_ending_time, " . $profile->starting_time() . "]");
 			##DEBUG_END
 
-			my $new_profile = Profile->new($previous_profile_ending_time, $profile->starting_time(), $job->assigned_processors_ids()->copy_range());
+			my $new_profile = Profile->new(
+				$previous_profile_ending_time,
+				$profile->starting_time(),
+				$job->assigned_processors_ids()->copy_range()
+			);
 			$self->{profile_tree}->add_content($new_profile);
 		}
 		$previous_profile_ending_time = $profile->ending_time();
 	}
 
 	# Gap at the end
-	if ((not float_equal($job_ending_time, $previous_profile_ending_time)) and ($job_ending_time > $previous_profile_ending_time)) {
+	if ((not float_equal($job_ending_time, $previous_profile_ending_time))
+			and ($job_ending_time > $previous_profile_ending_time)) {
 		##DEBUG_BEGIN
 		$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
 		##DEBUG_END
-		my $new_profile = Profile->new($previous_profile_ending_time, $job_ending_time, $job->assigned_processors_ids()->copy_range());
+		my $new_profile = Profile->new(
+			$previous_profile_ending_time,
+			$job_ending_time,
+			$job->assigned_processors_ids()->copy_range()
+		);
 		$self->{profile_tree}->add_content($new_profile);
 	}
 
@@ -276,7 +307,6 @@ sub add_job_at {
 	my $job = shift;
 
 	my @profiles_to_update;
-
 	my $ending_time = $starting_time + $job->requested_time();
 
 	my $logger = get_logger('ExecutionProfile::add_job_at');
@@ -333,7 +363,8 @@ sub could_start_job_at {
 			$min_processors = min($min_processors, $profile->processors()->size());
 
 			# Ok to return, profile may be good for the job
-			return 0 if ((float_equal($starting_time, $job_ending_time)) or ($starting_time > $job_ending_time));
+			return 0 if ((float_equal($starting_time, $job_ending_time))
+					or ($starting_time > $job_ending_time));
 			return 0 if ($min_processors <= $job->requested_cpus());
 			return 1;
 		});
@@ -365,7 +396,8 @@ sub find_first_profile_for {
 		sub {
 			my $profile = shift;
 			# Gap in the list of profiles
-			if (defined $previous_ending_time and !float_equal($previous_ending_time, $profile->starting_time())) {
+			if (defined $previous_ending_time
+					and not float_equal($previous_ending_time, $profile->starting_time())) {
 				@included_profiles = ();
 			}
 
@@ -377,7 +409,8 @@ sub find_first_profile_for {
 				@included_profiles = ();
 			}
 
-			while (@included_profiles and (not defined $included_profiles[-1]->ending_time() or ((float_equal($included_profiles[-1]->ending_time(), $included_profiles[0]->starting_time())) or ($included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() > $job->requested_time())))) {
+			while (@included_profiles and (not defined $included_profiles[-1]->ending_time()
+					or ((float_equal($included_profiles[-1]->ending_time(), $included_profiles[0]->starting_time())) or ($included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() > $job->requested_time())))) {
 				my $start_profile = shift @included_profiles;
 
 				$starting_time = $start_profile->starting_time();
@@ -413,7 +446,8 @@ sub set_current_time {
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
 
-			if (not defined $ending_time or ((not float_equal($ending_time, $current_time)) and ($ending_time > $current_time))) {
+			if (not defined $ending_time or ((not float_equal($ending_time, $current_time))
+					and ($ending_time > $current_time))) {
 				$updated_profile = $profile;
 				return 0;
 			}

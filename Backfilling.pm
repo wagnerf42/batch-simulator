@@ -37,7 +37,16 @@ our @BACKFILLING_VARIANT_STRINGS = (
 	"PLATFORM",
 );
 
-our @EXPORT = qw(BASIC BEST_EFFORT_CONTIGUOUS CONTIGUOUS BEST_EFFORT_LOCAL LOCAL @BACKFILLING_VARIANT_STRINGS NEW_EXECUTION_PROFILE REUSE_EXECUTION_PROFILE);
+our @EXPORT = qw(
+	BASIC
+	BEST_EFFORT_CONTIGUOUS
+	CONTIGUOUS
+	BEST_EFFORT_LOCAL
+	LOCAL
+	@BACKFILLING_VARIANT_STRINGS
+	NEW_EXECUTION_PROFILE
+	REUSE_EXECUTION_PROFILE
+);
 
 # Creates a new Backfilling object.
 
@@ -47,7 +56,12 @@ sub new {
 	my $class = shift;
 	my $self = $class->SUPER::new(@_);
 
-	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm}, $self->{platform_levels});
+	$self->{execution_profile} = ExecutionProfile->new(
+		$self->{processors_number},
+		$self->{cluster_size},
+		$self->{reduction_algorithm},
+		$self->{platform_levels}
+	);
 
 	$self->{current_time} = 0;
 
@@ -58,7 +72,12 @@ sub new_simulation {
 	my $class = shift;
 	my $self = $class->SUPER::new_simulation(@_);
 
-	$self->{execution_profile} = ExecutionProfile->new($self->{processors_number}, $self->{cluster_size}, $self->{reduction_algorithm});
+	$self->{execution_profile} = ExecutionProfile->new(
+		$self->{processors_number},
+		$self->{cluster_size},
+		$self->{reduction_algorithm}
+	);
+
 	$self->{current_time} = 0;
 
 	return $self;
@@ -89,7 +108,14 @@ sub run {
 
 	unless ($self->{uses_external_simulator}) {
 		$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
-		$self->{events}->add(Event->new(SUBMISSION_EVENT, $_->submit_time(), $_)) for (@{$self->{trace}->jobs()});
+
+		$self->{events}->add(
+			Event->new(
+				SUBMISSION_EVENT,
+				$_->submit_time(),
+				$_
+			)
+		) for (@{$self->{trace}->jobs()});
 	}
 
 	$self->{run_time} = time(); # time measure
@@ -98,7 +124,8 @@ sub run {
 		if ($self->{uses_external_simulator}) {
 			$self->{current_time} = $self->{events}->current_time();
 		} else {
-			my $events_timestamp = $events[0]->timestamp(); # events coming from the heap will have the same time and type
+			# events coming from the heap will have the same time and type
+			my $events_timestamp = $events[0]->timestamp();
 			$self->{current_time} = $events_timestamp;
 		}
 
@@ -126,7 +153,8 @@ sub run {
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
 				$job->run_time($self->{current_time} - $job->starting_time());
 			} else {
-				$self->{execution_profile}->remove_job($job, $self->{current_time}) unless float_equal($job->requested_time(), $job->run_time());
+				$self->{execution_profile}->remove_job($job, $self->{current_time}) unless
+					float_equal($job->requested_time(), $job->run_time());
 			}
 		}
 
@@ -143,7 +171,8 @@ sub run {
 			}
 
 			$self->assign_job($job);
-			$logger->logdie("job " . $job->job_number() . " was not assigned") unless defined $job->starting_time();
+			$logger->logdie("job " . $job->job_number() . " was not assigned") unless
+					defined $job->starting_time();
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
@@ -151,7 +180,8 @@ sub run {
 	}
 
 	# All jobs should be scheduled and started
-	$logger->logdie('there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}})) if (@{$self->{reserved_jobs}});
+	$logger->logdie('there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}}))
+		if (@{$self->{reserved_jobs}});
 
 	$self->{execution_profile}->free_profiles();
 
@@ -180,7 +210,14 @@ sub start_jobs {
 			$logger->debug("job " . $job->job_number() . " starting");
 			##DEBUG_END
 
-			$self->{events}->add(Event->new(JOB_COMPLETED_EVENT, $job->real_ending_time(), $job)) unless ($self->{uses_external_simulator});
+			$self->{events}->add(
+				Event->new(
+					JOB_COMPLETED_EVENT,
+					$job->real_ending_time(),
+					$job
+				)
+			) unless ($self->{uses_external_simulator});
+
 			$self->{started_jobs}->{$job->job_number()} = $job;
 			push @newly_started_jobs, $job;
 		} else {
@@ -205,7 +242,8 @@ sub reassign_jobs_two_positions {
 
 	for my $job (@{$self->{reserved_jobs}}) {
 
-		if ($self->{execution_profile}->processors_available_at($self->{current_time}) >= $job->requested_cpus()) {
+		if ($self->{execution_profile}->processors_available_at($self->{current_time})
+				>= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 

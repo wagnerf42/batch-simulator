@@ -12,13 +12,15 @@ use Backfilling;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test');
 
-my ($trace_file, $cpus_number, $cluster_size) = @ARGV;
+my ($trace_file) = @ARGV;
 
+my @levels = (1, 4, 16, 64, 1088, 77248);
 my $variant = 5;
-my $levels = '1-2-4-8';
+my $cpus_number = $levels[$#levels];
+my $cluster_size = $levels[$#levels]/$levels[$#levels - 1];
 
 my $trace = Trace->new_from_swf($trace_file);
-my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, $levels);
+my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, \@levels);
 $schedule->run();
 
 $logger->info("script finished");
