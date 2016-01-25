@@ -52,15 +52,15 @@ sub build_structure {
 
 	my @cpus_structure;
 
-	for my $level (reverse(0..$last_level)) {
+	for my $level (0..$last_level) {
 		$cpus_structure[$level] = [];
 
-		my $nodes_per_block = $self->{levels}->[$last_level]/$self->{levels}->[$level];
+		my $nodes_per_block = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - $level];
 
 		for my $block (0..($self->{levels}->[$last_level - $level] - 1)) {
 			my $block_content = {
 				total_size => 0,
-				total_original_size => $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$level],
+				total_original_size => $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$last_level - $level],
 				cpus => []
 			};
 
