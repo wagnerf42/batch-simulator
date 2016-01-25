@@ -48,19 +48,19 @@ sub build_structure {
 	my $available_cpus = shift;
 
 	my $last_level = $#{$self->{levels}} - 1;
+	my $cluster_size = $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$#{$self->{levels}} - 1];
+
 	my @cpus_structure;
 
-	# This block is a little confusing because the levels don't make sense.
-	# I want to start filling the list from position 0 and up, but I also
-	# want the order to be from the last level of the tree to the first.
-	for my $level (0..$last_level) {
+	for my $level (reverse(0..$last_level)) {
 		$cpus_structure[$level] = [];
 
-		my $nodes_per_block = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - $level];
+		my $nodes_per_block = $self->{levels}->[$last_level]/$self->{levels}->[$level];
 
 		for my $block (0..($self->{levels}->[$last_level - $level] - 1)) {
 			my $block_content = {
 				total_size => 0,
+				total_original_size => $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$level],
 				cpus => []
 			};
 

@@ -32,7 +32,8 @@ our @REDUCTION_FUNCTIONS = (
 	\&reduce_to_forced_contiguous,
 	\&reduce_to_best_effort_local,
 	\&reduce_to_forced_local,
-	\&reduce_to_platform2
+	\&reduce_to_best_effort_platform,
+	\&reduce_to_forced_platform,
 );
 
 our @EXPORT = qw(@REDUCTION_FUNCTIONS);
@@ -341,13 +342,7 @@ sub reduce_to_forced_local {
 	return;
 }
 
-# Choose which CPUs to use after enough CPUs are available for the job.
-
-# This subroutine is responsible for building a tree from the description of
-# the platform, match it to the available CPUs from the execution profile,
-# provite the best combination of CPUs amongst the different clusts and finally
-# choose which CPUs from those clusters to use.
-sub reduce_to_platform {
+sub reduce_to_best_effort_platform {
 	my $self = shift;
 	my $target_number = shift;
 	my $cluster_size = shift;
@@ -355,15 +350,53 @@ sub reduce_to_platform {
 
 	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
 	my $platform = Platform->new($platform_levels);
-	$platform->build($available_cpus);
-	my @chosen_combination = $platform->choose_combination($target_number);
-	my @chosen_ranges = $self->choose_ranges(\@chosen_combination, $cluster_size);
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@chosen_ranges));
+	my $cpus_structure = $platform->build_structure($available_cpus);
+	my $chosen_ranges = $self->choose_cpus_best_effort($cpus_structure, $target_number);
+	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
 
 	return;
 }
 
-# Returns the list of available CPUs per cluster, in a list.
+sub choose_cpus_best_effort {
+	my $self = shift;
+	my $cpus_structure = shift;
+	my $target_number = shift;
+
+	my $chosen_block;
+
+	# Find the first block with enough CPUs for the job
+	for my $structure_level (@{$cpus_structure}) {
+		for my $cpus_block (@{$structure_level}) {
+			if ($cpus_block->{total_size} >= $target_number) {
+				$chosen_block = $cpus_block;
+				last;
+			}
+		}
+	}
+
+	my @chosen_ranges;
+	my $range_start = shift @{$chosen_block->{cpus}};
+	my $range_end = $range_start;
+	my $taken_cpus = 0;
+
+	while ($taken_cpus < $target_number) {
+		my $cpu_number = shift @{$chosen_block->{cpus}};
+
+		while ((defined $cpu_number) and ($cpu_number == $range_end + 1)
+				and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
+			$range_end = $cpu_number;
+			$cpu_number = shift @{$chosen_block->{cpus}};
+		}
+
+		push @chosen_ranges, [$range_start, $range_end];
+		$taken_cpus += $range_end - $range_start + 1;
+		$range_start = shift @{$chosen_block->{cpus}};
+		$range_end = $range_start;
+	}
+
+	return \@chosen_ranges;
+}
+
 sub available_cpus_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
@@ -397,55 +430,7 @@ sub available_cpus_in_clusters {
 	return \@available_cpus;
 }
 
-# Chooses which ranges to use based on a list of clusters and numbers of CPUs.
-sub choose_ranges {
-	my $self = shift;
-	my $combination = shift;
-	my $cluster_size = shift;
-
-	my $logger = get_logger('ProcessorRange::choose_ranges');
-
-	# The chosen combination comes in a list of lists in the format:
-	# [[C1, P1], [C2, P2], ...].
-	my $next_block = shift @{$combination};
-
-	my @remaining_ranges;
-
-	$self->ranges_loop(
-		sub {
-			my ($start, $end) = @_;
-
-			my $start_cluster = floor($start/$cluster_size);
-			my $end_cluster = floor($end/$cluster_size);
-
-			$logger->logdie('expected cluster not found') if ($start_cluster > $next_block->[0]);
-
-			while ($end_cluster >= $next_block->[0]) {
-				# CPUs in the desired cluster
-				my $start_point_in_cluster = max($start, $next_block->[0] * $cluster_size);
-				my $end_point_in_cluster = min($end, ($next_block->[0] + 1) * $cluster_size - 1);
-
-				my $available_cpus_in_cluster = $end_point_in_cluster - $start_point_in_cluster + 1;
-				my $selected_cpus = min($available_cpus_in_cluster, $next_block->[1]);
-				$next_block->[1] -= $selected_cpus;
-				push @remaining_ranges, [$start_point_in_cluster, $start_point_in_cluster + $selected_cpus - 1];
-
-				unless ($next_block->[1]) {
-					$next_block = shift @{$combination};
-					return 0 unless (defined $next_block);
-				}
-			}
-
-			return 1;
-		}
-	);
-
-	$logger->logdie('did not find enough processors') if (@{$combination});
-
-	return @remaining_ranges;
-}
-
-sub reduce_to_platform2 {
+sub reduce_to_forced_platform {
 	my $self = shift;
 	my $target_number = shift;
 	my $cluster_size = shift;
@@ -454,34 +439,35 @@ sub reduce_to_platform2 {
 	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
 	my $platform = Platform->new($platform_levels);
 	my $cpus_structure = $platform->build_structure($available_cpus);
-	my $chosen_ranges = $self->choose_cpus($cpus_structure, $target_number);
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
+	my $chosen_ranges = $self->choose_cpus_forced($cpus_structure, $target_number);
+
+	if (defined $chosen_ranges) {
+		$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
+	} else {
+		$self->remove_all();
+	}
 
 	return;
 }
 
-sub choose_cpus {
+sub choose_cpus_forced {
 	my $self = shift;
 	my $cpus_structure = shift;
 	my $target_number = shift;
 
-	my $chosen_block;
+	my @suitable_levels = grep {$_->[0]->{total_original_size} >= $target_number} (@{$cpus_structure});
 
-	# Find the first block with enough CPUs for the job
-	for my $structure_level (@{$cpus_structure}) {
-		for my $cpus_block (@{$structure_level}) {
-			if ($cpus_block->{total_size} >= $target_number) {
-				$chosen_block = $cpus_block;
-				last;
-			}
+	my $chosen_block;
+	for my $cpus_block (@{$suitable_levels[0]}) {
+		if ($cpus_block->{total_size} >= $target_number) {
+			$chosen_block = $cpus_block;
+			last;
 		}
 	}
 
-	# Note: right now this is a best effort variant. If the execution
-	# profile says there is enough space for the job, then this subroutine
-	# finds the first block with enough space, meaning it is one of the
-	# blocks with the best possible size for the job. If this was a forced
-	# reduction, we should return an empty set of ranges.
+	# If this is undefined means there are no minimum sized blocks that
+	# have enough available CPUs for the job
+	return unless (defined $chosen_block);
 
 	my @chosen_ranges;
 	my $range_start = shift @{$chosen_block->{cpus}};
