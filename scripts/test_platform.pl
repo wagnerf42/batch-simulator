@@ -15,6 +15,7 @@ my $logger = get_logger('test');
 my ($trace_file) = @ARGV;
 
 my @levels = (1, 4, 16, 64, 1088, 77248);
+#my @levels = (1, 2, 4, 8);
 my $variant = 5;
 my $cpus_number = $levels[$#levels];
 my $cluster_size = $levels[$#levels]/$levels[$#levels - 1];
