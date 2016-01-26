@@ -72,7 +72,6 @@ sub build_structure {
 			}
 
 			push @{$cpus_structure[$level]}, $block_content;
-
 		}
 	}
 
