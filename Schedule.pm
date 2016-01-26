@@ -105,6 +105,15 @@ sub cmax {
 	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
 }
 
+sub bounded_stretch {
+	my $self = shift;
+
+	my $jobs_number = scalar @{$self->{trace}->jobs()};
+	my $total_bounded_stretch = sum map {$_->bounded_stretch(10)} (@{$self->{trace}->jobs()});
+
+	return $total_bounded_stretch/$jobs_number;
+}
+
 sub contiguous_jobs_number {
 	my $self = shift;
 	return scalar grep {$_->assigned_processors_ids()->contiguous($self->{processors_number})} (@{$self->{trace}->jobs()});

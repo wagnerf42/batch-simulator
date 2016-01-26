@@ -35,7 +35,8 @@ our @BACKFILLING_VARIANT_STRINGS = (
 	"CONT",
 	"BELOC",
 	"LOC",
-	"PLATFORM",
+	"BEPLATFORM",
+	"PLATFORM"
 );
 
 our @EXPORT = qw(
