@@ -31,29 +31,11 @@ share($results);
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('test_time');
 
-# Basic database part
-my $database = Database->new($database_file);
-$database->prepare_tables();
-my $execution_id = $database->add_execution({
-		trace_file => $trace_file,
-		script_name => "scripts/run_instances.pl",
-		jobs_number => $jobs_number,
-		cpus_number => $cpus_number,
-		cluster_size => $cluster_size,
-		git_revision => `git rev-parse HEAD`,
-	});
-
 $logger->info("Reading trace");
 my $trace = Trace->new_from_swf($trace_file);
 $trace->remove_large_jobs($cpus_number);
 $trace->reset_submit_times();
 $trace->reset_jobs_numbers();
-
-$database->add_trace(undef, {
-		execution => $execution_id,
-		generation_method => "remove large jobs, reset submit times, reset jobs numbers",
-		trace_file => $trace_file,
-	});
 
 # Create a directory to store the output
 my $basic_file_name = "run_instances-$jobs_number-$instances-$cpus_number-$execution_id";
@@ -78,7 +60,6 @@ $logger->info("Waiting for threads to finish");
 $_->join() for (@threads);
 
 $run_time = time() - $run_time;
-$database->update_run_time($execution_id, $run_time);
 
 $logger->info("Writing results to file $experiment_folder/$basic_file_name.csv");
 write_results_to_file();
@@ -89,7 +70,6 @@ sub run_instance {
 	my $id = shift;
 
 	my $logger = get_logger('test_time::run_instance');
-	my $database = Database->new($database_file);
 
 	while (defined(my $instance = $q->dequeue_nb())) {
 		$logger->info("Thread $id running $instance");
@@ -116,19 +96,8 @@ sub run_instance {
 				$schedule_result->{run_time},
 			);
 
-			$database->add_instance({
-					trace => $trace_id,
-					algorithm => $BACKFILLING_VARIANT_STRINGS[$backfilling_variant],
-					cmax => $schedule_result->{cmax},
-					local_jobs => $schedule_result->{local_jobs},
-					contiguous_jobs => $schedule_result->{contiguous_jobs},
-					locality_factor => $schedule_result->{locality_factor},
-					run_time => $schedule_result->{run_time},
-				});
-		}
-
-		push @{$results_instance}, $instance;
-		$results->[$instance] = $results_instance;
+			push @{$results_instance}, $instance;
+			$results->[$instance] = $results_instance;
 	}
 
 	$logger->info("Thread $id finished");
