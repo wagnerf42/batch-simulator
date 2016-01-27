@@ -102,6 +102,23 @@ sub get_log_file {
 }
 
 sub write_results_to_file {
+	my $file_name = "$experiment_folder/$basic_file_name.csv";
+	open(my $file, '>', $file_name) or $logger->logdie("unable to create results file $file_name");
+
+	print $file join(' ', (
+			"CPUS_NUMBER",
+			"JOBS_NUMBER",
+			"CLUSTER_SIZE",
+			"VARIANT",
+			"CMAX",
+			"CONT_JOBS",
+			"LOC_JOBS",
+			"LOC_FACTOR",
+			"BOUNDED_STRETCH",
+			"RUN_TIME"
+		)) . "\n";
+
+	print $file join(' ', $_) . "\n" for (@results);
 	return;
 }
 
