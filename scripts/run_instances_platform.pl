@@ -11,129 +11,91 @@ use Backfilling;
 my ($execution_id) = @ARGV;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my @variants = (BASIC, BEST_EFFORT_CONTIGUOUS, CONTIGUOUS, BEST_EFFORT_LOCAL, LOCAL);
+my @variants = (
+	BASIC,
+	BEST_EFFORT_CONTIGUOUS,
+	CONTIGUOUS,
+	BEST_EFFORT_LOCAL,
+	LOCAL,
+	BEST_EFFORT_PLATFORM,
+	PLATFORM
+);
 my @jobs_numbers = (10);
-my $experiment_path = 'experiment/run_schedule_platform';
+my $experiment_path = 'experiment/run_instances_platform';
+my $threads_number = 6;
+my $platform_levels = '1-4-16-64-1088-77248';
+my @platform_levels_parts = split('-', $platform_levels);
 
-my $results = [];
-share($results);
+my @results;
+share(@results);
 
-my $basic_file_name = "run_instances_platform-";
+my $basic_file_name = "run_instances_platform-$execution_id";
 my $experiment_folder = "$experiment_path/$basic_file_name";
 
-unless (-d $experiment_folder) {
-	mkdir $experiment_folder;
-	$logger->info("experiment folder $experiment_folder created");
-}
+mkdir $experiment_folder unless (-d $experiment_folder);
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('experiment');
 
-$logger->info("reading trace");
-my $trace = Trace->new_from_swf($trace_file);
-
-$logger->info("Creating queue\n");
+$logger->info("creating queue\n");
 my $q = Thread::Queue->new();
-$q->enqueue($_) for (0..($instances - 1));
+for my $variant (@variants) {
+	for my $jobs_number (@jobs_numbers) {
+		$q->enqueue([$variant, $jobs_number]);
+	}
+}
 $q->end();
 
-$logger->info("Creating threads");
+$logger->info("creating threads");
 my @threads = map {threads->create(\&run_instance, $_)} (0..($threads_number - 1));
 
-$logger->info("Waiting for threads to finish");
+$logger->info("waiting for threads to finish");
 $_->join() for (@threads);
 
-$run_time = time() - $run_time;
-
-$logger->info("Writing results to file $experiment_folder/$basic_file_name.csv");
+$logger->info("writing results to file $experiment_folder/$basic_file_name.csv");
 write_results_to_file();
 
-$logger->info("Done");
+$logger->info("done");
 
 sub run_instance {
 	my $id = shift;
-
-	my $logger = get_logger('test_time::run_instance');
+	my $logger = get_logger('experiment');
 
 	while (defined(my $instance = $q->dequeue_nb())) {
-		$logger->info("Thread $id running $instance");
+		my ($variant, $jobs_number) = @{$instance};
 
-		my $trace_instance_file = "$experiment_path/swf/$instance.swf";
+		$logger->info("thread $id running $variant, $jobs_number");
 
-		my $trace_id = $database->add_trace(undef, {
-				execution => $execution_id,
-				generation_method => "random jobs",
-			});
+		my $trace = Trace->new_from_swf($trace_file);
+		$trace->keep_first_jobs($jobs_number);
+		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, \@platform_levels_parts);
+		$schedule->run();
 
-		my $results_instance = [];
-		share($results_instance);
+		my @instance_results = (
+			$cpus_number,
+			$jobs_number,
+			$cluster_size,
+			$variant,
+			$schedule->cmax(),
+			$schedule->contiguous_jobs_number(),
+			$schedule->local_jobs_number(),
+			$schedule->locality_factor(),
+			$schedule->bounded_stretch(10),
+			$schedule->run_time(),
+		);
 
-		for my $backfilling_variant (@backfilling_variants) {
-			my $schedule_thread = threads->create(\&run_schedule, $trace_instance_file, $backfilling_variant);
-			my $schedule_result = $schedule_thread->join();
-
-			push @{$results_instance}, (
-				$schedule_result->{cmax},
-				$schedule_result->{contiguous_jobs},
-				$schedule_result->{local_jobs},
-				$schedule_result->{locality_factor},
-				$schedule_result->{run_time},
-			);
-
-			push @{$results_instance}, $instance;
-			$results->[$instance] = $results_instance;
+		push @results, join(' ', @instance_results);
 	}
 
-	$logger->info("Thread $id finished");
-	return;
-}
-
-sub run_schedule {
-	my $trace_file = shift;
-	my $backfilling_variant = shift;
-
-
-	my $schedule_result = `$schedule_script $trace_file $cpus_number $cluster_size $backfilling_variant`;
-	my ($cmax, $contiguous_jobs_number, $local_jobs_number, $locality_factor, $run_time) = split(' ', $schedule_result);
-
-	my %result = (
-		cmax => $cmax,
-		contiguous_jobs => $contiguous_jobs_number,
-		local_jobs => $local_jobs_number,
-		locality_factor => $locality_factor,
-		run_time => $run_time,
-	);
-
-	return \%result;
-}
-
-sub write_results_to_file {
-	open (my $file, '>', "$experiment_folder/$basic_file_name.csv") or die "unable to open $experiment_folder/$basic_file_name";
-
-	my @headers;
-	for my $backfilling_variant (@backfilling_variants) {
-		push @headers, map { $BACKFILLING_VARIANT_STRINGS[$backfilling_variant] . '_' . $_ } ("CMAX", "CJOBS", "LJOBS", "LFACTOR", "RTIME");
-	}
-
-	push @headers, "INSTANCE";
-	print $file join(' ', @headers) . "\n";
-
-	for my $results_item (@{$results}) {
-		print $file join(' ', @{$results_item}) . "\n";
-	}
-
-	close($file);
-	return;
-}
-
-sub catch_signal {
-	my $signame = shift;
-	print STDERR "Received SIG$signame signal\n";
-	$_->kill('INT')->detach() for @threads;
+	$logger->info("thread $id finished");
 	return;
 }
 
 sub get_log_file {
-	return "log/generate_platform.log";
+	return "$experiment_folder/$basic_file_name.log";
+}
+
+sub write_results_to_file {
+	return;
 }
 
