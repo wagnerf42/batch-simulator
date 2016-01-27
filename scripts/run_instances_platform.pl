@@ -2,6 +2,10 @@
 use strict;
 use warnings;
 
+use threads;
+use threads::shared;
+use Thread::Queue;
+
 use Data::Dumper qw(Dumper);
 use Log::Log4perl qw(get_logger);
 
@@ -25,6 +29,8 @@ my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
 my $platform_levels = '1-4-16-64-1088-77248';
 my @platform_levels_parts = split('-', $platform_levels);
+my $cpus_number = $platform_levels_parts[$#platform_levels_parts];
+my $cluster_size = $cpus_number/$platform_levels_parts[$#platform_levels_parts - 1];
 
 my @results;
 share(@results);
