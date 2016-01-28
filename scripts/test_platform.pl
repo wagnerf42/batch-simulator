@@ -21,6 +21,7 @@ my $cpus_number = $levels[$#levels];
 my $cluster_size = $levels[$#levels]/$levels[$#levels - 1];
 
 my $trace = Trace->new_from_swf($trace_file);
+$trace->keep_first_jobs(700);
 my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, \@levels);
 $schedule->run();
 

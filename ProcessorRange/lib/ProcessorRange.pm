@@ -352,6 +352,7 @@ sub reduce_to_best_effort_platform {
 	my $platform = Platform->new($platform_levels);
 	my $cpus_structure = $platform->build_structure($available_cpus);
 	my $chosen_ranges = $self->choose_cpus_best_effort($cpus_structure, $target_number);
+
 	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
 
 	return;
@@ -374,6 +375,8 @@ sub choose_cpus_best_effort {
 		}
 	}
 
+	my $original_block = Dumper($chosen_block);
+
 	my @chosen_ranges;
 	my $range_start = shift @{$chosen_block->{cpus}};
 	my $range_end = $range_start;
@@ -383,16 +386,18 @@ sub choose_cpus_best_effort {
 		my $cpu_number = shift @{$chosen_block->{cpus}};
 
 		while ((defined $cpu_number) and ($cpu_number == $range_end + 1)
-				and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
+		and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
 			$range_end = $cpu_number;
 			$cpu_number = shift @{$chosen_block->{cpus}};
 		}
 
 		push @chosen_ranges, [$range_start, $range_end];
 		$taken_cpus += $range_end - $range_start + 1;
-		$range_start = shift @{$chosen_block->{cpus}};
+		$range_start = $cpu_number;
 		$range_end = $range_start;
 	}
+
+	die('error choosing the CPUs') if ($taken_cpus < $target_number);
 
 	return \@chosen_ranges;
 }
@@ -485,7 +490,7 @@ sub choose_cpus_forced {
 
 		push @chosen_ranges, [$range_start, $range_end];
 		$taken_cpus += $range_end - $range_start + 1;
-		$range_start = shift @{$chosen_block->{cpus}};
+		$range_start = $cpu_number;
 		$range_end = $range_start;
 	}
 

@@ -24,7 +24,8 @@ my @variants = (
 	BEST_EFFORT_PLATFORM,
 	PLATFORM
 );
-my @jobs_numbers = (10);
+
+my @jobs_numbers = (100, 200, 300, 500, 600, 700, 1000, 2000);
 my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
 my $platform_levels = '1-4-16-64-1088-77248';
