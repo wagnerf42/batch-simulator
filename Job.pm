@@ -204,8 +204,7 @@ sub wait_time {
 	my $self = shift;
 	my $logger = get_logger('Job::wait_time');
 
-	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
-
+	return unless (defined $self->{starting_time});
 	return $self->{starting_time} - $self->{submit_time};
 }
 

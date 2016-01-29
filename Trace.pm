@@ -92,7 +92,8 @@ sub new_from_swf {
 
 		# Status or comment line
 		if ($fields[0] =~/^;/) {
-			push @{$self->{status}}, [@fields];
+			#push @{$self->{status}}, [@fields];
+			next;
 		}
 
 		# Job line
