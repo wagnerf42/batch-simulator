@@ -375,8 +375,6 @@ sub choose_cpus_best_effort {
 		}
 	}
 
-	my $original_block = Dumper($chosen_block);
-
 	my @chosen_ranges;
 	my $range_start = shift @{$chosen_block->{cpus}};
 	my $range_end = $range_start;
@@ -396,8 +394,6 @@ sub choose_cpus_best_effort {
 		$range_start = $cpu_number;
 		$range_end = $range_start;
 	}
-
-	die('error choosing the CPUs') if ($taken_cpus < $target_number);
 
 	return \@chosen_ranges;
 }
