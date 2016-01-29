@@ -25,7 +25,7 @@ my @variants = (
 	PLATFORM
 );
 
-my @jobs_numbers = (100, 200, 300, 500, 600, 700, 1000, 2000);
+my @jobs_numbers = (400, 800, 1200, 1600, 2000);
 my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
 my $platform_levels = '1-4-16-64-1088-77248';
@@ -75,6 +75,7 @@ sub run_instance {
 
 		my $trace = Trace->new_from_swf($trace_file);
 		$trace->keep_first_jobs($jobs_number);
+		$trace->fix_submit_times();
 		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, \@platform_levels_parts);
 		$schedule->run();
 
