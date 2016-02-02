@@ -6,6 +6,7 @@ use warnings;
 use List::Util qw(min max);
 use POSIX;
 use Log::Log4perl qw(get_logger);
+use Carp;
 
 use overload '""' => \&stringification;
 
@@ -45,7 +46,7 @@ sub new {
 	my $self = {
 		job_number => shift, #1
 		submit_time => shift, #2
-		wait_time => shift, #3
+		original_wait_time => shift, #3
 		run_time => shift, #4
 		allocated_cpus => shift, #5
 		avg_cpu_time => shift, #6
@@ -66,11 +67,6 @@ sub new {
 	# Sanity checks for some of the job fields
 	$self->{allocated_cpus} = $self->{requested_cpus} if ($self->{allocated_cpus} != $self->{requested_cpus});
 	$self->{run_time} = $self->{requested_time} if (defined($self->{run_time}) and $self->{requested_time} < $self->{run_time});
-
-	# Convert wait_time to starting time
-	$self->{starting_time} = $self->{submit_time} + $self->{wait_time};
-	$self->{original_wait_time} = $self->{wait_time};
-	delete $self->{wait_time};
 
 	bless $self, $class;
 	return $self;
@@ -182,7 +178,7 @@ sub original_bounded_stretch {
 
 	my $logger = get_logger('Job::original_bounded_stretch');
 
-	$logger->logdie('undefined job parameters') unless defined $self->{original_wait_time} and defined $self->{run_time};
+	$logger->logconfess('undefined job parameters') unless defined $self->{original_wait_time} and defined $self->{run_time};
 	return max(($self->{original_wait_time} + $self->{run_time})/max($self->{run_time}, ((defined $time_limit) ? $time_limit : 10)), 1);
 }
 
@@ -196,15 +192,20 @@ sub submit_time {
 	my $submit_time = shift;
 
 	$self->{submit_time} = $submit_time if defined $submit_time;
-
 	return $self->{submit_time};
+}
+
+sub original_wait_time {
+	my $self = shift;
+
+	return $self->{original_wait_time};
 }
 
 sub wait_time {
 	my $self = shift;
 	my $logger = get_logger('Job::wait_time');
 
-	return unless (defined $self->{starting_time});
+	return unless defined $self->{submit_time} and defined $self->{starting_time};
 	return $self->{starting_time} - $self->{submit_time};
 }
 

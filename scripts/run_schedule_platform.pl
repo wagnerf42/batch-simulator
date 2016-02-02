@@ -8,22 +8,26 @@ use Log::Log4perl qw(get_logger);
 use Trace;
 use Backfilling;
 
-my ($trace_file, $cpus_number, $jobs_number, $cluster_size, $variant, $platform_levels) = @ARGV;
+my (
+	$json_file,
+	$cpus_number,
+	$cluster_size,
+	$variant,
+	$platform_levels,
+	$delay,
+	$socket_file,
+) = @ARGV;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('experiment');
 
 my @platform_levels_parts = split('-', $platform_levels);
 
-my $trace = Trace->new_from_swf($trace_file);
-$trace->keep_first_jobs($jobs_number);
-
-my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, \@platform_levels_parts);
+my $schedule = Backfilling->new_simulation($cluster_size, $variant, $delay, $socket_file, $json_file, \@platform_levels_parts);
 $schedule->run();
 
 my @results = (
 	$cpus_number,
-	$jobs_number,
 	$cluster_size,
 	$variant,
 	$schedule->cmax(),

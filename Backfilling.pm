@@ -209,6 +209,7 @@ sub run {
 
 			if ($self->{uses_external_simulator}) {
 				$job->requested_time($job->requested_time() + $self->{job_delay});
+				$job->submit_time($self->{current_time});
 				$self->{trace}->add_job($job);
 			}
 

@@ -40,6 +40,7 @@ sub new_simulation {
 	my $delay = shift;
 	my $socket_file = shift;
 	my $json_file = shift;
+	my $platform_levels = shift;
 
 	my $self = {
 		cluster_size => $cluster_size,
@@ -47,6 +48,7 @@ sub new_simulation {
 		cmax => 0,
 		uses_external_simulator => 1,
 		job_delay => $delay,
+		platform_levels => $platform_levels,
 	};
 
 	$self->{trace} = Trace->new();

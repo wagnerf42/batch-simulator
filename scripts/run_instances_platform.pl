@@ -11,38 +11,59 @@ use Log::Log4perl qw(get_logger);
 
 use Trace;
 use Backfilling;
+use Platform;
 
 my ($execution_id) = @ARGV;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my @variants = (
 	BASIC,
-	BEST_EFFORT_CONTIGUOUS,
-	CONTIGUOUS,
-	BEST_EFFORT_LOCAL,
-	LOCAL,
-	BEST_EFFORT_PLATFORM,
-	PLATFORM
+	#BEST_EFFORT_CONTIGUOUS,
+	#CONTIGUOUS,
+	#BEST_EFFORT_LOCAL,
+	#LOCAL,
+	#BEST_EFFORT_PLATFORM,
+	#PLATFORM
 );
 
-my @jobs_numbers = (400, 800, 1200, 1600, 2000);
 my $experiment_path = 'experiment/run_instances_platform';
-my $threads_number = 6;
-my $platform_levels = '1-4-16-64-1088-77248';
+my $basic_file_name = "run_instances_platform-$execution_id";
+my $experiment_folder = "$experiment_path/$basic_file_name";
+my @jobs_numbers = (2);
+my $threads_number = 1;
+my $platform_levels = '1-2-4-8';
 my @platform_levels_parts = split('-', $platform_levels);
+my $platform_file = "$experiment_folder/platform.xml";
 my $cpus_number = $platform_levels_parts[$#platform_levels_parts];
 my $cluster_size = $cpus_number/$platform_levels_parts[$#platform_levels_parts - 1];
+my $comm_factor = '1e4';
+my $comp_factor = '1e5';
+my $schedule_script = 'scripts/run_schedule_platform.pl';
+my $batsim = '/home/fernando/Documents/batsim/build/batsim';
+my $delay = 15;
 
 my @results;
 share(@results);
-
-my $basic_file_name = "run_instances_platform-$execution_id";
-my $experiment_folder = "$experiment_path/$basic_file_name";
 
 mkdir $experiment_folder unless (-d $experiment_folder);
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('experiment');
+
+$logger->info("preparing trace files");
+for my $jobs_number (@jobs_numbers) {
+	my $trace = Trace->new_from_swf($trace_file);
+	$trace->remove_large_jobs($cpus_number);
+	$trace->keep_first_jobs($jobs_number);
+	$trace->fix_submit_times();
+	$trace->reset_jobs_numbers();
+	$trace->write_to_file("$experiment_folder/$basic_file_name-$jobs_number.swf");
+	$trace->save_json("$experiment_folder/$basic_file_name-$jobs_number.json", $cpus_number, $comm_factor, $comp_factor);
+}
+
+my $platform = Platform->new(\@platform_levels_parts);
+$platform->build_platform_xml();
+$platform->save_platform_xml($platform_file);
 
 $logger->info("creating queue\n");
 my $q = Thread::Queue->new();
@@ -60,7 +81,7 @@ $logger->info("waiting for threads to finish");
 $_->join() for (@threads);
 
 $logger->info("writing results to file $experiment_folder/$basic_file_name.csv");
-write_results_to_file();
+#write_results_to_file();
 
 $logger->info("done");
 
@@ -71,32 +92,37 @@ sub run_instance {
 	while (defined(my $instance = $q->dequeue_nb())) {
 		my ($variant, $jobs_number) = @{$instance};
 
+		my $json_file = "$experiment_folder/$basic_file_name-$jobs_number.json";
+		my $socket_file = "$experiment_folder/$basic_file_name-$variant-$jobs_number.socket";
+
 		$logger->info("thread $id running $variant, $jobs_number");
+		my $batsim_thread = threads->create(\&run_batsim, $socket_file, $json_file);
+		my $schedule_thread = threads->create(\&run_schedule, $json_file, $variant, $socket_file);
 
-		my $trace = Trace->new_from_swf($trace_file);
-		$trace->keep_first_jobs($jobs_number);
-		$trace->fix_submit_times();
-		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, \@platform_levels_parts);
-		$schedule->run();
-
-		my @instance_results = (
-			$cpus_number,
-			$jobs_number,
-			$cluster_size,
-			$variant,
-			$schedule->cmax(),
-			$schedule->contiguous_jobs_number(),
-			$schedule->local_jobs_number(),
-			$schedule->locality_factor(),
-			$schedule->bounded_stretch(10),
-			$schedule->run_time(),
-		);
-
-		push @results, join(' ', @instance_results);
+		$batsim_thread->join();
+		$schedule_thread->join();
 	}
 
 	$logger->info("thread $id finished");
 	return;
+}
+
+sub run_schedule {
+	my $json_file = shift;
+	my $variant = shift;
+	my $socket_file = shift;
+
+	my $schedule_result = `$schedule_script $json_file $cpus_number $cluster_size $variant $platform_levels $delay $socket_file`;
+	return $schedule_result;
+}
+
+sub run_batsim {
+	my $socket_file = shift;
+	my $json_file = shift;
+
+	#my $batsim_result =  `$batsim -s $socket_file -m 'master_host0' $platform_file $json_file 2>/dev/null`;
+	my $batsim_result =  `$batsim -s $socket_file -m 'master_host0' $platform_file $json_file`;
+	return $batsim_result;
 }
 
 sub get_log_file {

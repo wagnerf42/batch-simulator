@@ -22,8 +22,7 @@ sub save_json {
 	my $file = shift;
 	my $cpus_number = shift;
 	my $comm_factor = shift;
-
-	$comm_factor = 1000000 unless defined $comm_factor;
+	my $comp_factor = shift;
 
 	my $json = {
 		version => 0,
@@ -37,24 +36,24 @@ sub save_json {
 
 	my $job_number = 1;
 	for my $job (@{$self->{jobs}}) {
-		my $id = $job_number;
+		my $id = $job->job_number();
 
 		push @{$json->{jobs}}, {
-			'id' => $job_number,
+			'id' => int($id),
 			'subtime' => int($job->submit_time()),
 			'walltime' => int($job->requested_time()),
 			'res' => int($job->requested_cpus()),
 			'profile' => "p$id",
+			'original_wait_time' => $job->original_wait_time(),
 		};
 
 		$json->{profiles}->{"p$id"} = {
 			'type' => 'msg_par_hg',
-			'cpu' => int($job->run_time()*10000000),
-			'com' => int($comm_factor),
+			'cpu' => int($job->run_time() * $comp_factor),
+			'com' => int($job->run_time() * $comm_factor),
 		};
-
-		$job_number++;
 	}
+
 
 
 	my $json_text = to_json( $json, { pretty => 1, canonical => 1 } );

@@ -7,6 +7,7 @@ use Data::Dumper;
 use List::Util qw(min max sum);
 use POSIX;
 use XML::Smart;
+use Carp;
 
 use Tree;
 
@@ -97,9 +98,9 @@ sub _choose_combination {
 
 	# Return if at the last level
 	return [$tree->content()->{id}, $requested_cpus] if ($level == $#{$self->{levels}} - 1);
-	
+
 	my $best_combination = $tree->content()->{$requested_cpus}->{combination};
-	
+
 	my @children = @{$tree->children()};
 	return map {$self->_choose_combination($_, $level + 1, shift @{$best_combination})} (@children);
 }
@@ -284,6 +285,32 @@ sub build_platform_xml {
 			};
 		}
 	}
+
+	# Master host
+	push @{$xml->{platform}{AS}{cluster}}, {
+			id => 'C-MH',
+			prefix => 'master_host',
+			suffix => '',
+			radical => '0-0',
+			power => CLUSTER_POWER,
+			bw => CLUSTER_BANDWIDTH,
+			lat => CLUSTER_LATENCY,
+			router_id => 'R-MH',
+	};
+
+	push @{$xml->{platform}{AS}{link}}, {
+		id => 'L-MH',
+		bandwidth => LINK_BANDWIDTH,
+		latency => LINK_LATENCY,
+	};
+
+	push @{$xml->{platform}{AS}{ASroute}}, {
+		src => 'C-MH',
+		gw_src => 'R-MH',
+		dst => 'AS_Tree',
+		gw_dst => 'R-0-0',
+		link_ctn => {id => 'L-MH'},
+	};
 
 	# Clusters
 	for my $cluster (0..($platform_parts[$#platform_parts - 1] - 1)) {

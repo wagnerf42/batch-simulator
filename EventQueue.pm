@@ -37,7 +37,7 @@ sub new {
 		$self->{jobs}->{$id} = Job->new(
 			$job->{id}, # job number
 			undef,
-			undef,
+			$job->{original_wait_time},
 			$job->{walltime}, #it is a lie but temporary
 			$job->{res}, # allocated CPUs
 			undef,
