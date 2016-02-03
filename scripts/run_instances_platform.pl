@@ -16,6 +16,7 @@ use Platform;
 my ($execution_id) = @ARGV;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
+#my $trace_file = '/tmp/test.swf';
 my @variants = (
 	BASIC,
 	#BEST_EFFORT_CONTIGUOUS,
@@ -23,21 +24,21 @@ my @variants = (
 	#BEST_EFFORT_LOCAL,
 	#LOCAL,
 	#BEST_EFFORT_PLATFORM,
-	#PLATFORM
+	#PLATFORM,
 );
-
 my $experiment_path = 'experiment/run_instances_platform';
 my $basic_file_name = "run_instances_platform-$execution_id";
 my $experiment_folder = "$experiment_path/$basic_file_name";
-my @jobs_numbers = (2);
+my @jobs_numbers = (100);
 my $threads_number = 1;
-my $platform_levels = '1-2-4-8';
+#my $platform_levels = '1-2-4-8';
+my $platform_levels = '1-4-16-64-4544';
 my @platform_levels_parts = split('-', $platform_levels);
 my $platform_file = "$experiment_folder/platform.xml";
 my $cpus_number = $platform_levels_parts[$#platform_levels_parts];
 my $cluster_size = $cpus_number/$platform_levels_parts[$#platform_levels_parts - 1];
-my $comm_factor = '1e4';
-my $comp_factor = '1e5';
+my $comm_factor = '5e10';
+my $comp_factor = '5e10';
 my $schedule_script = 'scripts/run_schedule_platform.pl';
 my $batsim = '/home/fernando/Documents/batsim/build/batsim';
 my $delay = 15;
@@ -81,7 +82,7 @@ $logger->info("waiting for threads to finish");
 $_->join() for (@threads);
 
 $logger->info("writing results to file $experiment_folder/$basic_file_name.csv");
-#write_results_to_file();
+write_results_to_file();
 
 $logger->info("done");
 
@@ -100,7 +101,7 @@ sub run_instance {
 		my $schedule_thread = threads->create(\&run_schedule, $json_file, $variant, $socket_file);
 
 		$batsim_thread->join();
-		$schedule_thread->join();
+		push @results, $schedule_thread->join();
 	}
 
 	$logger->info("thread $id finished");
@@ -120,8 +121,8 @@ sub run_batsim {
 	my $socket_file = shift;
 	my $json_file = shift;
 
-	#my $batsim_result =  `$batsim -s $socket_file -m 'master_host0' $platform_file $json_file 2>/dev/null`;
-	my $batsim_result =  `$batsim -s $socket_file -m 'master_host0' $platform_file $json_file`;
+	my $batsim_result =  `$batsim -s $socket_file -m 'master_host0' $platform_file $json_file 2>/dev/null`;
+	#my $batsim_result =  `$batsim -s $socket_file -m 'master_host0' $platform_file $json_file`;
 	return $batsim_result;
 }
 

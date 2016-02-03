@@ -175,7 +175,7 @@ sub save_svg {
 	my $cluster_size = 600/$self->{processors_number}*$self->{cluster_size};
 	for my $cluster (1..$clusters_number) {
 		my $cluster_y = $cluster * $cluster_size;
-		print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:3\"/>\n";
+		print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
 
 	}
 
@@ -184,6 +184,11 @@ sub save_svg {
 	print $filehandle "</svg>\n";
 	close $filehandle;
 	return;
+}
+
+sub trace {
+	my $self = shift;
+	return $self->{trace};
 }
 
 1;

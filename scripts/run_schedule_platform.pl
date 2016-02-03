@@ -26,8 +26,13 @@ my @platform_levels_parts = split('-', $platform_levels);
 my $schedule = Backfilling->new_simulation($cluster_size, $variant, $delay, $socket_file, $json_file, \@platform_levels_parts);
 $schedule->run();
 
+$schedule->tycat();
+
+my $jobs_number = @{$schedule->trace()->jobs()};
+
 my @results = (
 	$cpus_number,
+	$jobs_number,
 	$cluster_size,
 	$variant,
 	$schedule->cmax(),

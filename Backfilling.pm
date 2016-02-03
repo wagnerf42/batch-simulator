@@ -84,7 +84,8 @@ sub new_simulation {
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{processors_number},
 		$self->{cluster_size},
-		$self->{reduction_algorithm}
+		$self->{reduction_algorithm},
+		$self->{platform_levels},
 	);
 
 	$self->{current_time} = 0;
@@ -129,20 +130,6 @@ sub run {
 
 	$self->{run_time} = time(); # time measure
 
-	#my @header_fields = (
-	#	"JOB_NUMBER",
-	#	"SUBMIT_TIME",
-	#	"ORIGINAL_WAIT_TIME",
-	#	"WAIT_TIME",
-	#	"ALLOCATED_CPUS",
-	#	"RUN_TIME",
-	#	"BSLD",
-	#	"BSLD_AVG",
-	#	"ORIGINAL_BSLD",
-	#	"ORIGINAL_BSLD_AVG",
-	#);
-	#print join(' ', @header_fields) . "\n";
-
 	while (my @events = $self->{events}->retrieve_all()) {
 		if ($self->{uses_external_simulator}) {
 			$self->{current_time} = $self->{events}->current_time();
@@ -169,24 +156,9 @@ sub run {
 			$logger->debug("job " . $job->job_number() . " ending");
 			##DEBUG_END
 
-			# Temporary code to print the bsld for all the finished jobs
 			$self->{total_bounded_stretch} += $job->bounded_stretch(10);
 			$self->{total_original_bounded_stretch} += $job->original_bounded_stretch(10);
 			$self->{processed_jobs}++;
-
-			#my @job_results = (
-			#	$job->{job_number},
-			#	$job->{submit_time},
-			#	$job->{original_wait_time},
-			#	$job->wait_time(),
-			#	$job->{allocated_cpus},
-			#	$job->{run_time},
-			#	$job->bounded_stretch(60),
-			#	$self->{total_bounded_stretch}/$self->{processed_jobs},
-			#	$job->original_bounded_stretch(60),
-			#	$self->{total_original_bounded_stretch}/$self->{processed_jobs}
-			#);
-			#print join(' ', @job_results) . "\n";
 
 			delete $self->{started_jobs}->{$job->job_number()};
 

@@ -50,12 +50,19 @@ sub new {
 		);
 	}
 
-	# Generate the UNIX socket
-	$self->{socket} = IO::Socket::UNIX->new(
-		Type => SOCK_STREAM(),
-		Peer => $self->{socket_file},
-	);
-	$logger->logdie("unable to find UNIX socket $self->{socket_file}") unless defined $self->{socket};
+	# Generate the UNIX socketa
+	do {
+		sleep(1);
+
+		##DEBUG_BEGIN
+		$logger->debug("looking for socket $self->{socket_file}");
+		##DEBUG_END
+
+		$self->{socket} = IO::Socket::UNIX->new(
+			Type => SOCK_STREAM(),
+			Peer => $self->{socket_file},
+		);
+	} until (defined $self->{socket});
 
 	$self->{current_simulator_time} = 0;
 
