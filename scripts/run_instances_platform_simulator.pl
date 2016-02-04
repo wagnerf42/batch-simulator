@@ -26,8 +26,8 @@ my @variants = (
 	#BEST_EFFORT_PLATFORM,
 	#PLATFORM,
 );
-my $experiment_path = 'experiment/run_instances_platform';
-my $basic_file_name = "run_instances_platform-$execution_id";
+my $experiment_path = 'experiment/run_instances_platform_simulator';
+my $basic_file_name = "run_instances_platform_simulator-$execution_id";
 my $experiment_folder = "$experiment_path/$basic_file_name";
 my @jobs_numbers = (100);
 my $threads_number = 1;
