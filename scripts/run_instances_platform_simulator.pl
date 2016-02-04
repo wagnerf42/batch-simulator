@@ -29,7 +29,7 @@ my @variants = (
 my $experiment_path = 'experiment/run_instances_platform_simulator';
 my $basic_file_name = "run_instances_platform_simulator-$execution_id";
 my $experiment_folder = "$experiment_path/$basic_file_name";
-my @jobs_numbers = (100);
+my @jobs_numbers = (10);
 my $threads_number = 1;
 #my $platform_levels = '1-2-4-8';
 my $platform_levels = '1-4-16-64-4544';
@@ -94,7 +94,7 @@ sub run_instance {
 		my ($variant, $jobs_number) = @{$instance};
 
 		my $json_file = "$experiment_folder/$basic_file_name-$jobs_number.json";
-		my $socket_file = "$experiment_folder/$basic_file_name-$variant-$jobs_number.socket";
+		my $socket_file = "$experiment_folder/socket-$variant-$jobs_number";
 
 		$logger->info("thread $id running $variant, $jobs_number");
 		my $batsim_thread = threads->create(\&run_batsim, $socket_file, $json_file);
