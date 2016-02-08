@@ -187,46 +187,6 @@ sub sort_and_fuse_contiguous_ranges {
 	return \@remaining_ranges;
 }
 
-sub choose_cpus_best_effort {
-	my $self = shift;
-	my $cpus_structure = shift;
-	my $target_number = shift;
-
-	my $chosen_block;
-
-	# Find the first block with enough CPUs for the job
-	for my $structure_level (@{$cpus_structure}) {
-		for my $cpus_block (@{$structure_level}) {
-			if ($cpus_block->{total_size} >= $target_number) {
-				$chosen_block = $cpus_block;
-				last;
-			}
-		}
-	}
-
-	my @chosen_ranges;
-	my $range_start = shift @{$chosen_block->{cpus}};
-	my $range_end = $range_start;
-	my $taken_cpus = 0;
-
-	while ($taken_cpus < $target_number) {
-		my $cpu_number = shift @{$chosen_block->{cpus}};
-
-		while ((defined $cpu_number) and ($cpu_number == $range_end + 1)
-		and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
-			$range_end = $cpu_number;
-			$cpu_number = shift @{$chosen_block->{cpus}};
-		}
-
-		push @chosen_ranges, [$range_start, $range_end];
-		$taken_cpus += $range_end - $range_start + 1;
-		$range_start = $cpu_number;
-		$range_end = $range_start;
-	}
-
-	return \@chosen_ranges;
-}
-
 sub available_cpus_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
@@ -258,68 +218,6 @@ sub available_cpus_in_clusters {
 	);
 
 	return \@available_cpus;
-}
-
-sub reduce_to_forced_platform {
-	my $self = shift;
-	my $target_number = shift;
-	my $cluster_size = shift;
-	my $platform_levels = shift;
-
-	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
-	my $platform = Platform->new($platform_levels);
-	my $cpus_structure = $platform->build_structure($available_cpus);
-	my $chosen_ranges = $self->choose_cpus_forced($cpus_structure, $target_number);
-
-	if (defined $chosen_ranges) {
-		$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
-	} else {
-		$self->remove_all();
-	}
-
-	return;
-}
-
-sub choose_cpus_forced {
-	my $self = shift;
-	my $cpus_structure = shift;
-	my $target_number = shift;
-
-	my @suitable_levels = grep {$_->[0]->{total_original_size} >= $target_number} (@{$cpus_structure});
-
-	my $chosen_block;
-	for my $cpus_block (@{$suitable_levels[0]}) {
-		if ($cpus_block->{total_size} >= $target_number) {
-			$chosen_block = $cpus_block;
-			last;
-		}
-	}
-
-	# If this is undefined means there are no minimum sized blocks that
-	# have enough available CPUs for the job
-	return unless (defined $chosen_block);
-
-	my @chosen_ranges;
-	my $range_start = shift @{$chosen_block->{cpus}};
-	my $range_end = $range_start;
-	my $taken_cpus = 0;
-
-	while ($taken_cpus < $target_number) {
-		my $cpu_number = shift @{$chosen_block->{cpus}};
-
-		while ((defined $cpu_number) and ($cpu_number == $range_end + 1)
-				and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
-			$range_end = $cpu_number;
-			$cpu_number = shift @{$chosen_block->{cpus}};
-		}
-
-		push @chosen_ranges, [$range_start, $range_end];
-		$taken_cpus += $range_end - $range_start + 1;
-		$range_start = $cpu_number;
-		$range_end = $range_start;
-	}
-
-	return \@chosen_ranges;
 }
 
 # Returns true if all processors form a contiguous block. Needs processors

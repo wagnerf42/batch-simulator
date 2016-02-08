@@ -1,4 +1,4 @@
-package BestEffortPlatform;
+package ForcedPlatform;
 use parent 'Basic';
 use strict;
 use warnings;
@@ -32,7 +32,12 @@ sub reduce {
 	my $cpus_structure = $platform->build_structure($available_cpus);
 	my $chosen_ranges = choose_cpus($cpus_structure, $target_number);
 
-	$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges($chosen_ranges));
+	if (defined $chosen_ranges) {
+		$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges($chosen_ranges));
+	} else {
+		$left_processors->remove_all();
+	}
+
 	return;
 }
 
@@ -40,17 +45,19 @@ sub choose_cpus {
 	my $cpus_structure = shift;
 	my $target_number = shift;
 
-	my $chosen_block;
+	my @suitable_levels = grep {$_->[0]->{total_original_size} >= $target_number} (@{$cpus_structure});
 
-	# Find the first block with enough CPUs for the job
-	for my $structure_level (@{$cpus_structure}) {
-		for my $cpus_block (@{$structure_level}) {
-			if ($cpus_block->{total_size} >= $target_number) {
-				$chosen_block = $cpus_block;
-				last;
-			}
+	my $chosen_block;
+	for my $cpus_block (@{$suitable_levels[0]}) {
+		if ($cpus_block->{total_size} >= $target_number) {
+			$chosen_block = $cpus_block;
+			last;
 		}
 	}
+
+	# If this is undefined means there are no minimum sized blocks that
+	# have enough available CPUs for the job
+	return unless (defined $chosen_block);
 
 	my @chosen_ranges;
 	my $range_start = shift @{$chosen_block->{cpus}};
@@ -61,7 +68,7 @@ sub choose_cpus {
 		my $cpu_number = shift @{$chosen_block->{cpus}};
 
 		while ((defined $cpu_number) and ($cpu_number == $range_end + 1)
-		and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
+				and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
 			$range_end = $cpu_number;
 			$cpu_number = shift @{$chosen_block->{cpus}};
 		}
@@ -74,6 +81,9 @@ sub choose_cpus {
 
 	return \@chosen_ranges;
 }
+
+
+
 
 1;
 
