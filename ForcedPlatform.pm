@@ -1,20 +1,18 @@
 package ForcedPlatform;
-use parent 'Basic';
+use parent 'BestEffortPlatform';
 use strict;
 use warnings;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 use ProcessorRange;
+use BestEffortPlatform qw(DEFAULT SMALLEST_FIRST BIGGEST_FIRST);
 
 use Data::Dumper;
+use Switch;
 
 sub new {
 	my $class = shift;
-	my $platform_levels = shift;
-
-	my $self = {
-		platform_levels => $platform_levels,
-	};
+	my $self = $class->SUPER::new(@_);
 
 	bless $self, $class;
 	return $self;
@@ -30,7 +28,7 @@ sub reduce {
 	my $available_cpus = $left_processors->available_cpus_in_clusters($cluster_size);
 	my $platform = Platform->new($self->{platform_levels});
 	my $cpus_structure = $platform->build_structure($available_cpus);
-	my $chosen_ranges = choose_cpus($cpus_structure, $target_number);
+	my $chosen_ranges = $self->choose_cpus($cpus_structure, $target_number);
 
 	if (defined $chosen_ranges) {
 		$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges($chosen_ranges));
@@ -42,13 +40,27 @@ sub reduce {
 }
 
 sub choose_cpus {
+	my $self = shift;
 	my $cpus_structure = shift;
 	my $target_number = shift;
 
 	my @suitable_levels = grep {$_->[0]->{total_original_size} >= $target_number} (@{$cpus_structure});
 
+	# The first level is the only one that can be used since this is a
+	# forced variant
+	my @sorted_blocks;
+	switch ($self->{mode}) {
+		case SMALLEST_FIRST {
+			@sorted_blocks = sort { $a->{total_size} <=> $b->{total_size} } (@{$suitable_levels[0]});
+		}
+
+		case BIGGEST_FIRST {
+			@sorted_blocks = sort { $b->{total_size} <=> $a->{total_size} } (@{$suitable_levels[0]});
+		}
+	}
+
 	my $chosen_block;
-	for my $cpus_block (@{$suitable_levels[0]}) {
+	for my $cpus_block (@sorted_blocks) {
 		if ($cpus_block->{total_size} >= $target_number) {
 			$chosen_block = $cpus_block;
 			last;

@@ -11,9 +11,6 @@ use POSIX qw(floor ceil);
 use List::Util qw(min max sum);
 use Data::Dumper;
 
-require Exporter;
-our @ISA = qw(Exporter);
-
 use Platform;
 
 # Items to export into callers namespace by default. Note: do not export
@@ -23,9 +20,6 @@ use Platform;
 # This allows declaration use ProcessorRange ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ('all' => [qw()]);
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-
 our $VERSION = '0.01';
 
 require XSLoader;

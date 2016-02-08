@@ -16,9 +16,6 @@ use ProcessorRange;
 use BinarySearchTree;
 use Platform;
 
-# Reduction algorithms
-use Basic;
-
 use Debug;
 
 use overload '""' => \&stringification;
