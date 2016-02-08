@@ -26,21 +26,6 @@ use Platform;
 our %EXPORT_TAGS = ('all' => [qw()]);
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
-our @REDUCTION_FUNCTIONS = (
-	\&reduce_to_basic,
-	\&reduce_to_best_effort_contiguous,
-	\&reduce_to_forced_contiguous,
-	\&reduce_to_best_effort_local,
-	\&reduce_to_forced_local,
-	\&reduce_to_best_effort_platform,
-	\&reduce_to_forced_platform,
-	\&reduce_to_best_effort_platform_smallest_first,
-	\&reduce_to_forced_platform_smallest_first,
-	\&reduce_to_best_effort_platform_biggest_first,
-	\&reduce_to_forced_platform_biggest_first,
-);
-
-our @EXPORT = qw(@REDUCTION_FUNCTIONS);
 our $VERSION = '0.01';
 
 require XSLoader;
@@ -112,7 +97,6 @@ sub check_ok {
 	return;
 }
 
-
 sub compute_ranges_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
@@ -179,14 +163,6 @@ sub contains_at_least {
 	return $self->size() >= $limit;
 }
 
-sub reduction_function {
-	my $self = shift;
-	my $reduction_algorithm = shift;
-
-	my $reduction_function = $REDUCTION_FUNCTIONS[$reduction_algorithm];
-	return $self->$reduction_function(@_);
-}
-
 sub cluster_size {
 	my $cluster = shift;
 	return sum (map {$_->[1] - $_->[0] + 1} @{$cluster});
@@ -209,32 +185,6 @@ sub sort_and_fuse_contiguous_ranges {
 	}
 
 	return \@remaining_ranges;
-}
-
-sub reduce_to_best_effort_local {
-	my ($self, $target_number, $cluster_size) = @_;
-	my @remaining_ranges;
-	my $used_clusters_number = 0;
-	my $current_cluster;
-	my $clusters = $self->compute_ranges_in_clusters($cluster_size);
-	my @sorted_clusters = sort { cluster_size($b) - cluster_size($a) } @{$clusters};
-
-	for my $cluster (@sorted_clusters) {
-		for my $pair (@{$cluster}) {
-			my ($start, $end) = @{$pair};
-			my $available_processors = $end - $start + 1;
-			my $taking = min($target_number, $available_processors);
-
-			push @remaining_ranges, [$start, $start + $taking - 1];
-			$target_number -= $taking;
-			last if $target_number == 0;
-		}
-
-		last if $target_number == 0;
-	}
-
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
-	return;
 }
 
 sub reduce_to_forced_local {
