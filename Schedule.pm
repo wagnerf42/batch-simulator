@@ -7,27 +7,25 @@ use warnings;
 use List::Util qw(max sum);
 use Time::HiRes qw(time);
 use Log::Log4perl qw(get_logger);
+use Data::Dumper;
 
 use EventQueue;
 
 # Creates a new Schedule object.
 sub new {
 	my $class = shift;
+	my $trace = shift;
+	my $processors_number = shift;
 
 	my $self = {
-		trace => shift,
-		processors_number => shift,
-		cluster_size => shift,
-		reduction_algorithm => shift,
-		platform_levels => shift,
+		trace => $trace,
+		processors_number => $processors_number,
 		cmax => 0,
-		uses_external_simulator => 0
+		uses_external_simulator => 0,
 	};
 
 	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
 	$self->{trace}->unassign_jobs(); # make sure the trace is clean
-
-	$self->{cluster_size} = $self->{processors_number} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{processors_number});
 
 	bless $self, $class;
 	return $self;
@@ -35,27 +33,19 @@ sub new {
 
 sub new_simulation {
 	my $class = shift;
-	my $cluster_size = shift;
-	my $reduction_algorithm = shift;
 	my $delay = shift;
 	my $socket_file = shift;
 	my $json_file = shift;
-	my $platform_levels = shift;
 
 	my $self = {
-		cluster_size => $cluster_size,
-		reduction_algorithm => $reduction_algorithm,
+		job_delay => $delay,
 		cmax => 0,
 		uses_external_simulator => 1,
-		job_delay => $delay,
-		platform_levels => $platform_levels,
 	};
 
 	$self->{trace} = Trace->new();
 	$self->{events} = EventQueue->new($socket_file, $json_file);
 	$self->{processors_number} = $self->{events}->cpu_number();
-
-	$self->{cluster_size} = $self->{processors_number} unless (defined $self->{cluster_size} and $self->{cluster_size} > 0 and $self->{cluster_size} <= $self->{processors_number});
 
 	bless $self, $class;
 	return $self;
@@ -171,13 +161,12 @@ sub save_svg {
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
 
-	my $clusters_number = POSIX::ceil($self->{processors_number}/$self->{cluster_size});
-	my $cluster_size = 600/$self->{processors_number}*$self->{cluster_size};
-	for my $cluster (1..$clusters_number) {
-		my $cluster_y = $cluster * $cluster_size;
-		print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
-
-	}
+	#my $clusters_number = POSIX::ceil($self->{processors_number}/$self->{cluster_size});
+	#my $cluster_size = 600/$self->{processors_number}*$self->{cluster_size};
+	#for my $cluster (1..$clusters_number) {
+	#	my $cluster_y = $cluster * $cluster_size;
+	#	print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
+	#}
 
 	$_->svg($filehandle, $w_ratio, $h_ratio, $time) for grep {defined $_->starting_time()} (@{$self->{trace}->jobs()});
 

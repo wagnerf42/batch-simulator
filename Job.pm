@@ -65,8 +65,14 @@ sub new {
 	};
 
 	# Sanity checks for some of the job fields
+	#$logger->logdie('job run time is 0') if ($self->{run_time} == );
+	$self->{status} = 5 if (($self->{run_time} == 0) and ($self->{status} == 1));
+	
+	#$logger->logdie('number of allocated CPUs is different than requested') if ($self->{allocated_cpus} != $self->{requested_cpus});
 	$self->{allocated_cpus} = $self->{requested_cpus} if ($self->{allocated_cpus} != $self->{requested_cpus});
-	$self->{run_time} = $self->{requested_time} if (defined($self->{run_time}) and $self->{requested_time} < $self->{run_time});
+
+	#$logger->logdie('requested time smaller than run time') if ($self->{requested_time} < $self->{run_time});
+	$self->{run_time} = $self->{requested_time} if ($self->{requested_time} < $self->{run_time});
 
 	bless $self, $class;
 	return $self;
@@ -218,6 +224,11 @@ sub job_number {
 	return $self->{job_number};
 }
 
+sub status {
+	my $self = shift;
+	return $self->{status};
+}
+
 sub unassign {
 	my $self = shift;
 
@@ -282,7 +293,7 @@ sub svg {
 			$x = $w/2 + $self->{starting_time} * $w_ratio;
 			$y = (($start+$end+1)/2) * $h_ratio;
 			my $fs = min($h_ratio*($end-$start+1), $w/5);
-			die "negative font size :$fs ; $end ; $start" if $fs <= 0;
+			die "negative font size :$fs ; $end ; $start $h_ratio $w $self->{run_time}" if $fs <= 0;
 			my $text_y = $y + $fs*0.35;
 			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
 		}

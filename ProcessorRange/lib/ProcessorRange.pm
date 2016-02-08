@@ -34,6 +34,10 @@ our @REDUCTION_FUNCTIONS = (
 	\&reduce_to_forced_local,
 	\&reduce_to_best_effort_platform,
 	\&reduce_to_forced_platform,
+	\&reduce_to_best_effort_platform_smallest_first,
+	\&reduce_to_forced_platform_smallest_first,
+	\&reduce_to_best_effort_platform_biggest_first,
+	\&reduce_to_forced_platform_biggest_first,
 );
 
 our @EXPORT = qw(@REDUCTION_FUNCTIONS);
@@ -354,7 +358,6 @@ sub reduce_to_best_effort_platform {
 	my $chosen_ranges = $self->choose_cpus_best_effort($cpus_structure, $target_number);
 
 	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
-
 	return;
 }
 

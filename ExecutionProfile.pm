@@ -16,6 +16,9 @@ use ProcessorRange;
 use BinarySearchTree;
 use Platform;
 
+# Reduction algorithms
+use Basic;
+
 use Debug;
 
 use overload '""' => \&stringification;
@@ -24,15 +27,11 @@ use overload '""' => \&stringification;
 sub new {
 	my $class = shift;
 	my $processors_number = shift;
-	my $cluster_size = shift;
 	my $reduction_algorithm = shift;
-	my $platform_levels = shift;
 
 	my $self = {
 		processors_number => $processors_number,
-		cluster_size => $cluster_size,
 		reduction_algorithm => $reduction_algorithm,
-		platform_levels => $platform_levels,
 	};
 
 	$self->{profile_tree} = BinarySearchTree->new(-1, 0);
@@ -91,14 +90,14 @@ sub get_free_processors_for {
 				return 0;
 			}
 
-			$duration = (defined $profile->ending_time()) ?
-					$duration + $profile->duration() : $requested_time;
+			$duration = (defined $profile->ending_time())
+			? $duration + $profile->duration() : $requested_time;
 			return 1;
 		});
 
 	# It is possible that not all processors were found
 	if (($left_processors->size() < $job->requested_cpus()) or ((not float_equal($duration, $requested_time))
-			and ($duration < $requested_time))) {
+	and ($duration < $requested_time))) {
 		##DEBUG_BEGIN
 		$logger->debug('size less than requested');
 		##DEBUG_END
@@ -107,12 +106,7 @@ sub get_free_processors_for {
 		return;
 	}
 
-	$left_processors->reduction_function(
-		$self->{reduction_algorithm},
-		$job->requested_cpus(),
-		$self->{cluster_size},
-		$self->{platform_levels}
-	);
+	$self->{reduction_algorithm}->reduce($job->requested_cpus(), $left_processors);
 
 	if ($left_processors->is_empty()) {
 		$left_processors->free_allocated_memory();

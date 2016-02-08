@@ -6,6 +6,7 @@ use warnings;
 use Exporter qw(import);
 use Time::HiRes qw(time);
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
+use Data::Dumper;
 
 use ExecutionProfile;
 use Heap;
@@ -26,7 +27,11 @@ use constant {
 	BEST_EFFORT_LOCAL => 3,
 	LOCAL => 4,
 	BEST_EFFORT_PLATFORM => 5,
-	PLATFORM => 6
+	PLATFORM => 6,
+	BEST_EFFORT_PLATFORM_SF => 7,
+	PLATFORM_SF => 8,
+	BEST_EFFORT_PLATFORM_BF => 8,
+	PLATFORM_BF => 9,
 };
 
 our @BACKFILLING_VARIANT_STRINGS = (
@@ -36,7 +41,11 @@ our @BACKFILLING_VARIANT_STRINGS = (
 	"BELOC",
 	"LOC",
 	"BEPLATFORM",
-	"PLATFORM"
+	"PLATFORM",
+	"BEPLATSF",
+	"PLATFORMSF",
+	"BEPLATBF",
+	"PLATFORMBF"
 );
 
 our @EXPORT = qw(
@@ -58,13 +67,13 @@ our @EXPORT = qw(
 # is added.
 sub new {
 	my $class = shift;
+	my $reduction_algorithm = shift;
+
 	my $self = $class->SUPER::new(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{processors_number},
-		$self->{cluster_size},
-		$self->{reduction_algorithm},
-		$self->{platform_levels}
+		$reduction_algorithm,
 	);
 
 	$self->{current_time} = 0;
@@ -80,12 +89,11 @@ sub new {
 sub new_simulation {
 	my $class = shift;
 	my $self = $class->SUPER::new_simulation(@_);
+	my $reduction_algorithm = shift;
 
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{processors_number},
-		$self->{cluster_size},
-		$self->{reduction_algorithm},
-		$self->{platform_levels},
+		$reduction_algorithm,
 	);
 
 	$self->{current_time} = 0;
