@@ -12,6 +12,7 @@ use BestEffortContiguous;
 use ForcedContiguous;
 use BestEffortLocal;
 use ForcedLocal;
+use BestEffortPlatform;
 
 my ($trace_file, $cpus_number, $jobs_number) = @ARGV;
 
@@ -24,7 +25,8 @@ $trace->remove_large_jobs($cpus_number);
 #$trace->fix_submit_times();
 $trace->keep_first_jobs($jobs_number);
 
-my $reduction_algorithm = ForcedLocal->new(2);
+my @platform_levels = (1, 2, 4, 8);
+my $reduction_algorithm = BestEffortPlatform->new(\@platform_levels);
 
 my $schedule = Backfilling->new($reduction_algorithm, $trace, $cpus_number);
 $schedule->run();

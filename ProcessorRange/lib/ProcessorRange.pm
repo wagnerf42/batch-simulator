@@ -187,21 +187,6 @@ sub sort_and_fuse_contiguous_ranges {
 	return \@remaining_ranges;
 }
 
-sub reduce_to_best_effort_platform {
-	my $self = shift;
-	my $target_number = shift;
-	my $cluster_size = shift;
-	my $platform_levels = shift;
-
-	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
-	my $platform = Platform->new($platform_levels);
-	my $cpus_structure = $platform->build_structure($available_cpus);
-	my $chosen_ranges = $self->choose_cpus_best_effort($cpus_structure, $target_number);
-
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
-	return;
-}
-
 sub choose_cpus_best_effort {
 	my $self = shift;
 	my $cpus_structure = shift;
