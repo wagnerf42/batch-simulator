@@ -8,6 +8,7 @@ use Log::Log4perl qw(get_logger);
 use Trace;
 use Backfilling;
 use Basic;
+use BestEffortContiguous;
 
 my ($trace_file, $cpus_number, $jobs_number, $cluster_size, $variant) = @ARGV;
 
@@ -20,7 +21,7 @@ $trace->reset_jobs_numbers();
 $trace->fix_submit_times();
 $trace->keep_first_jobs($jobs_number);
 
-my $reduction_algorithm = Basic->new();
+my $reduction_algorithm = BestEffortContiguous->new();
 
 my $schedule = Backfilling->new($reduction_algorithm, $trace, $cpus_number);
 $schedule->run();

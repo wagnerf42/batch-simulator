@@ -187,29 +187,6 @@ sub reduction_function {
 	return $self->$reduction_function(@_);
 }
 
-sub reduce_to_basic {
-	my $self = shift;
-	my $target_number = shift;
-	my @remaining_ranges;
-
-	$self->ranges_loop(
-		sub {
-			my ($start, $end) = @_;
-			my $taking = $target_number;
-			my $available_processors = $end + 1 - $start;
-
-			$taking = $available_processors if ($available_processors < $target_number);
-
-			push @remaining_ranges, [$start, $start + $taking - 1];
-			$target_number -= $taking;
-			return ($target_number != 0);
-		}
-	);
-
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
-	return;
-}
-
 sub reduce_to_forced_contiguous {
 	my $self = shift;
 	my $target_number = shift;
@@ -233,28 +210,6 @@ sub reduce_to_forced_contiguous {
 		$self->remove_all();
 	}
 
-	return;
-}
-
-sub reduce_to_best_effort_contiguous {
-	my $self = shift;
-	my $target_number = shift;
-
-	my @remaining_ranges;
-	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
-
-	for my $pair (@sorted_pairs) {
-		my ($start, $end) = @{$pair};
-		my $available_processors = $end + 1 - $start;
-		my $taking = min($target_number, $available_processors);
-
-		push @remaining_ranges, [$start, $start + $taking - 1];
-
-		$target_number -= $taking;
-		last if $target_number == 0;
-	}
-
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
 	return;
 }
 
