@@ -11,6 +11,7 @@ use Basic;
 use BestEffortContiguous;
 use ForcedContiguous;
 use BestEffortLocal;
+use ForcedLocal;
 
 my ($trace_file, $cpus_number, $jobs_number) = @ARGV;
 
@@ -23,7 +24,7 @@ $trace->remove_large_jobs($cpus_number);
 #$trace->fix_submit_times();
 $trace->keep_first_jobs($jobs_number);
 
-my $reduction_algorithm = BestEffortLocal->new(2);
+my $reduction_algorithm = ForcedLocal->new(2);
 
 my $schedule = Backfilling->new($reduction_algorithm, $trace, $cpus_number);
 $schedule->run();
