@@ -187,32 +187,6 @@ sub reduction_function {
 	return $self->$reduction_function(@_);
 }
 
-sub reduce_to_forced_contiguous {
-	my $self = shift;
-	my $target_number = shift;
-	my @remaining_ranges;
-
-	$self->ranges_loop(
-		sub {
-			my ($start, $end) = @_;
-			my $available_processors = $end + 1 - $start;
-
-			return 1 if ($available_processors < $target_number);
-
-			push @remaining_ranges, [$start, $start + $target_number - 1];
-			return 0;
-		},
-	);
-
-	if (@remaining_ranges) {
-		$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
-	} else {
-		$self->remove_all();
-	}
-
-	return;
-}
-
 sub cluster_size {
 	my $cluster = shift;
 	return sum (map {$_->[1] - $_->[0] + 1} @{$cluster});
