@@ -106,6 +106,24 @@ sub bounded_stretch {
 	return $total_bounded_stretch/$jobs_number;
 }
 
+sub stretch_sum_of_squares {
+	my $self = shift;
+
+	return sqrt(sum map {$_->bounded_stretch(10) ** 2} (@{$self->{trace}->jobs()}));
+}
+
+sub stretch_with_cpus_squared {
+	my $self = shift;
+
+	return sum map {$_->bounded_stretch_with_cpus_squared(10)} (@{$self->{trace}->jobs()});
+}
+
+sub stretch_with_cpus_log {
+	my $self = shift;
+
+	return sum map {$_->bounded_stretch_with_cpus_log(10)} (@{$self->{trace}->jobs()});
+}
+
 sub contiguous_jobs_number {
 	my $self = shift;
 	return scalar grep {$_->assigned_processors_ids()->contiguous($self->{processors_number})} (@{$self->{trace}->jobs()});

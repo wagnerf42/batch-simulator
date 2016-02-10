@@ -178,6 +178,25 @@ sub bounded_stretch {
 	return max(($self->wait_time() + $self->{run_time})/max($self->{run_time}, ((defined $time_limit) ? $time_limit : 10)), 1);
 }
 
+sub bounded_stretch_with_cpus_squared {
+	my $self = shift;
+	my $time_limit = shift;
+
+	$time_limit = 10 unless (defined $time_limit);
+	return max(($self->wait_time() + $self->{run_time})
+		/ (max($self->{run_time}, $time_limit) * sqrt($self->{allocated_cpus})), 1);
+}
+
+sub bounded_stretch_with_cpus_log {
+	my $self = shift;
+	my $time_limit = shift;
+
+	$time_limit = 10 unless (defined $time_limit);
+	return max(($self->wait_time() + $self->{run_time})
+		/ (max($self->{run_time}, $time_limit)
+		* ($self->{allocated_cpus} == 1) ? 1 : log($self->{allocated_cpus})), 1);
+}
+
 sub original_bounded_stretch {
 	my $self = shift;
 	my $time_limit = shift;
