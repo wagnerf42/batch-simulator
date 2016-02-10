@@ -11,9 +11,6 @@ use POSIX qw(floor ceil);
 use List::Util qw(min max sum);
 use Data::Dumper;
 
-require Exporter;
-our @ISA = qw(Exporter);
-
 use Platform;
 
 # Items to export into callers namespace by default. Note: do not export
@@ -23,20 +20,6 @@ use Platform;
 # This allows declaration use ProcessorRange ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ('all' => [qw()]);
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
-
-our @REDUCTION_FUNCTIONS = (
-	\&reduce_to_basic,
-	\&reduce_to_best_effort_contiguous,
-	\&reduce_to_forced_contiguous,
-	\&reduce_to_best_effort_local,
-	\&reduce_to_forced_local,
-	\&reduce_to_best_effort_platform,
-	\&reduce_to_forced_platform,
-);
-
-our @EXPORT = qw(@REDUCTION_FUNCTIONS);
 our $VERSION = '0.01';
 
 require XSLoader;
@@ -108,7 +91,6 @@ sub check_ok {
 	return;
 }
 
-
 sub compute_ranges_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
@@ -175,85 +157,6 @@ sub contains_at_least {
 	return $self->size() >= $limit;
 }
 
-sub reduction_function {
-	my $self = shift;
-	my $reduction_algorithm = shift;
-
-	my $reduction_function = $REDUCTION_FUNCTIONS[$reduction_algorithm];
-	return $self->$reduction_function(@_);
-}
-
-sub reduce_to_basic {
-	my $self = shift;
-	my $target_number = shift;
-	my @remaining_ranges;
-
-	$self->ranges_loop(
-		sub {
-			my ($start, $end) = @_;
-			my $taking = $target_number;
-			my $available_processors = $end + 1 - $start;
-
-			$taking = $available_processors if ($available_processors < $target_number);
-
-			push @remaining_ranges, [$start, $start + $taking - 1];
-			$target_number -= $taking;
-			return ($target_number != 0);
-		}
-	);
-
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
-	return;
-}
-
-sub reduce_to_forced_contiguous {
-	my $self = shift;
-	my $target_number = shift;
-	my @remaining_ranges;
-
-	$self->ranges_loop(
-		sub {
-			my ($start, $end) = @_;
-			my $available_processors = $end + 1 - $start;
-
-			return 1 if ($available_processors < $target_number);
-
-			push @remaining_ranges, [$start, $start + $target_number - 1];
-			return 0;
-		},
-	);
-
-	if (@remaining_ranges) {
-		$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
-	} else {
-		$self->remove_all();
-	}
-
-	return;
-}
-
-sub reduce_to_best_effort_contiguous {
-	my $self = shift;
-	my $target_number = shift;
-
-	my @remaining_ranges;
-	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $self->compute_pairs();
-
-	for my $pair (@sorted_pairs) {
-		my ($start, $end) = @{$pair};
-		my $available_processors = $end + 1 - $start;
-		my $taking = min($target_number, $available_processors);
-
-		push @remaining_ranges, [$start, $start + $taking - 1];
-
-		$target_number -= $taking;
-		last if $target_number == 0;
-	}
-
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
-	return;
-}
-
 sub cluster_size {
 	my $cluster = shift;
 	return sum (map {$_->[1] - $_->[0] + 1} @{$cluster});
@@ -276,126 +179,6 @@ sub sort_and_fuse_contiguous_ranges {
 	}
 
 	return \@remaining_ranges;
-}
-
-sub reduce_to_best_effort_local {
-	my ($self, $target_number, $cluster_size) = @_;
-	my @remaining_ranges;
-	my $used_clusters_number = 0;
-	my $current_cluster;
-	my $clusters = $self->compute_ranges_in_clusters($cluster_size);
-	my @sorted_clusters = sort { cluster_size($b) - cluster_size($a) } @{$clusters};
-
-	for my $cluster (@sorted_clusters) {
-		for my $pair (@{$cluster}) {
-			my ($start, $end) = @{$pair};
-			my $available_processors = $end - $start + 1;
-			my $taking = min($target_number, $available_processors);
-
-			push @remaining_ranges, [$start, $start + $taking - 1];
-			$target_number -= $taking;
-			last if $target_number == 0;
-		}
-
-		last if $target_number == 0;
-	}
-
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
-	return;
-}
-
-sub reduce_to_forced_local {
-	my ($self, $target_number, $cluster_size) = @_;
-	my @remaining_ranges;
-	my $used_clusters_number = 0;
-	my $current_cluster;
-	my $clusters = $self->compute_ranges_in_clusters($cluster_size);
-	my @sorted_clusters = sort { cluster_size($b) - cluster_size($a) } @{$clusters};
-	my $target_clusters_number = ceil($target_number/$cluster_size);
-
-	for my $cluster (@sorted_clusters) {
-		for my $pair (@{$cluster}) {
-			my ($start, $end) = @{$pair};
-			my $available_processors = $end - $start + 1;
-			my $taking = min($target_number, $available_processors);
-
-			push @remaining_ranges, [$start, $start + $taking - 1];
-			$target_number -= $taking;
-			last if $target_number == 0;
-		}
-
-		$used_clusters_number++;
-
-		if (($used_clusters_number == $target_clusters_number) and ($target_number > 0)) {
-			$self->remove_all();
-			return;
-		}
-
-		last if $target_number == 0;
-	}
-
-	if (@remaining_ranges) {
-		$self->affect_ranges(sort_and_fuse_contiguous_ranges(\@remaining_ranges));
-	} else {
-		$self->remove_all();
-	}
-	return;
-}
-
-sub reduce_to_best_effort_platform {
-	my $self = shift;
-	my $target_number = shift;
-	my $cluster_size = shift;
-	my $platform_levels = shift;
-
-	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
-	my $platform = Platform->new($platform_levels);
-	my $cpus_structure = $platform->build_structure($available_cpus);
-	my $chosen_ranges = $self->choose_cpus_best_effort($cpus_structure, $target_number);
-
-	$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
-
-	return;
-}
-
-sub choose_cpus_best_effort {
-	my $self = shift;
-	my $cpus_structure = shift;
-	my $target_number = shift;
-
-	my $chosen_block;
-
-	# Find the first block with enough CPUs for the job
-	for my $structure_level (@{$cpus_structure}) {
-		for my $cpus_block (@{$structure_level}) {
-			if ($cpus_block->{total_size} >= $target_number) {
-				$chosen_block = $cpus_block;
-				last;
-			}
-		}
-	}
-
-	my @chosen_ranges;
-	my $range_start = shift @{$chosen_block->{cpus}};
-	my $range_end = $range_start;
-	my $taken_cpus = 0;
-
-	while ($taken_cpus < $target_number) {
-		my $cpu_number = shift @{$chosen_block->{cpus}};
-
-		while ((defined $cpu_number) and ($cpu_number == $range_end + 1)
-		and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
-			$range_end = $cpu_number;
-			$cpu_number = shift @{$chosen_block->{cpus}};
-		}
-
-		push @chosen_ranges, [$range_start, $range_end];
-		$taken_cpus += $range_end - $range_start + 1;
-		$range_start = $cpu_number;
-		$range_end = $range_start;
-	}
-
-	return \@chosen_ranges;
 }
 
 sub available_cpus_in_clusters {
@@ -429,68 +212,6 @@ sub available_cpus_in_clusters {
 	);
 
 	return \@available_cpus;
-}
-
-sub reduce_to_forced_platform {
-	my $self = shift;
-	my $target_number = shift;
-	my $cluster_size = shift;
-	my $platform_levels = shift;
-
-	my $available_cpus = $self->available_cpus_in_clusters($cluster_size);
-	my $platform = Platform->new($platform_levels);
-	my $cpus_structure = $platform->build_structure($available_cpus);
-	my $chosen_ranges = $self->choose_cpus_forced($cpus_structure, $target_number);
-
-	if (defined $chosen_ranges) {
-		$self->affect_ranges(sort_and_fuse_contiguous_ranges($chosen_ranges));
-	} else {
-		$self->remove_all();
-	}
-
-	return;
-}
-
-sub choose_cpus_forced {
-	my $self = shift;
-	my $cpus_structure = shift;
-	my $target_number = shift;
-
-	my @suitable_levels = grep {$_->[0]->{total_original_size} >= $target_number} (@{$cpus_structure});
-
-	my $chosen_block;
-	for my $cpus_block (@{$suitable_levels[0]}) {
-		if ($cpus_block->{total_size} >= $target_number) {
-			$chosen_block = $cpus_block;
-			last;
-		}
-	}
-
-	# If this is undefined means there are no minimum sized blocks that
-	# have enough available CPUs for the job
-	return unless (defined $chosen_block);
-
-	my @chosen_ranges;
-	my $range_start = shift @{$chosen_block->{cpus}};
-	my $range_end = $range_start;
-	my $taken_cpus = 0;
-
-	while ($taken_cpus < $target_number) {
-		my $cpu_number = shift @{$chosen_block->{cpus}};
-
-		while ((defined $cpu_number) and ($cpu_number == $range_end + 1)
-				and ($taken_cpus + $range_end - $range_start + 1 < $target_number)) {
-			$range_end = $cpu_number;
-			$cpu_number = shift @{$chosen_block->{cpus}};
-		}
-
-		push @chosen_ranges, [$range_start, $range_end];
-		$taken_cpus += $range_end - $range_start + 1;
-		$range_start = $cpu_number;
-		$range_end = $range_start;
-	}
-
-	return \@chosen_ranges;
 }
 
 # Returns true if all processors form a contiguous block. Needs processors

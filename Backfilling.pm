@@ -6,6 +6,7 @@ use warnings;
 use Exporter qw(import);
 use Time::HiRes qw(time);
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
+use Data::Dumper;
 
 use ExecutionProfile;
 use Heap;
@@ -19,52 +20,19 @@ use constant {
 	SUBMISSION_EVENT => 1
 };
 
-use constant {
-	BASIC => 0,
-	BEST_EFFORT_CONTIGUOUS => 1,
-	CONTIGUOUS => 2,
-	BEST_EFFORT_LOCAL => 3,
-	LOCAL => 4,
-	BEST_EFFORT_PLATFORM => 5,
-	PLATFORM => 6
-};
-
-our @BACKFILLING_VARIANT_STRINGS = (
-	"BASIC",
-	"BECONT",
-	"CONT",
-	"BELOC",
-	"LOC",
-	"BEPLATFORM",
-	"PLATFORM"
-);
-
-our @EXPORT = qw(
-	BASIC
-	BEST_EFFORT_CONTIGUOUS
-	CONTIGUOUS
-	BEST_EFFORT_LOCAL
-	LOCAL
-	BEST_EFFORT_PLATFORM
-	PLATFORM
-	@BACKFILLING_VARIANT_STRINGS
-	NEW_EXECUTION_PROFILE
-	REUSE_EXECUTION_PROFILE
-);
-
 # Creates a new Backfilling object.
 
 # The parameters are redirected to the Schedule class and an execution profile
 # is added.
 sub new {
 	my $class = shift;
+	my $reduction_algorithm = shift;
+
 	my $self = $class->SUPER::new(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{processors_number},
-		$self->{cluster_size},
-		$self->{reduction_algorithm},
-		$self->{platform_levels}
+		$reduction_algorithm,
 	);
 
 	$self->{current_time} = 0;
@@ -80,12 +48,11 @@ sub new {
 sub new_simulation {
 	my $class = shift;
 	my $self = $class->SUPER::new_simulation(@_);
+	my $reduction_algorithm = shift;
 
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{processors_number},
-		$self->{cluster_size},
-		$self->{reduction_algorithm},
-		$self->{platform_levels},
+		$reduction_algorithm,
 	);
 
 	$self->{current_time} = 0;

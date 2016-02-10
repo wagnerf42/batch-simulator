@@ -98,6 +98,7 @@ sub new_from_swf {
 		# Job line
 		elsif ($fields[0] ne ' ') {
 			my $job = Job->new(@fields);
+			next if ($job->status() != 1);
 			push @{$self->{jobs}}, $job;
 		}
 	}
