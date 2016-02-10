@@ -245,6 +245,7 @@ sub contiguous {
 sub local {
 	my $self = shift;
 	my $cluster_size = shift;
+
 	my $needed_clusters = ceil($self->size() / $cluster_size);
 
 	return ($needed_clusters == $self->used_clusters($cluster_size));

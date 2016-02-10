@@ -16,12 +16,14 @@ sub new {
 	my $class = shift;
 	my $trace = shift;
 	my $processors_number = shift;
+	my $cluster_size = shift;
 
 	my $self = {
 		trace => $trace,
 		processors_number => $processors_number,
 		cmax => 0,
 		uses_external_simulator => 0,
+		cluster_size => $cluster_size,
 	};
 
 	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
@@ -36,11 +38,13 @@ sub new_simulation {
 	my $delay = shift;
 	my $socket_file = shift;
 	my $json_file = shift;
+	my $cluster_size = shift;
 
 	my $self = {
 		job_delay => $delay,
 		cmax => 0,
 		uses_external_simulator => 1,
+		cluster_size => $cluster_size,
 	};
 
 	$self->{trace} = Trace->new();

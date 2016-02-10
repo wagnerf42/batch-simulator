@@ -47,8 +47,9 @@ sub new {
 
 sub new_simulation {
 	my $class = shift;
-	my $self = $class->SUPER::new_simulation(@_);
 	my $reduction_algorithm = shift;
+
+	my $self = $class->SUPER::new_simulation(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new(
 		$self->{processors_number},
