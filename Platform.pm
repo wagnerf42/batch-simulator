@@ -16,7 +16,7 @@ use constant CLUSTER_POWER => "23.492E9";
 use constant CLUSTER_BANDWIDTH => "1.25E9";
 use constant CLUSTER_LATENCY => "1.0E-4";
 use constant LINK_BANDWIDTH => "1.25E9";
-use constant LINK_LATENCY => "3.0E-3";
+use constant LINK_LATENCY => "3.0E-2";
 
 # Constructors
 
