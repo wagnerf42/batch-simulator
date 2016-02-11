@@ -12,26 +12,40 @@ use Log::Log4perl qw(get_logger);
 use Trace;
 use Backfilling;
 
+use Basic;
+use BestEffortContiguous;
+use ForcedContiguous;
+use BestEffortLocal;
+use ForcedLocal;
+use BestEffortPlatform qw(SMALLEST_FIRST BIGGEST_FIRST);
+use ForcedPlatform;
+
 my ($execution_id) = @ARGV;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my @variants = (
-	BASIC,
-	BEST_EFFORT_CONTIGUOUS,
-	CONTIGUOUS,
-	BEST_EFFORT_LOCAL,
-	LOCAL,
-	BEST_EFFORT_PLATFORM,
-	PLATFORM
-);
 
-my @jobs_numbers = (400, 800, 1200, 1600, 2000);
+my @jobs_numbers = (600, 800, 1000, 1200, 1400);
+#my @jobs_numbers = (100, 200, 300, 400);
 my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
-my $platform_levels = '1-4-16-64-1088-77248';
-my @platform_levels_parts = split('-', $platform_levels);
-my $cpus_number = $platform_levels_parts[$#platform_levels_parts];
-my $cluster_size = $cpus_number/$platform_levels_parts[$#platform_levels_parts - 1];
+my @platform_levels = (1, 4, 16, 64, 1088, 77248);
+my $cpus_number = $platform_levels[$#platform_levels];
+my $cluster_size = $cpus_number/$platform_levels[$#platform_levels - 1];
+my $stretch_bound = 10;
+
+my @variants = (
+	Basic->new(),
+	BestEffortContiguous->new(),
+	ForcedContiguous->new(),
+	#BestEffortLocal->new($cluster_size),
+	#ForcedLocal->new($cluster_size),
+	#BestEffortPlatform->new(\@platform_levels),
+	#ForcedPlatform->new(\@platform_levels),
+	#BestEffortPlatform->new(\@platform_levels, mode => SMALLEST_FIRST),
+	#ForcedPlatform->new(\@platform_levels, mode => SMALLEST_FIRST),
+	#BestEffortPlatform->new(\@platform_levels, mode => BIGGEST_FIRST),
+	#ForcedPlatform->new(\@platform_levels, mode => BIGGEST_FIRST),
+);
 
 my @results;
 share(@results);
@@ -46,9 +60,9 @@ my $logger = get_logger('experiment');
 
 $logger->info("creating queue\n");
 my $q = Thread::Queue->new();
-for my $variant (@variants) {
+for my $variant_id (0..$#variants) {
 	for my $jobs_number (@jobs_numbers) {
-		$q->enqueue([$variant, $jobs_number]);
+		$q->enqueue([$variant_id, $jobs_number]);
 	}
 }
 $q->end();
@@ -69,26 +83,28 @@ sub run_instance {
 	my $logger = get_logger('experiment');
 
 	while (defined(my $instance = $q->dequeue_nb())) {
-		my ($variant, $jobs_number) = @{$instance};
+		my ($variant_id, $jobs_number) = @{$instance};
 
-		$logger->info("thread $id running $variant, $jobs_number");
+		$logger->info("thread $id running $variant_id, $jobs_number");
 
 		my $trace = Trace->new_from_swf($trace_file);
 		$trace->keep_first_jobs($jobs_number);
 		$trace->fix_submit_times();
-		my $schedule = Backfilling->new($trace, $cpus_number, $cluster_size, $variant, \@platform_levels_parts);
+		my $schedule = Backfilling->new($variants[$variant_id], $trace, $cpus_number, $cluster_size);
 		$schedule->run();
 
 		my @instance_results = (
 			$cpus_number,
 			$jobs_number,
 			$cluster_size,
-			$variant,
+			$variant_id,
 			$schedule->cmax(),
 			$schedule->contiguous_jobs_number(),
 			$schedule->local_jobs_number(),
 			$schedule->locality_factor(),
-			$schedule->bounded_stretch(10),
+			$schedule->bounded_stretch($stretch_bound),
+			$schedule->stretch_sum_of_squares($stretch_bound),
+			#$schedule->stretch_with_cpus_squared($stretch_bound),
 			$schedule->run_time(),
 		);
 
@@ -117,6 +133,8 @@ sub write_results_to_file {
 			"LOC_JOBS",
 			"LOC_FACTOR",
 			"BOUNDED_STRETCH",
+			"STRETCH_SUM_SQUARES",
+			#"STRETCH_CPUS_SQUARED",
 			"RUN_TIME"
 		)) . "\n";
 
