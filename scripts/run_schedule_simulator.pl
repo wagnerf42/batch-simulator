@@ -27,8 +27,8 @@ my $delay = 10;
 my $socket_file = '/tmp/socket';
 my $json_file = '/tmp/json';
 my $cpus_number = $platform_levels[$#platform_levels];
-my $comm_factor = '1.6e7';
-my $comp_factor = '2.34617e10';
+my $comm_factor = '4e6';
+my $comp_factor = '3e10';
 my $batsim = '../batsim/build/batsim';
 my $platform_file = '/tmp/platform';
 
