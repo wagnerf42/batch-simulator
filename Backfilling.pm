@@ -118,6 +118,7 @@ sub run {
 
 		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
+			
 			my $job = $event->payload();
 
 			##DEBUG_BEGIN

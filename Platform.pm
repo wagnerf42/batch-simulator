@@ -16,7 +16,7 @@ use constant CLUSTER_POWER => "23.492E9";
 use constant CLUSTER_BANDWIDTH => "1.25E9";
 use constant CLUSTER_LATENCY => "1.0E-4";
 use constant LINK_BANDWIDTH => "1.25E9";
-use constant LINK_LATENCY => "3.0E-2";
+use constant LINK_LATENCY => "5.0E-2";
 
 # Constructors
 
@@ -381,6 +381,21 @@ sub _score_function_pnorm {
 	my $max_depth = scalar @{$self->{levels}} - 1;
 
 	return $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * pow(($max_depth - $level) * 2, $self->{norm});
+}
+
+sub level_distance {
+	my $self = shift;
+	my $first_node = shift;
+	my $second_node = shift;
+
+	my $last_level = $#{$self->{levels}};
+
+	for my $level (0..($last_level - 1)) {
+		my $cpus_group = $self->{levels}->[$last_level]/$self->{levels}->[$level + 1];
+		return $last_level - $level if (int $first_node/$cpus_group != int $second_node/$cpus_group);
+	}
+
+	return 0;
 }
 
 1;

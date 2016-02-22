@@ -28,17 +28,17 @@ $platform->save_platform_xml($platform_file);
 for my $hosts_config (@{$hosts_configs}) {
 	save_hosts_file($hosts_config);
 
-	my $result = `$smpi_script $cpus_number $platform_file $hosts_file $benchmark`;
-	print "========\n$result\n";
-	die;
-}
+	my $result = `$smpi_script $cpus_number $platform_file $hosts_file $benchmark 2>&1`;
 
-#unless ($result =~ /Simulation time (\d*\.\d*)/) {
-#	print STDERR "./scripts/smpi/smpireplay.sh $cpus_number $platform_file /tmp/hosts-$nha $benchmark\n";
-#	print STDERR "$result\n";
-#	die 'error running benchmark';
-#}
-#my $simulated_time = $1;
+	unless ($result =~ /Simulation time (\d*\.\d*)/) {
+		print STDERR "$smpi_script $cpus_number $platform_file $hosts_file $benchmark\n";
+		print STDERR "$result\n";
+		die 'error running benchmark';
+	}
+
+	my $distance = $platform->level_distance($hosts_config->[0], $hosts_config->[1]);
+	print "$hosts_config->[1] $distance $1\n";
+}
 
 sub get_log_file {
 	return 'log/run_smpilog';
