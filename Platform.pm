@@ -398,4 +398,51 @@ sub level_distance {
 	return 0;
 }
 
+sub generate_speedup {
+	my $self = shift;
+	my $benchmark = shift;
+
+	my $smpi_script = './scripts/smpi/smpireplay.sh';
+	my $platform_file = '/tmp/platform';
+	my $hosts_file = '/tmp/hosts';
+
+	$self->build_platform_xml();
+	$self->save_platform_xml($platform_file);
+
+	my $last_level = $#{$self->{levels}};
+	my @hosts_configs = map {[0, $self->{levels}->[$_]]} (0..($last_level - 1));
+	my $cpus_number = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - 1];
+
+	my @results;
+
+	for my $hosts_config (@hosts_configs) {
+		save_hosts_file($hosts_config, $hosts_file);
+
+		my $result = `$smpi_script $cpus_number $platform_file $hosts_file $benchmark 2>&1`;
+
+		unless ($result =~ /Simulation time (\d*\.\d*)/) {
+			print STDERR "$smpi_script $cpus_number $platform_file $hosts_file $benchmark\n";
+			print STDERR "$result\n";
+			die 'error running benchmark';
+		}
+
+		my $distance = $self->level_distance($hosts_config->[0], $hosts_config->[1]);
+		push @results, $1;
+	}
+
+	my $base_runtime = $results[0];
+	@results = map {$_/$base_runtime} (@results);
+
+	return @results;
+}
+
+sub save_hosts_file {
+	my $hosts_config = shift;
+	my $hosts_file = shift;
+
+	open(my $file, '>', $hosts_file);
+	print $file join("\n", @{$hosts_config}) . "\n";
+	close($file);
+}
+
 1;
