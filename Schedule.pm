@@ -11,6 +11,11 @@ use Data::Dumper;
 
 use EventQueue;
 
+#TODO Rewrite the local code in this package. This package only needs the
+#cluster size for some minor things. I should be able to cleanup this package a
+#lot by removing unecessary code, or code that is not generic to the idea of a
+#Schedule.
+
 # Creates a new Schedule object.
 sub new {
 	my $class = shift;
@@ -183,12 +188,12 @@ sub save_svg {
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
 
-	#my $clusters_number = POSIX::ceil($self->{processors_number}/$self->{cluster_size});
-	#my $cluster_size = 600/$self->{processors_number}*$self->{cluster_size};
-	#for my $cluster (1..$clusters_number) {
-	#	my $cluster_y = $cluster * $cluster_size;
-	#	print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
-	#}
+	my $clusters_number = POSIX::ceil($self->{processors_number}/$self->{cluster_size});
+	my $cluster_size = 600/$self->{processors_number}*$self->{cluster_size};
+	for my $cluster (1..$clusters_number) {
+		my $cluster_y = $cluster * $cluster_size;
+		print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
+	}
 
 	$_->svg($filehandle, $w_ratio, $h_ratio, $time) for grep {defined $_->starting_time()} (@{$self->{trace}->jobs()});
 

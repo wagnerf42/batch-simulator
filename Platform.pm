@@ -18,7 +18,7 @@ use constant CLUSTER_LATENCY => "1.0E-4";
 use constant LINK_BANDWIDTH => "1.25E9";
 use constant LINK_LATENCY => "5.0E-2";
 
-# Constructors
+# Constructors and helper functions
 
 sub new {
 	my $class = shift;
@@ -32,51 +32,26 @@ sub new {
 	return $self;
 }
 
-# Platform structure generation code.
-# This is the exact version of the algorithm. It builds a list of all the
-# possible combination of CPUs and checks to see which one is the best. Takes a
-# long time in normal sized platforms.
-sub build {
+sub processors_number {
 	my $self = shift;
-	my $available_cpus = shift;
-
-	$self->{root} = $self->_build(0, 0, $available_cpus);
-	return;
+	return $self->{levels}->[$#{$self->{levels}}];
 }
 
-sub build_structure {
+sub cluster_size {
+	my $self = shift;
+
+	my $last_level = $#{$self->{levels}};
+	return $self->{levels}->[$last_level]/$self->{levels}->[$last_level - 1];
+}
+
+# Tree structure
+
+sub build_tree {
 	my $self = shift;
 	my $available_cpus = shift;
 
-	my $last_level = $#{$self->{levels}} - 1;
-	my $cluster_size = $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$#{$self->{levels}} - 1];
-
-	my @cpus_structure;
-
-	for my $level (0..$last_level) {
-		$cpus_structure[$level] = [];
-
-		my $nodes_per_block = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - $level];
-
-		for my $block (0..($self->{levels}->[$last_level - $level] - 1)) {
-			my $block_content = {
-				total_size => 0,
-				total_original_size => $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$last_level - $level],
-				cpus => []
-			};
-
-			for my $cluster (($block * $nodes_per_block)..(($block + 1) * $nodes_per_block - 1)) {
-				next unless (defined $available_cpus->[$cluster]);
-
-				$block_content->{total_size} += $available_cpus->[$cluster]->{total_size};
-				push @{$block_content->{cpus}}, @{$available_cpus->[$cluster]->{cpus}};
-			}
-
-			push @{$cpus_structure[$level]}, $block_content;
-		}
-	}
-
-	return \@cpus_structure;
+	$self->{root} = $self->_build_tree(0, 0, $available_cpus);
+	return;
 }
 
 sub choose_combination {
@@ -133,7 +108,7 @@ sub _choose_cpus {
 	return map {$self->_choose_cpus($_, shift @combination_parts)} (@children);
 }
 
-sub _build {
+sub _build_tree {
 	my $self = shift;
 	my $level = shift;
 	my $node = shift;
@@ -152,7 +127,7 @@ sub _build {
 		return Tree->new($tree_content);
 	}
 
-	my @children = map {$self->_build($level + 1, $_, $available_cpus)} (@next_level_nodes_ids);
+	my @children = map {$self->_build_tree($level + 1, $_, $available_cpus)} (@next_level_nodes_ids);
 
 	my $total_size = 0;
 	$total_size += $_->content()->{total_size} for (@children);
@@ -237,9 +212,127 @@ sub _score {
 	return $best_combination{score};
 }
 
-# Platform XML generation code
-# This code will be used to generate platform files and host files to be used
-# with SMPI initially.
+sub generate_all_combinations {
+	my $self = shift;
+	my $requested_cpus = shift;
+
+	return $self->_combinations($self->{root}, $requested_cpus, 0);
+}
+
+sub _score_function_pnorm {
+	my $self = shift;
+	my $child_requested_cpus = shift;
+	my $requested_cpus = shift;
+	my $level = shift;
+
+	my $max_depth = scalar @{$self->{levels}} - 1;
+
+	return $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * pow(($max_depth - $level) * 2, $self->{norm});
+}
+
+# Linear structure
+
+sub build_structure {
+	my $self = shift;
+	my $available_cpus = shift;
+
+	my $last_level = $#{$self->{levels}} - 1;
+	my $cluster_size = $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$#{$self->{levels}} - 1];
+
+	my @cpus_structure;
+
+	for my $level (0..$last_level) {
+		$cpus_structure[$level] = [];
+
+		my $nodes_per_block = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - $level];
+
+		for my $block (0..($self->{levels}->[$last_level - $level] - 1)) {
+			my $block_content = {
+				total_size => 0,
+				total_original_size => $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$last_level - $level],
+				cpus => []
+			};
+
+			for my $cluster (($block * $nodes_per_block)..(($block + 1) * $nodes_per_block - 1)) {
+				next unless (defined $available_cpus->[$cluster]);
+
+				$block_content->{total_size} += $available_cpus->[$cluster]->{total_size};
+				push @{$block_content->{cpus}}, @{$available_cpus->[$cluster]->{cpus}};
+			}
+
+			push @{$cpus_structure[$level]}, $block_content;
+		}
+	}
+
+	return \@cpus_structure;
+}
+
+# Speedup generation
+
+sub level_distance {
+	my $self = shift;
+	my $first_node = shift;
+	my $second_node = shift;
+
+	my $last_level = $#{$self->{levels}};
+
+	for my $level (0..($last_level - 1)) {
+		my $cpus_group = $self->{levels}->[$last_level]/$self->{levels}->[$level + 1];
+		return $last_level - $level if (int $first_node/$cpus_group != int $second_node/$cpus_group);
+	}
+
+	return 0;
+}
+
+sub generate_speedup {
+	my $self = shift;
+	my $benchmark = shift;
+
+	my $smpi_script = './scripts/smpi/smpireplay.sh';
+	my $platform_file = '/tmp/platform';
+	my $hosts_file = '/tmp/hosts';
+
+	$self->build_platform_xml();
+	$self->save_platform_xml($platform_file);
+
+	my $last_level = $#{$self->{levels}};
+	my @hosts_configs = map {[0, $self->{levels}->[$_]]} (0..($last_level - 1));
+	my $cpus_number = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - 1];
+
+	my @results;
+
+	for my $hosts_config (@hosts_configs) {
+		save_hosts_file($hosts_config, $hosts_file);
+
+		my $result = `$smpi_script $cpus_number $platform_file $hosts_file $benchmark 2>&1`;
+
+		unless ($result =~ /Simulation time (\d*\.\d*)/) {
+			print STDERR "$smpi_script $cpus_number $platform_file $hosts_file $benchmark\n";
+			print STDERR "$result\n";
+			die 'error running benchmark';
+		}
+
+		my $distance = $self->level_distance($hosts_config->[0], $hosts_config->[1]);
+		push @results, $1;
+	}
+
+	my $base_runtime = $results[0];
+	@results = map {$_/$base_runtime} (@results);
+
+	return @results;
+}
+
+sub save_hosts_file {
+	my $hosts_config = shift;
+	my $hosts_file = shift;
+
+	open(my $file, '>', $hosts_file);
+	print $file join("\n", @{$hosts_config}) . "\n";
+	close($file);
+}
+
+# Platform XML
+
 sub build_platform_xml {
 	my $self = shift;
 
@@ -353,96 +446,6 @@ sub save_platform_xml {
 	print $file "<?xml version=\'1.0\'?>\n" . "<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">\n" . $self->{xml}->data(noheader => 1, nometagen => 1);
 
 	return;
-}
-
-sub save_hostfile {
-	my $cpus = shift;
-	my $filename = shift;
-
-	open(my $file, '>', $filename);
-	print $file join("\n", @{$cpus}) . "\n";
-
-	return;
-}
-
-sub generate_all_combinations {
-	my $self = shift;
-	my $requested_cpus = shift;
-
-	return $self->_combinations($self->{root}, $requested_cpus, 0);
-}
-
-sub _score_function_pnorm {
-	my $self = shift;
-	my $child_requested_cpus = shift;
-	my $requested_cpus = shift;
-	my $level = shift;
-
-	my $max_depth = scalar @{$self->{levels}} - 1;
-
-	return $child_requested_cpus * ($requested_cpus - $child_requested_cpus) * pow(($max_depth - $level) * 2, $self->{norm});
-}
-
-sub level_distance {
-	my $self = shift;
-	my $first_node = shift;
-	my $second_node = shift;
-
-	my $last_level = $#{$self->{levels}};
-
-	for my $level (0..($last_level - 1)) {
-		my $cpus_group = $self->{levels}->[$last_level]/$self->{levels}->[$level + 1];
-		return $last_level - $level if (int $first_node/$cpus_group != int $second_node/$cpus_group);
-	}
-
-	return 0;
-}
-
-sub generate_speedup {
-	my $self = shift;
-	my $benchmark = shift;
-
-	my $smpi_script = './scripts/smpi/smpireplay.sh';
-	my $platform_file = '/tmp/platform';
-	my $hosts_file = '/tmp/hosts';
-
-	$self->build_platform_xml();
-	$self->save_platform_xml($platform_file);
-
-	my $last_level = $#{$self->{levels}};
-	my @hosts_configs = map {[0, $self->{levels}->[$_]]} (0..($last_level - 1));
-	my $cpus_number = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - 1];
-
-	my @results;
-
-	for my $hosts_config (@hosts_configs) {
-		save_hosts_file($hosts_config, $hosts_file);
-
-		my $result = `$smpi_script $cpus_number $platform_file $hosts_file $benchmark 2>&1`;
-
-		unless ($result =~ /Simulation time (\d*\.\d*)/) {
-			print STDERR "$smpi_script $cpus_number $platform_file $hosts_file $benchmark\n";
-			print STDERR "$result\n";
-			die 'error running benchmark';
-		}
-
-		my $distance = $self->level_distance($hosts_config->[0], $hosts_config->[1]);
-		push @results, $1;
-	}
-
-	my $base_runtime = $results[0];
-	@results = map {$_/$base_runtime} (@results);
-
-	return @results;
-}
-
-sub save_hosts_file {
-	my $hosts_config = shift;
-	my $hosts_file = shift;
-
-	open(my $file, '>', $hosts_file);
-	print $file join("\n", @{$hosts_config}) . "\n";
-	close($file);
 }
 
 1;

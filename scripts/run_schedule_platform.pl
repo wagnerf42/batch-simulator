@@ -10,22 +10,27 @@ use Backfilling;
 use Basic;
 
 my ($jobs_number) = @ARGV;
+die 'arguments' unless (defined $jobs_number);
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('experiment');
 
-my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my @platform_levels = (1, 8, 128);
+#my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
+my $trace_file = '/tmp/test.swf';
+my @platform_levels = (1, 2, 4, 8, 16);
 my $cpus_number = $platform_levels[$#platform_levels];
 my $cluster_size = $cpus_number/$platform_levels[$#platform_levels - 1];
 my $stretch_bound = 10;
 my $reduction_algorithm = Basic->new(\@platform_levels);
 
 my $trace = Trace->new_from_swf($trace_file);
+$trace->fix_submit_times();
 $trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 
-my $schedule = Backfilling->new($reduction_algorithm, $trace, $cpus_number, $cluster_size);
+my $platform = Platform->new(\@platform_levels);
+
+my $schedule = Backfilling->new($reduction_algorithm, $platform, $trace);
 $schedule->run();
 
 #my $jobs_number = @{$schedule->trace()->jobs()};
@@ -44,7 +49,7 @@ my @results = (
 );
 
 print STDOUT join(' ', @results) . "\n";
-#$schedule->tycat();
+$schedule->tycat();
 
 sub get_log_file {
 	return "log/generate_platform.log";
