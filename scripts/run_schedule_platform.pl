@@ -8,6 +8,8 @@ use Log::Log4perl qw(get_logger);
 use Trace;
 use Backfilling;
 use Basic;
+use BestEffortPlatform;
+use ForcedPlatform;
 
 my ($jobs_number) = @ARGV;
 die 'arguments' unless (defined $jobs_number);
@@ -21,7 +23,6 @@ my @platform_levels = (1, 2, 4, 8, 16);
 my $cpus_number = $platform_levels[$#platform_levels];
 my $cluster_size = $cpus_number/$platform_levels[$#platform_levels - 1];
 my $stretch_bound = 10;
-my $reduction_algorithm = Basic->new(\@platform_levels);
 
 my $trace = Trace->new_from_swf($trace_file);
 $trace->fix_submit_times();
@@ -29,6 +30,7 @@ $trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 
 my $platform = Platform->new(\@platform_levels);
+my $reduction_algorithm = ForcedPlatform->new($platform);
 
 my $schedule = Backfilling->new($reduction_algorithm, $platform, $trace);
 $schedule->run();

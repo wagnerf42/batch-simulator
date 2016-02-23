@@ -237,7 +237,6 @@ sub build_structure {
 	my $available_cpus = shift;
 
 	my $last_level = $#{$self->{levels}} - 1;
-	my $cluster_size = $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$#{$self->{levels}} - 1];
 
 	my @cpus_structure;
 
@@ -337,7 +336,6 @@ sub build_platform_xml {
 	my $self = shift;
 
 	my @platform_parts = @{$self->{levels}};
-	my $cluster_size = $platform_parts[$#platform_parts]/$platform_parts[$#platform_parts - 1];
 	my $xml = XML::Smart->new();
 
 	$xml->{platform} = {version => 3};
@@ -411,7 +409,7 @@ sub build_platform_xml {
 			id => "C-$cluster",
 			prefix => "",
 			suffix => "",
-			radical => ($cluster * $cluster_size) . '-' . (($cluster + 1) * $cluster_size - 1),
+			radical => ($cluster * $self->cluster_size()) . '-' . (($cluster + 1) * $self->cluster_size() - 1),
 			power => CLUSTER_POWER,
 			bw => CLUSTER_BANDWIDTH,
 			lat => CLUSTER_LATENCY,

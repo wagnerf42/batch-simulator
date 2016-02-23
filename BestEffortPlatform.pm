@@ -26,17 +26,13 @@ our @EXPORT_OK = qw(
 
 sub new {
 	my $class = shift;
-	my $platform_levels = shift;
+	my $platform = shift;
 
 	my %args = @_;
 	my $mode = $args{mode} or DEFAULT;
-	my $platform_speedup = $args{platform_speedup} or [(1) x ($#{$platform_levels} - 1)];
-
-	print Dumper($platform_speedup);
-	die;
 
 	my $self = {
-		platform_levels => $platform_levels,
+		platform => $platform,
 		mode => $mode,
 	};
 
@@ -49,11 +45,8 @@ sub reduce {
 	my $job = shift;
 	my $left_processors = shift;
 
-	my $cluster_size = $self->{platform_levels}->[$#{$self->{platform_levels}}]/$self->{platform_levels}->[$#{$self->{platform_levels}} - 1];
-
-	my $available_cpus = $left_processors->available_cpus_in_clusters($cluster_size);
-	my $platform = Platform->new($self->{platform_levels});
-	my $cpus_structure = $platform->build_structure($available_cpus);
+	my $available_cpus = $left_processors->available_cpus_in_clusters($self->{platform}->cluster_size());
+	my $cpus_structure = $self->{platform}->build_structure($available_cpus);
 	my $chosen_ranges = $self->choose_cpus($cpus_structure, $job->requested_cpus());
 
 	$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges($chosen_ranges));
@@ -79,6 +72,10 @@ sub choose_cpus {
 			case BIGGEST_FIRST {
 				@sorted_blocks = sort {$b->{total_size} <=> $a->{total_size}} (@{$structure_level});
 			}
+
+			else {
+				@sorted_blocks = @{$structure_level};
+			}
 		}
 
 		for my $cpus_block (@sorted_blocks) {
@@ -87,6 +84,8 @@ sub choose_cpus {
 				last;
 			}
 		}
+
+		last if (defined $chosen_block);
 	}
 
 	my @chosen_ranges;
