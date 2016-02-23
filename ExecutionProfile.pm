@@ -103,7 +103,7 @@ sub get_free_processors_for {
 		return;
 	}
 
-	$self->{reduction_algorithm}->reduce($job->requested_cpus(), $left_processors);
+	$self->{reduction_algorithm}->reduce($job, $left_processors);
 
 	if ($left_processors->is_empty()) {
 		$left_processors->free_allocated_memory();
@@ -511,7 +511,7 @@ sub save_svg {
 	$time = 0 unless defined $time;
 
 	my @profiles;
-	$self->{profile_tree}->nodes_loop(undef, undef, 
+	$self->{profile_tree}->nodes_loop(undef, undef,
 		sub {
 			my $profile = shift;
 			push @profiles, $profile;

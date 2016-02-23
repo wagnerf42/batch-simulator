@@ -20,7 +20,7 @@ sub new {
 
 sub reduce {
 	my $self = shift;
-	my $target_number = shift;
+	my $job = shift;
 	my $left_processors = shift;
 
 	my $cluster_size = $self->{platform_levels}->[$#{$self->{platform_levels}}]/$self->{platform_levels}->[$#{$self->{platform_levels}} - 1];
@@ -28,7 +28,7 @@ sub reduce {
 	my $available_cpus = $left_processors->available_cpus_in_clusters($cluster_size);
 	my $platform = Platform->new($self->{platform_levels});
 	my $cpus_structure = $platform->build_structure($available_cpus);
-	my $chosen_ranges = $self->choose_cpus($cpus_structure, $target_number);
+	my $chosen_ranges = $self->choose_cpus($cpus_structure, $job->requested_cpus());
 
 	if (defined $chosen_ranges) {
 		$left_processors->affect_ranges(ProcessorRange::sort_and_fuse_contiguous_ranges($chosen_ranges));

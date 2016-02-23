@@ -12,6 +12,7 @@ use ExecutionProfile;
 use Heap;
 use Event;
 use Util qw(float_equal float_precision);
+use Platform;
 
 use Debug;
 
@@ -118,7 +119,7 @@ sub run {
 
 		# Ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
-			
+
 			my $job = $event->payload();
 
 			##DEBUG_BEGIN

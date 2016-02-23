@@ -24,19 +24,20 @@ my ($execution_id) = @ARGV;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 
-my @jobs_numbers = (600, 800, 1000, 1200, 1400);
-#my @jobs_numbers = (100, 200, 300, 400);
+#my @jobs_numbers = (600, 800, 1000, 1200, 1400);
+my @jobs_numbers = (100, 200, 300, 400);
 my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
-my @platform_levels = (1, 4, 16, 64, 1088, 77248);
+my @platform_levels = (1, 2, 40, 5040, 80640)
 my $cpus_number = $platform_levels[$#platform_levels];
 my $cluster_size = $cpus_number/$platform_levels[$#platform_levels - 1];
 my $stretch_bound = 10;
+my $speedup_benchmark = '../NPB3.3.1/NPB3.3-MPI/bin/cg.B.2';
 
 my @variants = (
 	Basic->new(),
-	BestEffortContiguous->new(),
-	ForcedContiguous->new(),
+	#BestEffortContiguous->new(),
+	#ForcedContiguous->new(),
 	#BestEffortLocal->new($cluster_size),
 	#ForcedLocal->new($cluster_size),
 	#BestEffortPlatform->new(\@platform_levels),

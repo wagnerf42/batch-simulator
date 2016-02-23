@@ -7,39 +7,39 @@ use Log::Log4perl qw(get_logger);
 
 use Trace;
 use Backfilling;
+use Basic;
 
-my (
-	$json_file,
-	$cpus_number,
-	$cluster_size,
-	$variant,
-	$platform_levels,
-	$delay,
-	$socket_file,
-) = @ARGV;
+my ($jobs_number) = @ARGV;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('experiment');
 
-my @platform_levels_parts = split('-', $platform_levels);
+my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
+my @platform_levels = (1, 8, 128);
+my $cpus_number = $platform_levels[$#platform_levels];
+my $cluster_size = $cpus_number/$platform_levels[$#platform_levels - 1];
+my $stretch_bound = 10;
+my $reduction_algorithm = Basic->new(\@platform_levels);
 
-my $schedule = Backfilling->new_simulation($cluster_size, $variant, $delay, $socket_file, $json_file, \@platform_levels_parts);
+my $trace = Trace->new_from_swf($trace_file);
+$trace->remove_large_jobs($cpus_number);
+$trace->keep_first_jobs($jobs_number);
+
+my $schedule = Backfilling->new($reduction_algorithm, $trace, $cpus_number, $cluster_size);
 $schedule->run();
 
-$schedule->tycat();
-
-my $jobs_number = @{$schedule->trace()->jobs()};
+#my $jobs_number = @{$schedule->trace()->jobs()};
 
 my @results = (
-	$cpus_number,
-	$jobs_number,
-	$cluster_size,
-	$variant,
-	$schedule->cmax(),
-	$schedule->contiguous_jobs_number(),
-	$schedule->local_jobs_number(),
-	$schedule->locality_factor(),
-	$schedule->bounded_stretch(10),
+	#$cpus_number,
+	#$jobs_number,
+	#$cluster_size,
+	#$variant,
+	#$schedule->cmax(),
+	#$schedule->contiguous_jobs_number(),
+	#$schedule->local_jobs_number(),
+	#$schedule->locality_factor(),
+	#$schedule->bounded_stretch(10),
 	$schedule->run_time(),
 );
 
