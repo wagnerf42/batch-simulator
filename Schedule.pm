@@ -133,7 +133,7 @@ sub stretch_with_cpus_log {
 
 sub contiguous_jobs_number {
 	my $self = shift;
-	return scalar grep {$_->assigned_processors_ids()->contiguous($self->{processors_number})} (@{$self->{trace}->jobs()});
+	return scalar grep {$_->assigned_processors_ids()->contiguous($self->{platform}->processors_number())} (@{$self->{trace}->jobs()});
 }
 
 sub local_jobs_number {

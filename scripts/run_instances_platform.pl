@@ -8,6 +8,7 @@ use Thread::Queue;
 
 use Data::Dumper qw(Dumper);
 use Log::Log4perl qw(get_logger);
+use Scalar::Util qw(blessed);
 
 use Trace;
 use Backfilling;
@@ -25,7 +26,8 @@ my ($execution_id) = @ARGV;
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 
 #my @jobs_numbers = (600, 800, 1000, 1200, 1400);
-my @jobs_numbers = (100, 200, 300, 400);
+#my @jobs_numbers = (100, 200, 300, 400);
+my @jobs_numbers = (100);
 my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
 my @platform_levels = (1, 2, 40, 5040, 80640);
@@ -42,10 +44,10 @@ my @variants = (
 	ForcedLocal->new($platform->cluster_size()),
 	BestEffortPlatform->new($platform),
 	ForcedPlatform->new($platform),
-	BestEffortPlatform->new($platform, mode => SMALLEST_FIRST),
-	ForcedPlatform->new($platform, mode => SMALLEST_FIRST),
-	BestEffortPlatform->new($platform, mode => BIGGEST_FIRST),
-	ForcedPlatform->new($platform, mode => BIGGEST_FIRST),
+	#BestEffortPlatform->new($platform, mode => SMALLEST_FIRST),
+	#ForcedPlatform->new($platform, mode => SMALLEST_FIRST),
+	#BestEffortPlatform->new($platform, mode => BIGGEST_FIRST),
+	#ForcedPlatform->new($platform, mode => BIGGEST_FIRST),
 );
 
 my @results;
@@ -98,7 +100,7 @@ sub run_instance {
 			$platform->processors_number(),
 			$jobs_number,
 			$platform->cluster_size(),
-			$variant_id,
+			blessed $variants[$variant_id],
 			$schedule->cmax(),
 			$schedule->contiguous_jobs_number(),
 			$schedule->local_jobs_number(),

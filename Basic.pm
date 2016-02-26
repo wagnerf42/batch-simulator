@@ -2,10 +2,11 @@ package Basic;
 use strict;
 use warnings;
 
+use Data::Dumper;
+use Scalar::Util qw(blessed);
+
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 use ProcessorRange;
-
-use Data::Dumper;
 
 sub new {
 	my $class = shift;
