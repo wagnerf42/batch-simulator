@@ -28,24 +28,24 @@ my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 my @jobs_numbers = (100, 200, 300, 400);
 my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
-my @platform_levels = (1, 2, 40, 5040, 80640)
-my $cpus_number = $platform_levels[$#platform_levels];
-my $cluster_size = $cpus_number/$platform_levels[$#platform_levels - 1];
+my @platform_levels = (1, 2, 40, 5040, 80640);
 my $stretch_bound = 10;
 my $speedup_benchmark = '../NPB3.3.1/NPB3.3-MPI/bin/cg.B.2';
 
+my $platform = Platform->new(\@platform_levels);
+
 my @variants = (
 	Basic->new(),
-	#BestEffortContiguous->new(),
-	#ForcedContiguous->new(),
-	#BestEffortLocal->new($cluster_size),
-	#ForcedLocal->new($cluster_size),
-	#BestEffortPlatform->new(\@platform_levels),
-	#ForcedPlatform->new(\@platform_levels),
-	#BestEffortPlatform->new(\@platform_levels, mode => SMALLEST_FIRST),
-	#ForcedPlatform->new(\@platform_levels, mode => SMALLEST_FIRST),
-	#BestEffortPlatform->new(\@platform_levels, mode => BIGGEST_FIRST),
-	#ForcedPlatform->new(\@platform_levels, mode => BIGGEST_FIRST),
+	BestEffortContiguous->new(),
+	ForcedContiguous->new(),
+	BestEffortLocal->new($platform->cluster_size()),
+	ForcedLocal->new($platform->cluster_size()),
+	BestEffortPlatform->new($platform),
+	ForcedPlatform->new($platform),
+	BestEffortPlatform->new($platform, mode => SMALLEST_FIRST),
+	ForcedPlatform->new($platform, mode => SMALLEST_FIRST),
+	BestEffortPlatform->new($platform, mode => BIGGEST_FIRST),
+	ForcedPlatform->new($platform, mode => BIGGEST_FIRST),
 );
 
 my @results;
@@ -91,22 +91,24 @@ sub run_instance {
 		my $trace = Trace->new_from_swf($trace_file);
 		$trace->keep_first_jobs($jobs_number);
 		$trace->fix_submit_times();
-		my $schedule = Backfilling->new($variants[$variant_id], $trace, $cpus_number, $cluster_size);
+		my $schedule = Backfilling->new($variants[$variant_id], $platform, $trace);
 		$schedule->run();
 
 		my @instance_results = (
-			$cpus_number,
+			$platform->processors_number(),
 			$jobs_number,
-			$cluster_size,
+			$platform->cluster_size(),
 			$variant_id,
 			$schedule->cmax(),
 			$schedule->contiguous_jobs_number(),
 			$schedule->local_jobs_number(),
 			$schedule->locality_factor(),
 			$schedule->bounded_stretch($stretch_bound),
-			$schedule->stretch_sum_of_squares($stretch_bound),
+			#$schedule->stretch_sum_of_squares($stretch_bound),
 			#$schedule->stretch_with_cpus_squared($stretch_bound),
 			$schedule->run_time(),
+			$schedule->platform_level_factor(),
+
 		);
 
 		push @results, join(' ', @instance_results);
@@ -134,9 +136,10 @@ sub write_results_to_file {
 			"LOC_JOBS",
 			"LOC_FACTOR",
 			"BOUNDED_STRETCH",
-			"STRETCH_SUM_SQUARES",
+			#"STRETCH_SUM_SQUARES",
 			#"STRETCH_CPUS_SQUARED",
-			"RUN_TIME"
+			"RUN_TIME",
+			"PLATFORM_LEVEL",
 		)) . "\n";
 
 	print $file join(' ', $_) . "\n" for (@results);

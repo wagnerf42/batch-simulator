@@ -138,7 +138,7 @@ sub contiguous_jobs_number {
 
 sub local_jobs_number {
 	my $self = shift;
-	return scalar grep {$_->assigned_processors_ids()->local($self->{cluster_size})} (@{$self->{trace}->jobs()});
+	return scalar grep {$_->assigned_processors_ids()->local($self->{platform}->cluster_size())} (@{$self->{trace}->jobs()});
 }
 
 sub locality_factor {
@@ -147,8 +147,8 @@ sub locality_factor {
 	my $optimum_clusters = 0;
 
 	for my $job (@{$self->{trace}->jobs()}) {
-		$used_clusters += $job->used_clusters($self->{cluster_size});
-		$optimum_clusters += $job->clusters_required($self->{cluster_size});
+		$used_clusters += $job->used_clusters($self->{platform}->cluster_size());
+		$optimum_clusters += $job->clusters_required($self->{platform}->cluster_size());
 	}
 
 	# If there are no jobs we need to avoid the division
@@ -162,8 +162,8 @@ sub locality_factor_2 {
 	my $sum_of_ratios = 0;
 
 	for my $job (@{$self->{trace}->jobs()}) {
-		my $used_clusters = $job->used_clusters($self->{cluster_size});
-		my $optimum_clusters = $job->clusters_required($self->{cluster_size});
+		my $used_clusters = $job->used_clusters($self->{platform}->cluster_size());
+		my $optimum_clusters = $job->clusters_required($self->{platform}->cluster_size());
 		$sum_of_ratios += $used_clusters / $optimum_clusters;
 	}
 

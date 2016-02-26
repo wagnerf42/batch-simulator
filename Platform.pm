@@ -464,9 +464,7 @@ sub job_level_distance {
 
 		for my $cluster_id (1..$#{$used_clusters}) {
 			if (int($used_clusters->[$cluster_id] / $clusters_per_side) != $clusters_side) {
-				my $result = $last_level - $level;
-				print "result $result\n";
-				return $result;
+				return $last_level - $level;
 			}
 		}
 	}
@@ -501,9 +499,7 @@ sub relative_job_level_distance {
 
 		for my $cluster_id (1..$#{$used_clusters}) {
 			if (int($used_clusters->[$cluster_id] / $clusters_per_side) != $clusters_side) {
-				my $result = $last_level - $level;
-				print "result $requested_cpus $result/$minimum_level_distance\n";
-				return $result / $minimum_level_distance;
+				return ($last_level - $level) / $minimum_level_distance;
 			}
 		}
 	}
