@@ -474,4 +474,41 @@ sub job_level_distance {
 	return 1;
 }
 
+sub relative_job_level_distance {
+	my $self = shift;
+	my $used_clusters = shift;
+	my $requested_cpus = shift;
+
+	my $last_level = $#{$self->{levels}};
+	my $clusters_number = $self->{levels}->[$last_level - 1];
+
+	# Return 1 if there is only one cluster
+	return 1 if (scalar @{$used_clusters} == 1);
+
+	# Compute minimum level distance for the job
+	my $minimum_level_distance;
+	for my $level (reverse(0..($last_level - 1))) {
+		my $cpus_per_level = $self->{levels}->[$last_level] / $self->{levels}->[$level];
+		if ($cpus_per_level >= $requested_cpus) {
+			$minimum_level_distance = $last_level - $level;
+			last;
+		}
+	}
+
+	for my $level (0..($last_level - 2)) {
+		my $clusters_per_side = $clusters_number / $self->{levels}->[$level + 1];
+		my $clusters_side = int($used_clusters->[0] / $clusters_per_side);
+
+		for my $cluster_id (1..$#{$used_clusters}) {
+			if (int($used_clusters->[$cluster_id] / $clusters_per_side) != $clusters_side) {
+				my $result = $last_level - $level;
+				print "result $requested_cpus $result/$minimum_level_distance\n";
+				return $result / $minimum_level_distance;
+			}
+		}
+	}
+
+	return 1;
+}
+
 1;
