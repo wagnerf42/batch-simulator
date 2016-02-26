@@ -26,7 +26,6 @@ my $stretch_bound = 10;
 
 my $trace = Trace->new_from_swf($trace_file);
 $trace->fix_submit_times();
-$trace->reset_jobs_numbers();
 $trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 
@@ -49,6 +48,7 @@ my @results = (
 	#$schedule->locality_factor(),
 	#$schedule->bounded_stretch(10),
 	$schedule->run_time(),
+	$schedule->platform_level_factor(),
 );
 
 print STDOUT join(' ', @results) . "\n";

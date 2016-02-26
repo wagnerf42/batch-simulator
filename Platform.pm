@@ -268,7 +268,7 @@ sub build_structure {
 
 # Speedup generation
 
-sub level_distance {
+sub node_level_distance {
 	my $self = shift;
 	my $first_node = shift;
 	my $second_node = shift;
@@ -444,6 +444,34 @@ sub save_platform_xml {
 	print $file "<?xml version=\'1.0\'?>\n" . "<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">\n" . $self->{xml}->data(noheader => 1, nometagen => 1);
 
 	return;
+}
+
+sub job_level_distance {
+	my $self = shift;
+	my $used_clusters = shift;
+
+	my $last_level = $#{$self->{levels}};
+	my $clusters_number = $self->{levels}->[$last_level - 1];
+
+	# Return 1 if there is only one cluster
+	return 1 if (scalar @{$used_clusters} == 1);
+
+	print Dumper($used_clusters);
+
+	for my $level (0..($last_level - 2)) {
+		my $clusters_per_side = $clusters_number / $self->{levels}->[$level + 1];
+		my $clusters_side = int($used_clusters->[0] / $clusters_per_side);
+
+		for my $cluster_id (1..$#{$used_clusters}) {
+			if (int($used_clusters->[$cluster_id] / $clusters_per_side) != $clusters_side) {
+				my $result = $last_level - $level;
+				print "result $result\n";
+				return $result;
+			}
+		}
+	}
+
+	return 1;
 }
 
 1;

@@ -272,5 +272,26 @@ sub used_clusters {
 	return scalar (keys %used_clusters_ids);
 }
 
+sub list_of_used_clusters {
+	my $self = shift;
+	my $cluster_size = shift;
+
+	my %used_clusters_ids;
+
+	my $logger = get_logger('ProcessorRange::used_clusters');
+
+	$self->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+			my $start_cluster = floor($start/$cluster_size);
+			my $end_cluster = floor($end/$cluster_size);
+			$used_clusters_ids{$_} = 1 for ($start_cluster..$end_cluster);
+			return 1;
+		}
+	);
+
+	return [keys %used_clusters_ids];
+}
+
 1;
 

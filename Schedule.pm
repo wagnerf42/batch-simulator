@@ -207,5 +207,13 @@ sub trace {
 	return $self->{trace};
 }
 
+sub platform_level_factor {
+	my $self = shift;
+
+	my $job_level_distances = sum map {$self->{platform}->job_level_distance($_->list_of_used_clusters($self->{platform}->cluster_size()))} (@{$self->{trace}->jobs()});
+
+	return $job_level_distances / scalar @{$self->{trace}->jobs()};
+}
+
 1;
 

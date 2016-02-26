@@ -327,6 +327,13 @@ sub used_clusters {
 	return $self->{assigned_processors_ids}->used_clusters($cluster_size);
 }
 
+sub list_of_used_clusters {
+	my $self = shift;
+	my $cluster_size = shift;
+
+	return $self->{assigned_processors_ids}->list_of_used_clusters($cluster_size);
+}
+
 sub clusters_required {
 	my $self = shift;
 	my $cluster_size = shift;
@@ -337,7 +344,8 @@ sub clusters_required {
 sub DESTROY {
 	my $self = shift;
 
-	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
+	$self->{assigned_processors_ids}->free_allocated_memory()
+		if defined $self->{assigned_processors_ids};
 
 	return;
 }
