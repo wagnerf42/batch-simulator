@@ -28,19 +28,15 @@ use constant {
 sub new {
 	my $class = shift;
 	my $reduction_algorithm = shift;
-	my $platform = shift;
-	my $trace = shift;
 
-	my $self = $class->SUPER::new($trace, $platform->processors_number(), $platform->cluster_size());
+	my $self = $class->SUPER::new(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new(
-		$self->{processors_number},
+		$self->{platform}->processors_number(),
 		$reduction_algorithm,
 	);
 
 	$self->{current_time} = 0;
-	
-	$self->{platform} = $platform;
 
 	# Temporary variables to calculate the average stretch
 	$self->{processed_jobs} = 0;

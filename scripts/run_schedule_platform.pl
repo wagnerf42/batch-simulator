@@ -18,7 +18,7 @@ Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger('experiment');
 
 #my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
-my $trace_file = '/tmp/test.swf';
+my $trace_file = '../swf2/test.swf';
 my @platform_levels = (1, 2, 4, 8, 16);
 my $cpus_number = $platform_levels[$#platform_levels];
 my $cluster_size = $cpus_number/$platform_levels[$#platform_levels - 1];
@@ -26,6 +26,7 @@ my $stretch_bound = 10;
 
 my $trace = Trace->new_from_swf($trace_file);
 $trace->fix_submit_times();
+$trace->reset_jobs_numbers();
 $trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 

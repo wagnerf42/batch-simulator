@@ -10,6 +10,7 @@ use Log::Log4perl qw(get_logger);
 use Data::Dumper;
 
 use EventQueue;
+use Platform;
 
 #TODO Rewrite the local code in this package. This package only needs the
 #cluster size for some minor things. I should be able to cleanup this package a
@@ -19,19 +20,17 @@ use EventQueue;
 # Creates a new Schedule object.
 sub new {
 	my $class = shift;
+	my $platform = shift;
 	my $trace = shift;
-	my $processors_number = shift;
-	my $cluster_size = shift;
 
 	my $self = {
 		trace => $trace,
-		processors_number => $processors_number,
+		platform => $platform,
 		cmax => 0,
 		uses_external_simulator => 0,
-		cluster_size => $cluster_size,
 	};
 
-	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{processors_number};
+	die 'not enough processors' if $self->{trace}->needed_cpus() > $self->{platform}->processors_number();
 	$self->{trace}->unassign_jobs(); # make sure the trace is clean
 
 	bless $self, $class;
@@ -40,21 +39,20 @@ sub new {
 
 sub new_simulation {
 	my $class = shift;
+	my $platform = shift;
 	my $delay = shift;
 	my $socket_file = shift;
 	my $json_file = shift;
-	my $cluster_size = shift;
 
 	my $self = {
+		platform => $platform,
 		job_delay => $delay,
 		cmax => 0,
 		uses_external_simulator => 1,
-		cluster_size => $cluster_size,
 	};
 
 	$self->{trace} = Trace->new();
 	$self->{events} = EventQueue->new($socket_file, $json_file);
-	$self->{processors_number} = $self->{events}->cpu_number();
 
 	bless $self, $class;
 	return $self;
@@ -183,13 +181,15 @@ sub save_svg {
 	$cmax = 1 unless defined $cmax;
 	print $filehandle "<svg width=\"800\" height=\"600\">\n";
 	my $w_ratio = 800/$cmax;
-	my $h_ratio = 600/$self->{processors_number};
+	my $h_ratio = 600/$self->{platform}->processors_number();
 
 	my $current_x = $w_ratio * $time;
 	print $filehandle "<line x1=\"$current_x\" x2=\"$current_x\" y1=\"0\" y2=\"600\" style=\"stroke:rgb(255,0,0);stroke-width:5\"/>\n";
 
-	my $clusters_number = POSIX::ceil($self->{processors_number}/$self->{cluster_size});
-	my $cluster_size = 600/$self->{processors_number}*$self->{cluster_size};
+	my $clusters_number = POSIX::ceil($self->{platform}->processors_number()
+		/ $self->{platform}->cluster_size());
+	my $cluster_size = 600/$self->{platform}->processors_number()
+		* $self->{platform}->cluster_size();
 	for my $cluster (1..$clusters_number) {
 		my $cluster_y = $cluster * $cluster_size;
 		print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
