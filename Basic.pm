@@ -18,8 +18,10 @@ sub new {
 
 sub reduce {
 	my $self = shift;
-	my $target_number = shift;
+	my $job = shift;
 	my $left_processors = shift;
+
+	my $target_number = $job->requested_cpus();
 
 	my @remaining_ranges;
 

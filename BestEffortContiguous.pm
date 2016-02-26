@@ -20,8 +20,10 @@ sub new {
 
 sub reduce {
 	my $self = shift;
-	my $target_number = shift;
+	my $job = shift;
 	my $left_processors = shift;
+
+	my $target_number = $job->requested_cpus();
 
 	my @remaining_ranges;
 	my @sorted_pairs = sort { $b->[1] - $b->[0] <=> $a->[1] - $a->[0] } $left_processors->compute_pairs();
