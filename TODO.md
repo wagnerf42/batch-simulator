@@ -5,7 +5,7 @@
 - [ ] Platform level factor
   - [x] Add the platform level factor to the Schedule package
   - [x] Generate an example schedule with platform level factor
-  - [ ] Compare all the variants using the platform level factor
+  - [x] Compare all the variants using the platform level factor
   - [ ] Implement the code to stretch the job's run time
   - [ ] Compare all the variants using Cmax and Stretch with this stretch code
   - [ ] Transfer all the code about contiguity and locality to the Platform
