@@ -25,12 +25,16 @@ my $cluster_size = $cpus_number/$platform_levels[$#platform_levels - 1];
 my $stretch_bound = 10;
 
 my $trace = Trace->new_from_swf($trace_file);
+$trace->reset_jobs_numbers();
 $trace->fix_submit_times();
 $trace->remove_large_jobs($cpus_number);
 $trace->keep_first_jobs($jobs_number);
 
 my $platform = Platform->new(\@platform_levels);
 my $reduction_algorithm = ForcedPlatform->new($platform);
+#$platform->generate_speedup('../NPB3.3.1/NPB3.3-MPI/bin/cg.B.2');
+my @speedup = (1, 2, 4, 8);
+$platform->set_speedup(\@speedup);
 
 my $schedule = Backfilling->new($reduction_algorithm, $platform, $trace);
 $schedule->run();
@@ -42,11 +46,12 @@ my @results = (
 	#$jobs_number,
 	#$cluster_size,
 	#$variant,
-	#$schedule->cmax(),
+	$schedule->cmax(),
 	#$schedule->contiguous_jobs_number(),
 	#$schedule->local_jobs_number(),
 	#$schedule->locality_factor(),
 	#$schedule->bounded_stretch(10),
+	$schedule->job_success_rate(),
 	$schedule->run_time(),
 	$schedule->platform_level_factor(),
 );

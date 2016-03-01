@@ -7,10 +7,29 @@ use List::Util qw(min max);
 use POSIX;
 use Log::Log4perl qw(get_logger);
 use Carp;
+use Data::Dumper;
 
 use overload '""' => \&stringification;
 
-my @svg_colors = qw(red green blue purple orange saddlebrown mediumseagreen darkolivegreen darkred dimgray mediumpurple midnightblue olive chartreuse darkorchid hotpink lightskyblue peru goldenrod mediumslateblue orangered darkmagenta darkgoldenrod mediumslateblue);
+my @svg_colors = (
+	'orange',
+	'green',
+	undef,
+	undef,
+	undef,
+	'red',
+);
+
+use Exporter;
+our @ISA = qw(Exporter);
+
+use constant {
+	JOB_STATUS_COMPLETED => 1,
+	JOB_STATUS_FAILED => 0,
+	JOB_STATUS_CANCELED => 5,
+};
+
+our @EXPORT = qw(JOB_STATUS_COMPLETED JOB_STATUS_FAILED JOB_STATUS_CANCELED);
 
 sub stringification {
 	my $self = shift;
@@ -67,12 +86,16 @@ sub new {
 	# Sanity checks for some of the job fields
 	#$logger->logdie('job run time is 0') if ($self->{run_time} == );
 	$self->{status} = 5 if (($self->{run_time} == 0) and ($self->{status} == 1));
-	
+
 	#$logger->logdie('number of allocated CPUs is different than requested') if ($self->{allocated_cpus} != $self->{requested_cpus});
 	$self->{allocated_cpus} = $self->{requested_cpus} if ($self->{allocated_cpus} != $self->{requested_cpus});
 
 	#$logger->logdie('requested time smaller than run time') if ($self->{requested_time} < $self->{run_time});
 	$self->{run_time} = $self->{requested_time} if ($self->{requested_time} < $self->{run_time});
+
+	# Reset the job status for now. Maybe later we will do something
+	# different with this
+	$self->{status} = JOB_STATUS_COMPLETED;
 
 	bless $self, $class;
 	return $self;
@@ -107,7 +130,7 @@ sub run_time {
 	my $self = shift;
 	my $run_time = shift;
 
-	$self->{run_time} = $run_time if defined $run_time;
+	$self->{run_time} = $run_time if (defined $run_time);
 
 	return $self->{run_time};
 }
@@ -116,7 +139,7 @@ sub requested_time {
 	my $self = shift;
 	my $requested_time = shift;
 
-	$self->{requested_time} = $requested_time if defined $requested_time;
+	$self->{requested_time} = $requested_time if (defined $requested_time);
 
 	return $self->{requested_time};
 }
@@ -245,6 +268,9 @@ sub job_number {
 
 sub status {
 	my $self = shift;
+	my $status = shift;
+
+	$self->{status} = $status if (defined $status);
 	return $self->{status};
 }
 
@@ -284,6 +310,10 @@ sub svg {
 	my $w_ratio = shift;
 	my $h_ratio = shift;
 	my $current_time = shift;
+	my $platform = shift;
+
+	my $used_clusters = $self->{assigned_processors_ids}->list_of_used_clusters($platform->cluster_size());
+	my $job_platform_level = $platform->job_level_distance($used_clusters);
 
 	$self->{assigned_processors_ids}->ranges_loop(
 		sub {
@@ -300,7 +330,7 @@ sub svg {
 
 			my $y = $start * $h_ratio;
 			my $h = $h_ratio * ($end - $start + 1);
-			my $color = $svg_colors[$self->{job_number} % @svg_colors];
+			my $color = $svg_colors[$self->{status}];
 			my $sw = min($w_ratio, $h_ratio) / 10;
 			if ($self->real_ending_time() > $current_time) {
 				my $x = ($self->{starting_time}+$self->{run_time}) * $w_ratio;
@@ -314,7 +344,7 @@ sub svg {
 			my $fs = min($h_ratio*($end-$start+1), $w/5);
 			die "negative font size :$fs ; $end ; $start $h_ratio $w $self->{run_time}" if $fs <= 0;
 			my $text_y = $y + $fs*0.35;
-			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
+			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}-$job_platform_level</text>\n";
 		}
 	);
 	return;

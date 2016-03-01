@@ -50,8 +50,7 @@ sub get_free_processors_for {
 
 	my $duration = 0;
 
-	my $profile = $self->{profile_tree}->find_content($starting_time);
-	my $left_processors = $profile->processors()->copy_range();
+	my $left_processors = ProcessorRange->new(0, $self->{processors_number} - 1);
 	my $requested_time = $job->requested_time();
 
 	my $logger = get_logger('ExecutionProfile::get_free_processors_for');
@@ -87,14 +86,15 @@ sub get_free_processors_for {
 				return 0;
 			}
 
-			$duration = (defined $profile->ending_time())
-			? $duration + $profile->duration() : $requested_time;
+			$duration = (defined $profile->ending_time()) ?
+			$duration + $profile->duration() : $requested_time;
 			return 1;
 		});
 
-	# It is possible that not all processors were found
-	if (($left_processors->size() < $job->requested_cpus()) or ((not float_equal($duration, $requested_time))
-	and ($duration < $requested_time))) {
+	# Check if the nodes_loop section found all needed CPUs
+	if ($left_processors->size() < $job->requested_cpus()
+	or (not float_equal($duration, $requested_time)
+	and $duration < $requested_time)) {
 		##DEBUG_BEGIN
 		$logger->debug('size less than requested');
 		##DEBUG_END
@@ -307,7 +307,7 @@ sub add_job_at {
 			my $profile = shift;
 
 			# Avoid including a profile that starts at $ending_time
-			return 0 if float_equal($profile->starting_time, $ending_time);
+			return 0 if (float_equal($profile->starting_time, $ending_time));
 
 			push @profiles_to_update, $profile;
 			return 1;
@@ -354,13 +354,13 @@ sub could_start_job_at {
 			$min_processors = min($min_processors, $profile->processors()->size());
 
 			# Ok to return, profile may be good for the job
-			return 0 if ((float_equal($starting_time, $job_ending_time))
-					or ($starting_time > $job_ending_time));
+			return 0 if (float_equal($starting_time, $job_ending_time)
+			or $starting_time > $job_ending_time);
 			return 0 if ($min_processors <= $job->requested_cpus());
 			return 1;
 		});
 
-	return $min_processors >= $job->requested_cpus() ? 1 : 0;
+	return ($min_processors >= $job->requested_cpus()) ? 1 : 0;
 }
 
 # Find the first profile that has enough processors for the whole duration of
@@ -388,7 +388,7 @@ sub find_first_profile_for {
 			my $profile = shift;
 			# Gap in the list of profiles
 			if (defined $previous_ending_time
-					and not float_equal($previous_ending_time, $profile->starting_time())) {
+			and not float_equal($previous_ending_time, $profile->starting_time())) {
 				@included_profiles = ();
 			}
 
@@ -401,7 +401,7 @@ sub find_first_profile_for {
 			}
 
 			while (@included_profiles and (not defined $included_profiles[-1]->ending_time()
-					or ((float_equal($included_profiles[-1]->ending_time(), $included_profiles[0]->starting_time())) or ($included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() > $job->requested_time())))) {
+			or $included_profiles[-1]->ending_time() - $included_profiles[0]->starting_time() > $job->requested_time())) {
 				my $start_profile = shift @included_profiles;
 
 				$starting_time = $start_profile->starting_time();
@@ -412,7 +412,7 @@ sub find_first_profile_for {
 			return 1;
 		});
 
-	return ($starting_time, $processors) if defined $processors;
+	return ($starting_time, $processors) if (defined $processors);
 	return;
 }
 

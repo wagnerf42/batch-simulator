@@ -7,12 +7,14 @@ use Exporter qw(import);
 use Time::HiRes qw(time);
 use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 use Data::Dumper;
+use List::Util qw(min);
 
 use ExecutionProfile;
 use Heap;
 use Event;
 use Util qw(float_equal float_precision);
 use Platform;
+use Job;
 
 use Debug;
 
@@ -156,8 +158,8 @@ sub run {
 			}
 
 			$self->assign_job($job);
-			$logger->logdie("job " . $job->job_number() . " was not assigned") unless
-					defined $job->starting_time();
+			$logger->logdie("job " . $job->job_number() . " was not assigned")
+			unless (defined $job->starting_time());
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
@@ -281,8 +283,23 @@ sub assign_job {
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
 
 	##DEBUG_BEGIN
-	$logger->debug("chose starting time $starting_time and processors $chosen_processors");
+	$logger->debug("chose starting time $starting_time and processors $chosen_processors duration " . $job->requested_time());
 	##DEBUG_END
+
+	# Here we can decide the new run time based on the platform level
+	my $used_clusters = $chosen_processors->list_of_used_clusters($self->{platform}->cluster_size());
+	my $job_platform_level = $self->{platform}->job_level_distance($used_clusters);
+
+	my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level - 1);
+
+	if ($new_job_run_time > $job->requested_time()) {
+		$job->run_time($job->requested_time());
+		$job->status(JOB_STATUS_FAILED);
+	}
+
+	else {
+		$job->run_time($new_job_run_time);
+	}
 
 	$job->assign_to($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job);

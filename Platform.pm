@@ -311,14 +311,25 @@ sub generate_speedup {
 			die 'error running benchmark';
 		}
 
-		my $distance = $self->level_distance($hosts_config->[0], $hosts_config->[1]);
+		my $distance = $self->node_level_distance($hosts_config->[0], $hosts_config->[1]);
 		push @results, $1;
 	}
 
 	my $base_runtime = $results[0];
 	@results = map {$_/$base_runtime} (@results);
 
-	return @results;
+	$self->{speedup} = \@results;
+
+	return;
+}
+
+sub set_speedup {
+	my $self = shift;
+	my $speedup = shift;
+
+	$self->{speedup} = $speedup;
+
+	return;
 }
 
 sub save_hosts_file {
@@ -328,6 +339,15 @@ sub save_hosts_file {
 	open(my $file, '>', $hosts_file);
 	print $file join("\n", @{$hosts_config}) . "\n";
 	close($file);
+}
+
+sub speedup {
+	my $self = shift;
+	my $level = shift;
+
+	return unless (defined $self->{speedup});
+
+	return $self->{speedup}->[$level];
 }
 
 # Platform XML
@@ -446,6 +466,8 @@ sub save_platform_xml {
 	return;
 }
 
+# Platform level measure for jobs
+
 sub job_level_distance {
 	my $self = shift;
 	my $used_clusters = shift;
@@ -455,8 +477,6 @@ sub job_level_distance {
 
 	# Return 1 if there is only one cluster
 	return 1 if (scalar @{$used_clusters} == 1);
-
-	print Dumper($used_clusters);
 
 	for my $level (0..($last_level - 2)) {
 		my $clusters_per_side = $clusters_number / $self->{levels}->[$level + 1];
