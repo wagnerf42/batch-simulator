@@ -328,10 +328,9 @@ sub generate_speedup {
 
 sub set_speedup {
 	my $self = shift;
-	my $speedup = shift;
+	my $latencies = shift;
 
-	$self->{speedup} = $speedup;
-
+	@{$self->{speedup}} = reverse map {$_/$latencies->[-1]} (@{$latencies});
 	return;
 }
 
