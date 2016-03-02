@@ -159,7 +159,7 @@ sub run {
 
 			$self->assign_job($job);
 			$logger->logdie("job " . $job->job_number() . " was not assigned")
-			unless (defined $job->starting_time());
+				unless (defined $job->starting_time());
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
@@ -289,8 +289,7 @@ sub assign_job {
 	# Here we can decide the new run time based on the platform level
 	my $used_clusters = $chosen_processors->list_of_used_clusters($self->{platform}->cluster_size());
 	my $job_platform_level = $self->{platform}->job_level_distance($used_clusters);
-
-	my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level - 1);
+	my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level);
 
 	if ($new_job_run_time > $job->requested_time()) {
 		$job->run_time($job->requested_time());

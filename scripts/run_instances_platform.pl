@@ -25,16 +25,23 @@ my ($execution_id) = @ARGV;
 
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 
-my @jobs_numbers = (600, 800, 1000, 1200, 1400);
-#my @jobs_numbers = (100, 200, 300, 400);
+#my @jobs_numbers = (600, 800, 1000, 1200, 1400);
+my @jobs_numbers = (300);
 #my @jobs_numbers = (100);
 my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
 my @platform_levels = (1, 2, 40, 5040, 80640);
+#my @platform_levels = (1, 2, 4, 8, 16);
+my @platform_latencies = (3.2e-2, 2e-3, 1e-3, 1e-4);
+my @platform_speedup = map {$_/$platform_latencies[-1]} (@platform_latencies);
 my $stretch_bound = 10;
 my $speedup_benchmark = '../NPB3.3.1/NPB3.3-MPI/bin/cg.B.2';
 
-my $platform = Platform->new(\@platform_levels);
+my $platform = Platform->new(\@platform_levels, \@platform_latencies);
+#$platform->build_platform_xml();
+#$platform->save_platform_xml('/tmp/platform');
+#$platform->generate_speedup($speedup_benchmark, '/tmp/platform-80640.xml');
+$platform->set_speedup(\@platform_speedup);
 
 my @variants = (
 	Basic->new(),
@@ -96,6 +103,8 @@ sub run_instance {
 		my $schedule = Backfilling->new($variants[$variant_id], $platform, $trace);
 		$schedule->run();
 
+		$schedule->save_svg("/tmp/fernando/$variant_id-$jobs_number.svg");
+
 		my @instance_results = (
 			$platform->processors_number(),
 			$jobs_number,
@@ -111,7 +120,7 @@ sub run_instance {
 			#$schedule->stretch_with_cpus_squared($stretch_bound),
 			$schedule->run_time(),
 			$schedule->platform_level_factor(),
-
+			$schedule->job_success_rate(),
 		);
 
 		push @results, join(' ', @instance_results);
@@ -143,6 +152,7 @@ sub write_results_to_file {
 			#"STRETCH_CPUS_SQUARED",
 			"RUN_TIME",
 			"PLATFORM_LEVEL",
+			"SUCCESS_RATIO",
 		)) . "\n";
 
 	print $file join(' ', $_) . "\n" for (@results);

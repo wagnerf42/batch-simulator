@@ -187,7 +187,6 @@ sub copy_from_trace {
 	return $self;
 }
 
-
 sub copy {
 	my $class = shift;
 	my $original = shift;
@@ -201,7 +200,6 @@ sub copy {
 	bless $self, $class;
 	return $self;
 }
-
 
 sub reset_submit_times {
 	my $self = shift;
@@ -282,7 +280,7 @@ sub load {
 	@valid_jobs = grep {$_->submit_time() + $_->wait_time() + $_->run_time() < $last_submit_time} @valid_jobs;
 	my $t_end = max map {$_->submit_time() + $_->wait_time() + $_->run_time()} @valid_jobs;
 	my $load = sum map {$_->requested_cpus() * $_->run_time() / ($processors_number * ($t_end - $t_start))} @valid_jobs;
-	
+
 	return $load;
 }
 
