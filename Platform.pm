@@ -298,7 +298,7 @@ sub generate_speedup {
 	}
 
 	my $last_level = $#{$self->{levels}};
-	my @hosts_configs = map {[0, $self->{levels}->[$_]]} (0..($last_level - 1));
+	my @hosts_configs = reverse map {[0, int($self->{levels}->[-1]/$self->{levels}->[$_])]} (1..$last_level);
 	my $cpus_number = 2;
 
 	my @results;
@@ -320,8 +320,8 @@ sub generate_speedup {
 
 	my $base_runtime = $results[0];
 	@results = map {$_/$base_runtime} (@results);
-
-	$self->{speedup} = \@results;
+	print Dumper(@results);
+	@{$self->{speedup}} = @results;
 
 	return;
 }
