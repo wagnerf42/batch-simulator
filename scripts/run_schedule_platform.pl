@@ -25,18 +25,18 @@ my $logger = get_logger('experiment');
 my $trace_file = '../swf/CEA-Curie-2011-2.1-cln-b1-clean2.swf';
 #my $trace_file = '../swf2/test.swf';
 #my @platform_levels = (1, 2, 4, 8, 16);
-my @platform_levels = (1, 2, 40, 5040, 80640);
+my @platform_levels = (1, 2, 64, 2048);
 #my @platform_levels = (1, 2, 4, 8, 16);
-my @platform_latencies = (2e-2, 1e-3, 1e-3, 1e-4);
+my @platform_latencies = (2e-2, 1e-3, 1e-4);
 #my @platform_speedup = (16, 8, 4, 1);
 
 my $platform = Platform->new(\@platform_levels, \@platform_latencies);
-#$platform->generate_speedup('../NPB3.3.1/NPB3.3-MPI/bin/cg.B.2');
+$platform->generate_speedup('../NPB3.3.1/NPB3.3-MPI/bin/cg.B.2');
 #$platform->set_speedup(\@platform_speedup);
-$platform->set_speedup(\@platform_latencies);
+#$platform->set_speedup(\@platform_latencies);
 
 my $trace = Trace->new_from_swf($trace_file);
-#$trace->remove_large_jobs($platform->processors_number());
+$trace->remove_large_jobs($platform->processors_number());
 $trace->reset_jobs_numbers();
 $trace->fix_submit_times();
 $trace->keep_first_jobs($jobs_number);
