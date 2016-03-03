@@ -11,6 +11,7 @@ use Data::Dumper;
 
 use EventQueue;
 use Platform;
+use Job;
 
 #TODO Rewrite the local code in this package. This package only needs the
 #cluster size for some minor things. I should be able to cleanup this package a
@@ -190,12 +191,12 @@ sub save_svg {
 		/ $self->{platform}->cluster_size());
 	my $cluster_size = 600/$self->{platform}->processors_number()
 		* $self->{platform}->cluster_size();
-	for my $cluster (1..$clusters_number) {
-		my $cluster_y = $cluster * $cluster_size;
-		print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
-	}
+	#for my $cluster (1..$clusters_number) {
+	#	my $cluster_y = $cluster * $cluster_size;
+	#	print $filehandle "<line x1=\"0\" x2=\"800\" y1=\"$cluster_y\" y2=\"$cluster_y\" style=\"stroke:rgb(255,0,0);stroke-width:1\"/>\n";
+	#}
 
-	$_->svg($filehandle, $w_ratio, $h_ratio, $time) for grep {defined $_->starting_time()} (@{$self->{trace}->jobs()});
+	$_->svg($filehandle, $w_ratio, $h_ratio, $time, $self->{platform}) for grep {defined $_->starting_time()} (@{$self->{trace}->jobs()});
 
 	print $filehandle "</svg>\n";
 	close $filehandle;
@@ -213,6 +214,12 @@ sub platform_level_factor {
 	my $job_level_distances = sum map {$self->{platform}->relative_job_level_distance($_->list_of_used_clusters($self->{platform}->cluster_size()), $_->requested_cpus())} (@{$self->{trace}->jobs()});
 
 	return $job_level_distances / scalar @{$self->{trace}->jobs()};
+}
+
+sub job_success_rate {
+	my $self = shift;
+
+	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
 }
 
 1;

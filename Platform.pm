@@ -14,18 +14,18 @@ use Tree;
 # Default power, latency and bandwidth values
 use constant CLUSTER_POWER => "23.492E9";
 use constant CLUSTER_BANDWIDTH => "1.25E9";
-use constant CLUSTER_LATENCY => "1.0E-4";
 use constant LINK_BANDWIDTH => "1.25E9";
-use constant LINK_LATENCY => "5.0E-2";
 
 # Constructors and helper functions
 
 sub new {
 	my $class = shift;
 	my $levels = shift;
+	my $latencies = shift;
 
 	my $self = {
 		levels => $levels,
+		latencies => $latencies,
 	};
 
 	bless $self, $class;
@@ -286,17 +286,20 @@ sub node_level_distance {
 sub generate_speedup {
 	my $self = shift;
 	my $benchmark = shift;
+	my $platform_file = shift;
 
 	my $smpi_script = './scripts/smpi/smpireplay.sh';
-	my $platform_file = '/tmp/platform';
 	my $hosts_file = '/tmp/hosts';
 
-	$self->build_platform_xml();
-	$self->save_platform_xml($platform_file);
+	unless (defined $platform_file) {
+		$platform_file = '/tmp/platform';
+		$self->build_platform_xml();
+		$self->save_platform_xml($platform_file);
+	}
 
 	my $last_level = $#{$self->{levels}};
-	my @hosts_configs = map {[0, $self->{levels}->[$_]]} (0..($last_level - 1));
-	my $cpus_number = $self->{levels}->[$last_level]/$self->{levels}->[$last_level - 1];
+	my @hosts_configs = reverse map {[0, int($self->{levels}->[-1]/$self->{levels}->[$_])]} (1..$last_level);
+	my $cpus_number = 2;
 
 	my @results;
 
@@ -311,14 +314,24 @@ sub generate_speedup {
 			die 'error running benchmark';
 		}
 
-		my $distance = $self->level_distance($hosts_config->[0], $hosts_config->[1]);
+		my $distance = $self->node_level_distance($hosts_config->[0], $hosts_config->[1]);
 		push @results, $1;
 	}
 
 	my $base_runtime = $results[0];
 	@results = map {$_/$base_runtime} (@results);
+	print Dumper(@results);
+	@{$self->{speedup}} = @results;
 
-	return @results;
+	return;
+}
+
+sub set_speedup {
+	my $self = shift;
+	my $latencies = shift;
+
+	@{$self->{speedup}} = reverse map {$_/$latencies->[-1]} (@{$latencies});
+	return;
 }
 
 sub save_hosts_file {
@@ -328,6 +341,14 @@ sub save_hosts_file {
 	open(my $file, '>', $hosts_file);
 	print $file join("\n", @{$hosts_config}) . "\n";
 	close($file);
+}
+
+sub speedup {
+	my $self = shift;
+	my $level = shift;
+
+	return unless (defined $self->{speedup});
+	return $self->{speedup}->[$level - 1];
 }
 
 # Platform XML
@@ -366,7 +387,7 @@ sub build_platform_xml {
 			push @{$xml->{platform}{AS}{AS}{link}}, {
 				id => "L-$level-$node_number",
 				bandwidth => LINK_BANDWIDTH,
-				latency => LINK_LATENCY,
+				latency => $self->{latencies}->[$level -1],
 			};
 
 			push @{$xml->{platform}{AS}{AS}{route}}, {
@@ -385,14 +406,14 @@ sub build_platform_xml {
 			radical => '0-0',
 			power => CLUSTER_POWER,
 			bw => CLUSTER_BANDWIDTH,
-			lat => CLUSTER_LATENCY,
+			lat => $self->{latencies}->[$#{$self->{latencies}}],
 			router_id => 'R-MH',
 	};
 
 	push @{$xml->{platform}{AS}{link}}, {
 		id => 'L-MH',
 		bandwidth => LINK_BANDWIDTH,
-		latency => LINK_LATENCY,
+		latency => $self->{latencies}->[$#{$self->{latencies}}],
 	};
 
 	push @{$xml->{platform}{AS}{ASroute}}, {
@@ -412,14 +433,14 @@ sub build_platform_xml {
 			radical => ($cluster * $self->cluster_size()) . '-' . (($cluster + 1) * $self->cluster_size() - 1),
 			power => CLUSTER_POWER,
 			bw => CLUSTER_BANDWIDTH,
-			lat => CLUSTER_LATENCY,
+			lat => $self->{latencies}->[$#{$self->{latencies}}],
 			router_id => "R-$cluster",
 		};
 
 		push @{$xml->{platform}{AS}{link}}, {
 			id => "L-$cluster",
 			bandwidth => LINK_BANDWIDTH,
-			latency => LINK_LATENCY,
+			latency => $self->{latencies}->[$#{$self->{latencies}}],
 		};
 
 		push @{$xml->{platform}{AS}{ASroute}}, {
@@ -446,6 +467,8 @@ sub save_platform_xml {
 	return;
 }
 
+# Platform level measure for jobs
+
 sub job_level_distance {
 	my $self = shift;
 	my $used_clusters = shift;
@@ -455,8 +478,6 @@ sub job_level_distance {
 
 	# Return 1 if there is only one cluster
 	return 1 if (scalar @{$used_clusters} == 1);
-
-	print Dumper($used_clusters);
 
 	for my $level (0..($last_level - 2)) {
 		my $clusters_per_side = $clusters_number / $self->{levels}->[$level + 1];
