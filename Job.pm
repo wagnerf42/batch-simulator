@@ -20,6 +20,16 @@ my @svg_colors = (
 	'red',
 );
 
+my @svg_colors_platform = (
+	'blue',
+	'green',
+	'yellow',
+	'orange',
+	'red',
+	'purple',
+	'brown',
+);
+
 use Exporter;
 our @ISA = qw(Exporter);
 
@@ -330,7 +340,8 @@ sub svg {
 
 			my $y = $start * $h_ratio;
 			my $h = $h_ratio * ($end - $start + 1);
-			my $color = $svg_colors[$self->{status}];
+			#my $color = $svg_colors[$self->{status}];
+			my $color = $svg_colors_platform[$job_platform_level];
 			my $sw = min($w_ratio, $h_ratio) / 10;
 			if ($self->real_ending_time() > $current_time) {
 				my $x = ($self->{starting_time}+$self->{run_time}) * $w_ratio;

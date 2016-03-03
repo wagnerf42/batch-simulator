@@ -12,7 +12,7 @@
   successful (when the real run time is smaller than the walltime) and when the
   job is not successful (when the job has to be killed because the real run
   time reached the walltime).
-- [ ] Do some checking on the job status when the trace is read from the file.
+- [x] Do some checking on the job status when the trace is read from the file.
   I would like to know how many jobs are failing on the original trace as well
   on the new schedule.
 

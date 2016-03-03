@@ -31,13 +31,14 @@ my $experiment_path = 'experiment/run_instances_platform';
 my $threads_number = 6;
 my @platform_levels = (1, 2, 40, 5040);
 my @platform_latencies = (3.2e-2, 2e-3, 1e-4);
+my $platform_file = '/tmp/platform';
 my $stretch_bound = 10;
 my $speedup_benchmark = '../NPB3.3.1/NPB3.3-MPI/bin/cg.B.2';
 
 my $platform = Platform->new(\@platform_levels, \@platform_latencies);
 $platform->build_platform_xml();
-$platform->save_platform_xml('/tmp/platform');
-$platform->generate_speedup($speedup_benchmark, '/tmp/platform');
+$platform->save_platform_xml($platform_file);
+$platform->generate_speedup($speedup_benchmark, $platform_file);
 #$platform->set_speedup(\@platform_latencies);
 
 my @variants = (
