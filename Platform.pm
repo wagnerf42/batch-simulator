@@ -21,11 +21,9 @@ use constant LINK_BANDWIDTH => "1.25E9";
 sub new {
 	my $class = shift;
 	my $levels = shift;
-	my $latencies = shift;
 
 	my $self = {
 		levels => $levels,
-		latencies => $latencies,
 	};
 
 	bless $self, $class;

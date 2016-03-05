@@ -3,8 +3,9 @@ package Displayable;
 use strict;
 use warnings;
 
-my $user = $ENV{"USER"};
-my $dir = "/tmp/$user";
+#my $user = $ENV{"USER"};
+#my $dir = "/tmp/$user";
+my $dir = 'svg';
 mkdir $dir unless -f $dir;
 
 my $file_count = 0;

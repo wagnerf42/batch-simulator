@@ -21,16 +21,19 @@ Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger();
 
 my @platform_levels = (1, 2, 4, 8);
-my $cpus_number = $platform_levels[$#platform_levels];
+my @platform_latencies = (8, 4, 1);
+my $platform = Platform->new(\@platform_levels);
+$platform->set_speedup(\@platform_latencies);
+
 my $trace = Trace->new_from_swf($trace_file);
-$trace->remove_large_jobs($cpus_number);
-#$trace->reset_jobs_numbers();
-#$trace->fix_submit_times();
+$trace->remove_large_jobs($platform->processors_number());
+$trace->reset_jobs_numbers();
+$trace->fix_submit_times();
 $trace->keep_first_jobs($jobs_number);
 
 my $reduction_algorithm = Basic->new(\@platform_levels, mode => SMALLEST_FIRST);
 
-my $schedule = Backfilling->new($reduction_algorithm, $trace, $cpus_number);
+my $schedule = Backfilling->new($reduction_algorithm, $platform, $trace);
 $schedule->run();
 
 my @results = (
