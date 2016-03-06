@@ -54,7 +54,7 @@ sub remove {
 	return;
 }
 
-sub compute_pairs {
+sub pairs {
 	my $self = shift;
 	my @pairs;
 
@@ -78,10 +78,10 @@ sub check_ok {
 		sub {
 			my ($start, $end) = @_;
 
-			$logger->logconfess("invalid range $self: repeated cpu ($last_end)") if $start == $last_end;
-			$logger->logconfess("invalid range $self: end < start ($end < $start)") if $end < $start;
-			$logger->logconfess("invalid range $self: start not defined") unless defined $end;
-			$logger->logconfess("invalid range $self: end not defined") unless defined $end;
+			$logger->logdie("invalid range $self: repeated cpu ($last_end)") if $start == $last_end;
+			$logger->logdie("invalid range $self: end < start ($end < $start)") if $end < $start;
+			$logger->logdie("invalid range $self: start not defined") unless defined $end;
+			$logger->logdie("invalid range $self: end not defined") unless defined $end;
 
 			$last_end = $end;
 			return 1;
@@ -91,10 +91,11 @@ sub check_ok {
 	return;
 }
 
-sub compute_ranges_in_clusters {
+sub ranges_in_clusters {
 	my $self = shift;
 	my $cluster_size = shift;
-	my $clusters;
+
+	my @clusters;
 	my $current_cluster = -1;
 
 	$self->ranges_loop(
@@ -107,16 +108,18 @@ sub compute_ranges_in_clusters {
 			for my $cluster ($start_cluster..$end_cluster) {
 				my $start_point_in_cluster = max($start, $cluster*$cluster_size);
 				my $end_point_in_cluster = min($end, ($cluster+1)*$cluster_size-1);
-				push @{$clusters}, [] if ($cluster != $current_cluster);
-				$current_cluster = $cluster;
-				push @{$clusters->[$#{$clusters}]}, [$start_point_in_cluster, $end_point_in_cluster];
-			}
-			return 1;
 
+				push @clusters, [] if ($cluster != $current_cluster);
+				push @{$clusters[-1]}, [$start_point_in_cluster, $end_point_in_cluster];
+
+				$current_cluster = $cluster;
+			}
+
+			return 1;
 		}
 	);
 
-	return $clusters;
+	return @clusters;
 }
 
 sub processors_ids {
@@ -150,18 +153,6 @@ sub stringification {
 	return join(' ', @strings);
 }
 
-sub contains_at_least {
-	my $self = shift;
-	my $limit = shift;
-
-	return $self->size() >= $limit;
-}
-
-sub cluster_size {
-	my $cluster = shift;
-	return sum (map {$_->[1] - $_->[0] + 1} @{$cluster});
-}
-
 sub sort_and_fuse_contiguous_ranges {
 	my $ranges = shift;
 
@@ -171,8 +162,8 @@ sub sort_and_fuse_contiguous_ranges {
 	push @remaining_ranges, (@{shift @sorted_ranges});
 
 	for my $range (@sorted_ranges) {
-		if ($range->[0] == $remaining_ranges[$#remaining_ranges] + 1) {
-			$remaining_ranges[$#remaining_ranges] = $range->[1];
+		if ($range->[0] == $remaining_ranges[-1] + 1) {
+			$remaining_ranges[-1] = $range->[1];
 		} else {
 			push @remaining_ranges, @$range;
 		}
@@ -200,11 +191,14 @@ sub available_cpus_in_clusters {
 
 				$available_cpus[$cluster] = {
 					total_size => 0,
-					cpus => []
+					cpus => [],
 				} unless (defined $available_cpus[$cluster]);
 
-				$available_cpus[$cluster]->{total_size} += $end_point_in_cluster - $start_point_in_cluster + 1;
-				push @{$available_cpus[$cluster]->{cpus}}, ($start_point_in_cluster..$end_point_in_cluster);
+				$available_cpus[$cluster]->{total_size} +=
+				$end_point_in_cluster - $start_point_in_cluster + 1;
+
+				push @{$available_cpus[$cluster]->{cpus}},
+				($start_point_in_cluster..$end_point_in_cluster);
 			}
 
 			return 1;
@@ -219,27 +213,14 @@ sub available_cpus_in_clusters {
 sub contiguous {
 	my $self = shift;
 	my $processors_number = shift;
-	my @ranges;
-	my $logger = get_logger('ProcessorRange::contiguous');
 
-	$logger->logdie('are 0 processors contiguous ?') if $self->is_empty();
+	my @ranges = $self->pairs();
 
-	$self->ranges_loop(
-		sub {
-			my ($start, $end) = @_;
-			push @ranges, ($start, $end);
-			return 1;
-		}
-	);
+	return 1 if @ranges == 1;
+	return 1 if (@ranges == 2 and $ranges[0]->[0] == 0
+	and $ranges[1]->[1] == $processors_number - 1);
 
-	return 1 if @ranges == 2;
-
-	if (@ranges == 4) {
-		#complex case
-		return (($ranges[0] == 0) and ($ranges[3] == $processors_number - 1));
-	} else {
-		return 0;
-	}
+	return 0;
 }
 
 sub local {
@@ -247,7 +228,6 @@ sub local {
 	my $cluster_size = shift;
 
 	my $needed_clusters = ceil($self->size() / $cluster_size);
-
 	return ($needed_clusters == $self->used_clusters($cluster_size));
 }
 

@@ -64,7 +64,25 @@ sub run {
 	return;
 }
 
+# Getters and setters
+
+sub trace {
+	my $self = shift;
+	return $self->{trace};
+}
+
+sub run_time {
+	my $self = shift;
+
+	return $self->{run_time};
+}
+
 # Metrics
+
+sub cmax {
+	my $self = shift;
+	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
+}
 
 sub sum_flow_time {
 	my $self = shift;
@@ -91,18 +109,14 @@ sub mean_stretch {
 	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
 }
 
-# FIXME
-sub cmax {
-	my $self = shift;
-	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
-}
-
 sub bounded_stretch {
 	my $self = shift;
 	my $bound = shift;
 
+	$bound = 10 unless defined $bound;
+
 	my $jobs_number = scalar @{$self->{trace}->jobs()};
-	my $total_bounded_stretch = sum map {$_->bounded_stretch(10)} (@{$self->{trace}->jobs()});
+	my $total_bounded_stretch = sum map {$_->bounded_stretch($bound)} (@{$self->{trace}->jobs()});
 
 	return $total_bounded_stretch/$jobs_number;
 }
@@ -164,6 +178,22 @@ sub locality_factor_2 {
 	return $sum_of_ratios;
 }
 
+sub platform_level_factor {
+	my $self = shift;
+
+	my $job_level_distances = sum map {$self->{platform}->relative_job_level_distance($_->list_of_used_clusters($self->{platform}->cluster_size()), $_->requested_cpus())} (@{$self->{trace}->jobs()});
+
+	return $job_level_distances / scalar @{$self->{trace}->jobs()};
+}
+
+sub job_success_rate {
+	my $self = shift;
+
+	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
+}
+
+# SVG
+
 sub save_svg {
 	my ($self, $svg_filename) = @_;
 	my $time = $self->{current_time};
@@ -194,25 +224,6 @@ sub save_svg {
 	print $filehandle "</svg>\n";
 	close $filehandle;
 	return;
-}
-
-sub trace {
-	my $self = shift;
-	return $self->{trace};
-}
-
-sub platform_level_factor {
-	my $self = shift;
-
-	my $job_level_distances = sum map {$self->{platform}->relative_job_level_distance($_->list_of_used_clusters($self->{platform}->cluster_size()), $_->requested_cpus())} (@{$self->{trace}->jobs()});
-
-	return $job_level_distances / scalar @{$self->{trace}->jobs()};
-}
-
-sub job_success_rate {
-	my $self = shift;
-
-	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
 }
 
 1;
