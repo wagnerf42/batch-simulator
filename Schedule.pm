@@ -13,11 +13,6 @@ use EventQueue;
 use Platform;
 use Job;
 
-#TODO Rewrite the local code in this package. This package only needs the
-#cluster size for some minor things. I should be able to cleanup this package a
-#lot by removing unecessary code, or code that is not generic to the idea of a
-#Schedule.
-
 # Creates a new Schedule object.
 sub new {
 	my $class = shift;
@@ -69,10 +64,7 @@ sub run {
 	return;
 }
 
-sub run_time {
-	my $self = shift;
-	return $self->{run_time};
-}
+# Metrics
 
 sub sum_flow_time {
 	my $self = shift;
@@ -99,7 +91,7 @@ sub mean_stretch {
 	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
 }
 
-#TODO Check this (delay)
+# FIXME
 sub cmax {
 	my $self = shift;
 	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
@@ -107,6 +99,7 @@ sub cmax {
 
 sub bounded_stretch {
 	my $self = shift;
+	my $bound = shift;
 
 	my $jobs_number = scalar @{$self->{trace}->jobs()};
 	my $total_bounded_stretch = sum map {$_->bounded_stretch(10)} (@{$self->{trace}->jobs()});
