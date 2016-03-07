@@ -24,7 +24,6 @@ use constant {
 };
 
 # Creates a new Backfilling object.
-
 # The parameters are redirected to the Schedule class and an execution profile
 # is added.
 sub new {
