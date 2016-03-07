@@ -150,6 +150,26 @@ sub run {
 		# Submission events
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
+			# Start of Rejection Code
+
+                        # Asking job rejection policy if this job
+                        # should be rejected or not??
+                        if(1){#$rejection_policy->should_reject($job)){ # must return true or false(Code yet to be written)
+                                # Yes, Reject the job by removing it from the $typed_events
+                                for(my $i=0; $i<scalar @typed_events; $i++){
+                                        if($typed_events[$i]->payload()->job_number() == $job->job_number()){
+                                                ##DEBUG_BEGIN
+                                                $logger->debug("Rejected Job Number: " . $typed_events[$i]->payload()->job_number());
+                                                ##DEBUG_END
+                                                splice @typed_events, $i, 1;
+                                                ##DEBUG_BEGIN
+                                                $logger->debug("Next Job Numbe: " . $typed_events[$i]->payload()->job_number());
+                                                ##DEBUG_END
+                                                next JOB_REJECTED;
+                                        }
+                                }
+                        }
+                        # End of Rejection Code
 
 			if ($self->{uses_external_simulator}) {
 				$job->requested_time($job->requested_time() + $self->{job_delay});
@@ -157,7 +177,10 @@ sub run {
 				$self->{trace}->add_job($job);
 			}
 
-			$self->assign_job($job);
+			#my $rejected = $self->assign_job($job);
+                        #if($rejected){
+                        #        next JOB_REJECTED;
+                        #}
 			$logger->logdie("job " . $job->job_number() . " was not assigned")
 				unless (defined $job->starting_time());
 			push @{$self->{reserved_jobs}}, $job;
@@ -299,7 +322,11 @@ sub assign_job {
 	else {
 		$job->run_time($new_job_run_time);
 	}
-
+	# If the the job should be rejected according to rejection policy then
+        # return before reserving job in execution_profile
+        if(0){#$rejection_plicy->sould_dep_reject($job)){
+                return 0;
+        }
 	$job->assign_to($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job);
 
