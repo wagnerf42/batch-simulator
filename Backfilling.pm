@@ -154,20 +154,11 @@ sub run {
 
                         # Asking job rejection policy if this job
                         # should be rejected or not??
-                        if(1){#$rejection_policy->should_reject($job)){ # must return true or false(Code yet to be written)
-                                # Yes, Reject the job by removing it from the $typed_events
-                                for(my $i=0; $i<scalar @typed_events; $i++){
-                                        if($typed_events[$i]->payload()->job_number() == $job->job_number()){
-                                                ##DEBUG_BEGIN
-                                                $logger->debug("Rejected Job Number: " . $typed_events[$i]->payload()->job_number());
-                                                ##DEBUG_END
-                                                splice @typed_events, $i, 1;
-                                                ##DEBUG_BEGIN
-                                                $logger->debug("Next Job Numbe: " . $typed_events[$i]->payload()->job_number());
-                                                ##DEBUG_END
-                                                next JOB_REJECTED;
-                                        }
-                                }
+                        if($rejection_policy->should_reject($job)){ # must return true or false(Code yet to be written)
+                                # Yes, Reject the job by simply jumping to next job
+				# Note: The rejected job still remains in the $typed_events[SUBMISSION_EVENT] list
+				next;
+
                         }
                         # End of Rejection Code
 
@@ -177,10 +168,10 @@ sub run {
 				$self->{trace}->add_job($job);
 			}
 
-			#my $rejected = $self->assign_job($job);
-                        #if($rejected){
-                        #        next JOB_REJECTED;
-                        #}
+			my $rejected = $self->assign_job($job);
+                        if($rejected){
+                                next;
+                        }
 			$logger->logdie("job " . $job->job_number() . " was not assigned")
 				unless (defined $job->starting_time());
 			push @{$self->{reserved_jobs}}, $job;
@@ -324,7 +315,7 @@ sub assign_job {
 	}
 	# If the the job should be rejected according to rejection policy then
         # return before reserving job in execution_profile
-        if(0){#$rejection_plicy->sould_dep_reject($job)){
+        if($rejection_plicy->sould_dep_reject($job)){
                 return 0;
         }
 	$job->assign_to($starting_time, $chosen_processors);
