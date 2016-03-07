@@ -141,41 +141,19 @@ sub stretch_with_cpus_log {
 
 sub contiguous_jobs_number {
 	my $self = shift;
-	return scalar grep {$_->assigned_processors_ids()->contiguous($self->{platform}->processors_number())} (@{$self->{trace}->jobs()});
+	return sum map {$self->{platform}->job_contiguity($_->assigned_processors_ids())} (@{$self->{trace}->jobs()});
 }
 
 sub local_jobs_number {
 	my $self = shift;
-	return scalar grep {$_->assigned_processors_ids()->local($self->{platform}->cluster_size())} (@{$self->{trace}->jobs()});
+	return sum map {$self->{platform}->job_locality($_->assigned_processors_ids())} (@{$self->{trace}->jobs()});
 }
 
 sub locality_factor {
 	my $self = shift;
-	my $used_clusters = 0;
-	my $optimum_clusters = 0;
 
-	for my $job (@{$self->{trace}->jobs()}) {
-		$used_clusters += $job->used_clusters($self->{platform}->cluster_size());
-		$optimum_clusters += $job->clusters_required($self->{platform}->cluster_size());
-	}
-
-	# If there are no jobs we need to avoid the division
-	return 1 unless ($optimum_clusters != 0);
-
-	return ($used_clusters / $optimum_clusters);
-}
-
-sub locality_factor_2 {
-	my $self = shift;
-	my $sum_of_ratios = 0;
-
-	for my $job (@{$self->{trace}->jobs()}) {
-		my $used_clusters = $job->used_clusters($self->{platform}->cluster_size());
-		my $optimum_clusters = $job->clusters_required($self->{platform}->cluster_size());
-		$sum_of_ratios += $used_clusters / $optimum_clusters;
-	}
-
-	return $sum_of_ratios;
+	my $total_locality_factor = sum map {$self->{platform}->job_locality_factor($_->assigned_processors_ids())} (@{$self->{trace}->jobs()});
+	return $total_locality_factor/@{$self->{trace}->jobs()};
 }
 
 sub platform_level_factor {
@@ -188,7 +166,6 @@ sub platform_level_factor {
 
 sub job_success_rate {
 	my $self = shift;
-
 	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
 }
 

@@ -209,23 +209,9 @@ sub status {
 	return $self->{status};
 }
 
-sub used_clusters {
-	my $self = shift;
-	my $cluster_size = shift;
-
-	return $self->{assigned_processors_ids}->used_clusters($cluster_size);
-}
-
 sub assigned_processors_ids {
 	my $self = shift;
 	return $self->{assigned_processors_ids};
-}
-
-sub list_of_used_clusters {
-	my $self = shift;
-	my $cluster_size = shift;
-
-	return $self->{assigned_processors_ids}->list_of_used_clusters($cluster_size);
 }
 
 # Ending time
@@ -329,8 +315,7 @@ sub svg {
 	my $current_time = shift;
 	my $platform = shift;
 
-	my $used_clusters = $self->{assigned_processors_ids}->list_of_used_clusters($platform->cluster_size());
-	my $job_platform_level = $platform->job_level_distance($used_clusters);
+	my $job_platform_level = $platform->job_level_distance($self->{assigned_processors_ids});
 
 	$self->{assigned_processors_ids}->ranges_loop(
 		sub {
@@ -362,7 +347,7 @@ sub svg {
 			my $fs = min($h_ratio*($end-$start+1), $w/5);
 			die "negative font size :$fs ; $end ; $start $h_ratio $w $self->{run_time}" if $fs <= 0;
 			my $text_y = $y + $fs*0.35;
-			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}-$job_platform_level</text>\n";
+			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
 		}
 	);
 	return;

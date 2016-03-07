@@ -25,3 +25,12 @@
   - [ ] Implement the code for using real application
   - [ ] Run an example with real applications and all the variants
   - [ ] Design and run an experiment comparing all the variants
+
+- [s] Cleanup the code
+  - [x] Move as much as possible of the locality and contiguity code to the
+  Platform package
+  - [ ] Review all the code base and use the better the idea of scalar and list
+  context. Generally, code should be as flexible as possible, preserving the
+  possibility of being used in list or scalar context.
+  - [ ] Check if the that rule affects the performance in Perl.
+  - [ ] Finish documenting the routines in the code.

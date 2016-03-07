@@ -9,10 +9,10 @@ use Log::Log4perl qw(get_logger);
 use Data::Dumper;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
+use ProcessorRange;
 
 use Util qw(float_equal float_precision);
 use Profile;
-use ProcessorRange;
 use BinarySearchTree;
 use Platform;
 

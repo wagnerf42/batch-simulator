@@ -254,7 +254,7 @@ sub reassign_jobs_two_positions {
 				$logger->debug("reassigning job " . $job->job_number() . " processors $new_processors");
 				##DEBUG_END
 
-				$job->assign_to($self->{current_time}, $new_processors);
+				$job->assign($self->{current_time}, $new_processors);
 				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
 			} else {
 				$self->{execution_profile}->add_job_at($job_starting_time, $job, $self->{current_time});
@@ -287,8 +287,7 @@ sub assign_job {
 	##DEBUG_END
 
 	# Here we can decide the new run time based on the platform level
-	my $used_clusters = $chosen_processors->list_of_used_clusters($self->{platform}->cluster_size());
-	my $job_platform_level = $self->{platform}->job_level_distance($used_clusters);
+	my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
 	my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level);
 
 	if ($new_job_run_time > $job->requested_time()) {
@@ -300,7 +299,7 @@ sub assign_job {
 		$job->run_time($new_job_run_time);
 	}
 
-	$job->assign_to($starting_time, $chosen_processors);
+	$job->assign($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job_at($starting_time, $job);
 
 	return;

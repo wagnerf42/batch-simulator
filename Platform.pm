@@ -11,6 +11,9 @@ use Carp;
 
 use Tree;
 
+use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
+use ProcessorRange;
+
 # Default power, latency and bandwidth values
 use constant CLUSTER_POWER => "23.492E9";
 use constant CLUSTER_BANDWIDTH => "1.25E9";
@@ -32,7 +35,7 @@ sub new {
 
 sub processors_number {
 	my $self = shift;
-	return $self->{levels}->[$#{$self->{levels}}];
+	return $self->{levels}->[-1];
 }
 
 sub cluster_size {
@@ -50,6 +53,36 @@ sub build_tree {
 
 	$self->{root} = $self->_build_tree(0, 0, $available_cpus);
 	return;
+}
+
+sub _build_tree {
+	my $self = shift;
+	my $level = shift;
+	my $node = shift;
+	my $available_cpus = shift;
+
+	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
+	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
+
+	# Last level before the leafs/nodes
+	if ($level == $#{$self->{levels}} - 1) {
+		my $tree_content = {
+			total_size => (defined $available_cpus->[$node]) ? $available_cpus->[$node] : 0,
+			nodes => [@next_level_nodes_ids],
+			id => $node
+		};
+		return Tree->new($tree_content);
+	}
+
+	my @children = map {$self->_build_tree($level + 1, $_, $available_cpus)} (@next_level_nodes_ids);
+
+	my $total_size = 0;
+	$total_size += $_->content()->{total_size} for (@children);
+
+	my $tree_content = {total_size => $total_size, id => $node};
+	my $tree = Tree->new($tree_content);
+	$tree->children(\@children);
+	return $tree;
 }
 
 sub choose_combination {
@@ -104,36 +137,6 @@ sub _choose_cpus {
 	my @combination_parts = split('-', $best_combination->{combination});
 
 	return map {$self->_choose_cpus($_, shift @combination_parts)} (@children);
-}
-
-sub _build_tree {
-	my $self = shift;
-	my $level = shift;
-	my $node = shift;
-	my $available_cpus = shift;
-
-	my $next_level_nodes = $self->{levels}->[$level + 1]/$self->{levels}->[$level];
-	my @next_level_nodes_ids = map {$next_level_nodes * $node + $_} (0..($next_level_nodes - 1));
-
-	# Last level before the leafs/nodes
-	if ($level == $#{$self->{levels}} - 1) {
-		my $tree_content = {
-			total_size => (defined $available_cpus->[$node]) ? $available_cpus->[$node] : 0,
-			nodes => [@next_level_nodes_ids],
-			id => $node
-		};
-		return Tree->new($tree_content);
-	}
-
-	my @children = map {$self->_build_tree($level + 1, $_, $available_cpus)} (@next_level_nodes_ids);
-
-	my $total_size = 0;
-	$total_size += $_->content()->{total_size} for (@children);
-
-	my $tree_content = {total_size => $total_size, id => $node};
-	my $tree = Tree->new($tree_content);
-	$tree->children(\@children);
-	return $tree;
 }
 
 sub _combinations {
@@ -469,20 +472,21 @@ sub save_platform_xml {
 
 sub job_level_distance {
 	my $self = shift;
-	my $used_clusters = shift;
+	my $assigned_processors = shift;
 
+	my @used_clusters = $self->job_used_clusters($assigned_processors);
 	my $last_level = $#{$self->{levels}};
 	my $clusters_number = $self->{levels}->[$last_level - 1];
 
 	# Return 1 if there is only one cluster
-	return 1 if (scalar @{$used_clusters} == 1);
+	return 1 if (@used_clusters == 1);
 
 	for my $level (0..($last_level - 2)) {
 		my $clusters_per_side = $clusters_number / $self->{levels}->[$level + 1];
-		my $clusters_side = int($used_clusters->[0] / $clusters_per_side);
+		my $clusters_side = int($used_clusters[0] / $clusters_per_side);
 
-		for my $cluster_id (1..$#{$used_clusters}) {
-			if (int($used_clusters->[$cluster_id] / $clusters_per_side) != $clusters_side) {
+		for my $cluster_id (1..$#used_clusters) {
+			if (int($used_clusters[$cluster_id] / $clusters_per_side) != $clusters_side) {
 				return $last_level - $level;
 			}
 		}
@@ -491,7 +495,7 @@ sub job_level_distance {
 	return 1;
 }
 
-sub relative_job_level_distance {
+sub job_relative_level_distance {
 	my $self = shift;
 	my $used_clusters = shift;
 	my $requested_cpus = shift;
@@ -524,6 +528,89 @@ sub relative_job_level_distance {
 	}
 
 	return 1;
+}
+
+# Contiguity and locality
+
+# Returns 1 if the assigned processors form a contiguous block and 0 if not.
+# Receives as parameter a list of processor ranges in the form of a
+# ProcessorRange object. Evaluation is in scalar context.
+sub job_contiguity {
+	my $self = shift;
+	my $assigned_processors = shift;
+
+	my @ranges = $assigned_processors->pairs();
+
+	return 1 if (@ranges == 1);
+	return 1 if (@ranges == 2 and $ranges[0]->[0] == 0
+	and $ranges[1]->[1] == $self->processors_number()- 1);
+
+	return 0;
+}
+
+# Returns the contiguity factor for a job. Receives as parameter a list of
+# processor ranges in the form of a ProcessorRange object. Evaluation may be in
+# list or schalar context, depending on how the retun value will be used.
+sub job_contiguity_factor {
+	my $self = shift;
+	my $assigned_processors = shift;
+
+	my $ranges = $assigned_processors->pairs();
+
+	return 1 if (@{$ranges} == 2 and $ranges->[0]->[0] == 0
+	and $ranges->[1]->[1] == $self->processors_number()- 1);
+
+	return @{$ranges};
+}
+
+# Returns the locality factor for a job. Receives as parameter a list of
+# processor ranges in the form of a ProcessorRange object. Evaluation is done
+# in scalar context.
+sub job_locality {
+	my $self = shift;
+	my $assigned_processors = shift;
+
+	my @used_clusters = $self->job_used_clusters($assigned_processors);
+
+	return 1 if (@used_clusters == ceil($assigned_processors->size() / $self->cluster_size()));
+	return 0;
+}
+
+# Returns the list of used clusters by a job. Receives as parameter a list of
+# processor ranges in the form of a ProcessorRange object. Evaluation may be in
+# list or scalar context, depending on how the return value will be used.
+sub job_used_clusters {
+	my $self = shift;
+	my $assigned_processors = shift;
+
+	my %used_clusters;
+
+	$assigned_processors->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+
+			my $start_cluster = floor($start/$self->cluster_size());
+			my $end_cluster = floor($end/$self->cluster_size());
+
+			$used_clusters{$_} = 1 for ($start_cluster..$end_cluster);
+
+			return 1;
+
+		}
+	);
+
+	return keys %used_clusters;
+}
+
+# Returns the locality factor for a job. Receives as parameter a list of
+# processor ranges in the form of a ProcessorRange object. Evaluation is done
+# in scalar context.
+sub job_locality_factor {
+	my $self = shift;
+	my $assigned_processors = shift;
+
+	return $self->job_used_clusters($assigned_processors)
+	/ ceil($assigned_processors->size() / $self->cluster_size());
 }
 
 1;
