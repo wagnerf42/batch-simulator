@@ -229,7 +229,7 @@ sub reassign_jobs_two_positions {
 
 	for my $job (@{$self->{reserved_jobs}}) {
 
-		if ($self->{execution_profile}->processors_available_at($self->{current_time})
+		if ($self->{execution_profile}->available_processors($self->{current_time})
 				>= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();

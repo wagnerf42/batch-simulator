@@ -20,8 +20,8 @@ my ($trace_file, $jobs_number) = @ARGV;
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger();
 
-my @platform_levels = (1, 2, 4, 8);
-my @platform_latencies = (8, 4, 1);
+my @platform_levels = (1, 2, 4, 8, 16);
+my @platform_latencies = (8, 4, 2, 1);
 my $platform = Platform->new(\@platform_levels);
 $platform->set_speedup(\@platform_latencies);
 

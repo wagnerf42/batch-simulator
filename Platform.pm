@@ -40,9 +40,7 @@ sub processors_number {
 
 sub cluster_size {
 	my $self = shift;
-
-	my $last_level = $#{$self->{levels}};
-	return $self->{levels}->[$last_level]/$self->{levels}->[$last_level - 1];
+	return $self->{levels}->[-1]/$self->{levels}->[-2];
 }
 
 # Tree structure
@@ -269,6 +267,7 @@ sub build_structure {
 
 # Speedup generation
 
+# FIXME Check if 0 is ok, I don't thik it is
 sub node_level_distance {
 	my $self = shift;
 	my $first_node = shift;

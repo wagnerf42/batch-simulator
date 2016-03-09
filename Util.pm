@@ -28,13 +28,4 @@ sub float_equal {
 	return (abs($a - $b) < 10 ** -$precision);
 }
 
-sub float_precision {
-	my $a = shift;
-	my $precision = shift;
-
-	$precision = 6 unless defined $precision;
-
-	return sprintf("%.${precision}f", $a);
-}
-
 1;

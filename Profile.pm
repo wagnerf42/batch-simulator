@@ -9,9 +9,9 @@ use Log::Log4perl qw(get_logger);
 use Carp;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
-
 use ProcessorRange;
-use Util qw(float_equal float_precision);
+
+use Util qw(float_equal);
 
 use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 
@@ -20,15 +20,15 @@ sub new {
 	my $starting_time = shift;
 	my $ending_time = shift;
 	my $ids = shift;
-	my $logger = get_logger('Profile::new');
 
 	my $self = {
 		starting_time => $starting_time,
 		ending_time => $ending_time
 	};
 
-	$logger->logconfess("invalid profile duration ($self->{ending_time} - $self->{starting_time}") if defined $self->{ending_time} and $self->{ending_time} <= $self->{starting_time};
+	die "invalid profile duration ($self->{ending_time} - $self->{starting_time}" if defined $self->{ending_time} and $self->{ending_time} <= $self->{starting_time};
 
+	# FIXME Rewrite with blessed
 	$self->{processors} = (ref $ids eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
 
 	bless $self, $class;
@@ -38,6 +38,7 @@ sub new {
 sub stringification {
 	my $self = shift;
 
+	#FIXME Rewrite
 	return "[$self->{starting_time} ; ($self->{processors}) " . (defined $self->{ending_time} ? ": $self->{ending_time}]" : "]");
 }
 
@@ -58,7 +59,7 @@ sub processors_ids {
 sub duration {
 	my $self = shift;
 
-	return ($self->{ending_time} - $self->{starting_time}) if defined $self->{ending_time};
+	return $self->{ending_time} - $self->{starting_time} if defined $self->{ending_time};
 	return;
 }
 
@@ -75,6 +76,7 @@ sub add_job {
 	my $self = shift;
 	my $job = shift;
 
+	#FIXME Check again this routine split by job
 	return $self->split_by_job($job);
 }
 
@@ -96,6 +98,7 @@ sub split_by_job {
 	my $middle_start = $self->{starting_time};
 	my $middle_end = (defined $self->{ending_time}) ? min($self->{ending_time}, $job->submitted_ending_time()) : $job->submitted_ending_time();
 	my $middle_profile = Profile->new($middle_start, $middle_end, $self->{processors}->copy_range());
+	#FIXME Rename this remove_used_processors routine to just removed
 	$middle_profile->remove_used_processors($job);
 	unless ($middle_profile->is_fully_loaded()) {
 		push @profiles, $middle_profile
@@ -111,16 +114,19 @@ sub split_by_job {
 	return @profiles;
 }
 
+#FIXME Rewrite this empty/full/loaded part. I just need one routine that
+#returns the size of the ProcessorRange
 sub is_fully_loaded {
 	my $self = shift;
 	return $self->{processors}->is_empty();
 }
 
+#FIXME Rename to remove processors
 sub remove_used_processors {
 	my $self = shift;
 	my $job = shift;
-	my $assigned_processors_ids = $job->assigned_processors_ids();
 
+	my $assigned_processors_ids = $job->assigned_processors_ids();
 	$self->{processors}->remove($assigned_processors_ids);
 
 	return;
@@ -165,6 +171,8 @@ sub svg {
 	return;
 }
 
+# Comparison functions
+
 my $comparison_function = 'default';
 my %comparison_functions = (
 	'default' => \&starting_times_comparison,
@@ -180,6 +188,7 @@ sub three_way_comparison {
 	my $self = shift;
 	my $other = shift;
 	my $inverted = shift;
+
 	return $comparison_functions{$comparison_function}->($self, $other, $inverted);
 }
 
@@ -200,18 +209,13 @@ sub all_times_comparison {
 	my $other = shift;
 	my $inverted = shift;
 
-	my $coef = ($inverted) ? -1 : 1;
-	my $ending_time = $self->{ending_time};
+	return $self->{starting_time} <=> $other->{starting_time} if ref $other eq 'Profile';
 
-	if (ref $other eq '') {
-		return -$coef if (defined $ending_time) and ($ending_time <= $other);
-		return $coef if $self->{starting_time} >= $other;
-		return 0;
-	}
+	my $coef = $inverted ? -1 : 1;
 
-	return $self->{starting_time} <=> $other->{starting_time} if (ref $other eq 'Profile');
-
-	die 'comparison not implemented';
+	return -$coef if defined $self->{ending_time} and $self->{ending_time} <= $other;
+	return $coef if $self->{starting_time} >= $other;
+	return 0;
 }
 
 1;

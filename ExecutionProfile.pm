@@ -20,7 +20,6 @@ use Debug;
 
 use overload '""' => \&stringification;
 
-# Created a new object with one profile containing all the available CPUs.
 sub new {
 	my $class = shift;
 	my $processors_number = shift;
@@ -38,15 +37,13 @@ sub new {
 	return $self;
 }
 
-#Tries to find on which processors a job starting at starting_time can execute.
+# Tries to find on which processors a job starting at starting_time can execute.
 
 # This routine uses the intersection of processor sets to find which processors
-# can be used to execute the job starting at starting_time. It returns either
-# the list of all processors available during that time.
-sub get_free_processors_for {
-	my $self = shift;
-	my $job = shift;
-	my $starting_time = shift;
+# can be used to execute the job starting at starting_time. It returns the list
+# of all processors available during that time.
+sub get_free_processors_for { my $self = shift; my $job = shift; my
+	$starting_time = shift;
 
 	my $duration = 0;
 
@@ -115,13 +112,12 @@ sub get_free_processors_for {
 }
 
 # Returns the number of available processors at the time starting_time.
-sub processors_available_at {
+sub available_processors {
 	my $self = shift;
 	my $starting_time = shift;
-	my $profile = $self->{profile_tree}->find_content($starting_time);
 
-	return $profile->processors()->size() if defined $profile;
-	return 0;
+	my $profile = $self->{profile_tree}->find_content($starting_time);
+	return (defined $profile) ? $profile->processors()->size() : 0;
 }
 
 # Removes a job from the execution profile.
@@ -151,35 +147,25 @@ sub remove_job {
 	my $job = shift;
 	my $current_time = shift;
 
-	my $logger = get_logger('ExecutionProfile::remove_job');
-
-	return unless defined $job->starting_time(); #do not remove jobs which are not here anyway
-
 	my $starting_time = $job->starting_time();
 	my $job_ending_time = $job->submitted_ending_time();
 
 	my @impacted_profiles;
-	Profile::set_comparison_function('all_times');
 	$self->{profile_tree}->nodes_loop($starting_time, $job_ending_time,
 		sub {
 			my $profile = shift;
-			push @impacted_profiles, $profile ;
+			push @impacted_profiles, $profile;
 			return 1;
 		}
 	);
-	Profile::set_comparison_function('default');
 
-	##DEBUG_BEGIN
-	$logger->debug("impacted profiles: @impacted_profiles");
-	##DEBUG_END
+	# impacted profiles must not include a profile that starts at the same
+	# time as $job_ending-time
+	pop @impacted_profiles if @impacted_profiles and $impacted_profiles[-1]->starting_time() == $job_ending_time;
 
-	# No impacted profiles
 	unless (@impacted_profiles) {
-		my $start = max($current_time, $starting_time); #avoid starting in the past
-
-		##DEBUG_BEGIN
-		$logger->debug('no impacted profiles');
-		##DEBUG_END
+		# avoid starting in the past
+		my $start = max($current_time, $starting_time);
 
 		# Only remove if it is still there
 		if ((not float_equal($job_ending_time, $start)) and ($job_ending_time > $start)) {
@@ -193,18 +179,13 @@ sub remove_job {
 		return;
 	}
 
-	# Split at the first profile
-	if ((not float_equal($impacted_profiles[0]->starting_time(), $starting_time))
-			and ($impacted_profiles[0]->starting_time() < $starting_time)) {
-		##DEBUG_BEGIN
-		$logger->debug('split at the first profile');
-		##DEBUG_END
-
-		#remove
+	# split at the first profile
+	if ((not float_equal($impacted_profiles[0]->starting_time(), $starting_time)) and ($impacted_profiles[0]->starting_time() < $starting_time)) {
+		# remove
 		my $first_profile = shift @impacted_profiles;
 		$self->{profile_tree}->remove_content($first_profile);
 
-		#split in two
+		# split in two
 		my $first_profile_ending_time = $first_profile->ending_time();
 		$first_profile->ending_time($starting_time);
 		my $second_profile = Profile->new(
@@ -213,23 +194,19 @@ sub remove_job {
 			$first_profile->processors()->copy_range()
 		);
 
-		#put back
+		# put back
 		$self->{profile_tree}->add_content($first_profile);
 		$self->{profile_tree}->add_content($second_profile);
 		unshift @impacted_profiles, $second_profile;
 	}
 
-	# Split at the last profile
+	# split at the last profile
 	if ($impacted_profiles[-1]->ends_after($job_ending_time)) {
-		##DEBUG_BEGIN
-		$logger->debug('split at the last profile');
-		##DEBUG_END
-
-		#remove
+		# remove
 		my $first_profile = pop @impacted_profiles;
 		$self->{profile_tree}->remove_content($first_profile);
 
-		#split in two
+		# split in two
 		my $second_profile = Profile->new(
 			$job_ending_time,
 			$first_profile->ending_time(),
@@ -237,26 +214,18 @@ sub remove_job {
 		);
 		$first_profile->ending_time($job_ending_time);
 
-		#put back
+		# put back
 		$self->{profile_tree}->add_content($first_profile);
 		$self->{profile_tree}->add_content($second_profile);
 		push @impacted_profiles, $first_profile;
 	}
 
-	# Update profiles
+	# update profiles
 	my $previous_profile_ending_time = max($starting_time, $current_time);
 	for my $profile (@impacted_profiles) {
-		##DEBUG_BEGIN
-		$logger->debug("updating profile $profile");
-		##DEBUG_END
 		$profile->remove_job($job);
 
-		if ((not float_equal($profile->starting_time(), $previous_profile_ending_time))
-				and ($profile->starting_time() > $previous_profile_ending_time)) {
-			##DEBUG_BEGIN
-			$logger->debug("gap at [$previous_profile_ending_time, " . $profile->starting_time() . "]");
-			##DEBUG_END
-
+		if ((not float_equal($profile->starting_time(), $previous_profile_ending_time)) and ($profile->starting_time() > $previous_profile_ending_time)) {
 			my $new_profile = Profile->new(
 				$previous_profile_ending_time,
 				$profile->starting_time(),
@@ -267,12 +236,8 @@ sub remove_job {
 		$previous_profile_ending_time = $profile->ending_time();
 	}
 
-	# Gap at the end
-	if ((not float_equal($job_ending_time, $previous_profile_ending_time))
-			and ($job_ending_time > $previous_profile_ending_time)) {
-		##DEBUG_BEGIN
-		$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
-		##DEBUG_END
+	# gap at the end
+	if ((not float_equal($job_ending_time, $previous_profile_ending_time)) and ($job_ending_time > $previous_profile_ending_time)) {
 		my $new_profile = Profile->new(
 			$previous_profile_ending_time,
 			$job_ending_time,
@@ -280,10 +245,6 @@ sub remove_job {
 		);
 		$self->{profile_tree}->add_content($new_profile);
 	}
-
-	##DEBUG_BEGIN
-	$logger->debug("execution profile after removal:  $self");
-	##DEBUG_END
 
 	return;
 }
@@ -306,7 +267,7 @@ sub add_job_at {
 		sub {
 			my $profile = shift;
 
-			# Avoid including a profile that starts at $ending_time
+			# avoid including a profile that starts at $ending_time
 			return 0 if (float_equal($profile->starting_time, $ending_time));
 
 			push @profiles_to_update, $profile;
@@ -425,6 +386,7 @@ sub find_first_profile_for {
 sub set_current_time {
 	my $self = shift;
 	my $current_time = shift;
+
 	my $updated_profile;
 	my @removed_profiles;
 
@@ -438,7 +400,7 @@ sub set_current_time {
 			my $ending_time = $profile->ending_time();
 
 			if (not defined $ending_time or ((not float_equal($ending_time, $current_time))
-					and ($ending_time > $current_time))) {
+			and ($ending_time > $current_time))) {
 				$updated_profile = $profile;
 				return 0;
 			}
@@ -494,6 +456,7 @@ sub stringification {
 	return join(', ', @profiles);
 }
 
+#FIXME Dafuq?
 sub show {
 	my $self = shift;
 
