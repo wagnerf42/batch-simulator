@@ -5,6 +5,7 @@ use warnings;
 
 use POSIX;
 use List::Util qw(min);
+use Scalar::Util qw(blessed);
 use Log::Log4perl qw(get_logger);
 use Carp;
 
@@ -28,8 +29,7 @@ sub new {
 
 	die "invalid profile duration ($self->{ending_time} - $self->{starting_time}" if defined $self->{ending_time} and $self->{ending_time} <= $self->{starting_time};
 
-	# FIXME Rewrite with blessed
-	$self->{processors} = (ref $ids eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
+	$self->{processors} = (defined blessed($ids) and blessed($ids) eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
 
 	bless $self, $class;
 	return $self;
@@ -98,9 +98,9 @@ sub split_by_job {
 	my $middle_start = $self->{starting_time};
 	my $middle_end = (defined $self->{ending_time}) ? min($self->{ending_time}, $job->submitted_ending_time()) : $job->submitted_ending_time();
 	my $middle_profile = Profile->new($middle_start, $middle_end, $self->{processors}->copy_range());
-	#FIXME Rename this remove_used_processors routine to just removed
-	$middle_profile->remove_used_processors($job);
-	unless ($middle_profile->is_fully_loaded()) {
+	$middle_profile->remove_processors($job);
+
+	if ($middle_profile->{processors}->size()) {
 		push @profiles, $middle_profile
 	} else {
 		$middle_profile->processors()->free_allocated_memory();
@@ -114,15 +114,7 @@ sub split_by_job {
 	return @profiles;
 }
 
-#FIXME Rewrite this empty/full/loaded part. I just need one routine that
-#returns the size of the ProcessorRange
-sub is_fully_loaded {
-	my $self = shift;
-	return $self->{processors}->is_empty();
-}
-
-#FIXME Rename to remove processors
-sub remove_used_processors {
+sub remove_processors {
 	my $self = shift;
 	my $job = shift;
 
@@ -198,7 +190,7 @@ sub starting_times_comparison {
 	my $inverted = shift;
 
 	# Save two calls to the comparison functions if $other is a Profile
-	$other = $other->starting_time() if (ref $other eq 'Profile');
+	$other = $other->starting_time() if defined blessed($other) and blessed($other) eq 'Profile';
 
 	return $other <=> $self->{starting_time} if $inverted;
 	return $self->{starting_time} <=> $other;
@@ -209,7 +201,7 @@ sub all_times_comparison {
 	my $other = shift;
 	my $inverted = shift;
 
-	return $self->{starting_time} <=> $other->{starting_time} if ref $other eq 'Profile';
+	return $self->{starting_time} <=> $other->{starting_time} if defined blessed($other) and blessed($other) eq 'Profile';
 
 	my $coef = $inverted ? -1 : 1;
 

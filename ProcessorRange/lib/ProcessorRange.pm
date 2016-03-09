@@ -46,8 +46,8 @@ sub new {
 sub remove {
 	my $self = shift;
 	my $other = shift;
-	my $inverted_other = $other->invert($self->get_last());
 
+	my $inverted_other = $other->invert($self->get_last());
 	$self->intersection($inverted_other);
 	$inverted_other->free_allocated_memory();
 

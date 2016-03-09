@@ -145,7 +145,7 @@ sub run {
 		}
 
 		# Reassign all reserved jobs if any job finished
-		$self->reassign_jobs_two_positions() if (@{$typed_events[JOB_COMPLETED_EVENT]});
+		$self->reassign_jobs() if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
 		# Submission events
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
@@ -223,14 +223,13 @@ sub start_jobs {
 
 # For each job in the list, the routine checks if the job can start now. If that
 # is not possible, the job is returned to it's original position.
-sub reassign_jobs_two_positions {
+sub reassign_jobs {
 	my $self = shift;
+
 	my $logger = get_logger('Backfilling::reassign_jobs_two_positions');
 
 	for my $job (@{$self->{reserved_jobs}}) {
-
-		if ($self->{execution_profile}->available_processors($self->{current_time})
-				>= $job->requested_cpus()) {
+		if ($self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
 
@@ -241,12 +240,12 @@ sub reassign_jobs_two_positions {
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
 
 			my $new_processors;
-			if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
+			if ($self->{execution_profile}->could_start_job($job, $self->{current_time})) {
 				##DEBUG_BEGIN
 				$logger->debug("could start job " . $job->job_number());
 				##DEBUG_END
 
-				$new_processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
+				$new_processors = $self->{execution_profile}->get_free_processors($job, $self->{current_time});
 			}
 
 			if (defined $new_processors) {
@@ -255,9 +254,9 @@ sub reassign_jobs_two_positions {
 				##DEBUG_END
 
 				$job->assign($self->{current_time}, $new_processors);
-				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
+				$self->{execution_profile}->add_job($self->{current_time}, $job, $self->{current_time});
 			} else {
-				$self->{execution_profile}->add_job_at($job_starting_time, $job, $self->{current_time});
+				$self->{execution_profile}->add_job($job_starting_time, $job, $self->{current_time});
 			}
 		}
 	}
@@ -280,7 +279,7 @@ sub assign_job {
 	$logger->debug("assigning job " . $job->job_number());
 	##DEBUG_END
 
-	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
+	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile($job);
 
 	##DEBUG_BEGIN
 	$logger->debug("chose starting time $starting_time and processors $chosen_processors duration " . $job->requested_time());
@@ -300,7 +299,7 @@ sub assign_job {
 	}
 
 	$job->assign($starting_time, $chosen_processors);
-	$self->{execution_profile}->add_job_at($starting_time, $job);
+	$self->{execution_profile}->add_job($starting_time, $job);
 
 	return;
 }

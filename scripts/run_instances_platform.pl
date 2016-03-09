@@ -35,7 +35,7 @@ my $platform_file = '/tmp/platform';
 my $stretch_bound = 10;
 my $speedup_benchmark = '../NPB3.3.1/NPB3.3-MPI/bin/cg.B.2';
 
-my $platform = Platform->new(\@platform_levels, \@platform_latencies);
+my $platform = Platform->new(\@platform_levels);
 $platform->build_platform_xml();
 $platform->save_platform_xml($platform_file);
 $platform->generate_speedup($speedup_benchmark, $platform_file);

@@ -267,22 +267,6 @@ sub build_structure {
 
 # Speedup generation
 
-# FIXME Check if 0 is ok, I don't thik it is
-sub node_level_distance {
-	my $self = shift;
-	my $first_node = shift;
-	my $second_node = shift;
-
-	my $last_level = $#{$self->{levels}};
-
-	for my $level (0..($last_level - 1)) {
-		my $cpus_group = $self->{levels}->[$last_level]/$self->{levels}->[$level + 1];
-		return $last_level - $level if (int $first_node/$cpus_group != int $second_node/$cpus_group);
-	}
-
-	return 0;
-}
-
 sub generate_speedup {
 	my $self = shift;
 	my $benchmark = shift;
@@ -314,13 +298,11 @@ sub generate_speedup {
 			die 'error running benchmark';
 		}
 
-		my $distance = $self->node_level_distance($hosts_config->[0], $hosts_config->[1]);
 		push @results, $1;
 	}
 
 	my $base_runtime = $results[0];
 	@results = map {$_/$base_runtime} (@results);
-	print Dumper(@results);
 	@{$self->{speedup}} = @results;
 
 	return;
@@ -347,7 +329,6 @@ sub speedup {
 	my $self = shift;
 	my $level = shift;
 
-	return unless (defined $self->{speedup});
 	return $self->{speedup}->[$level - 1];
 }
 
@@ -355,6 +336,7 @@ sub speedup {
 
 sub build_platform_xml {
 	my $self = shift;
+	my $latencies = shift;
 
 	my @platform_parts = @{$self->{levels}};
 	my $xml = XML::Smart->new();
@@ -387,7 +369,7 @@ sub build_platform_xml {
 			push @{$xml->{platform}{AS}{AS}{link}}, {
 				id => "L-$level-$node_number",
 				bandwidth => LINK_BANDWIDTH,
-				latency => $self->{latencies}->[$level -1],
+				latency => $latencies->[$level -1],
 			};
 
 			push @{$xml->{platform}{AS}{AS}{route}}, {
@@ -406,14 +388,14 @@ sub build_platform_xml {
 			radical => '0-0',
 			power => CLUSTER_POWER,
 			bw => CLUSTER_BANDWIDTH,
-			lat => $self->{latencies}->[$#{$self->{latencies}}],
+			lat => $latencies->[-1],
 			router_id => 'R-MH',
 	};
 
 	push @{$xml->{platform}{AS}{link}}, {
 		id => 'L-MH',
 		bandwidth => LINK_BANDWIDTH,
-		latency => $self->{latencies}->[$#{$self->{latencies}}],
+		latency => $latencies->[-1],
 	};
 
 	push @{$xml->{platform}{AS}{ASroute}}, {
@@ -433,14 +415,14 @@ sub build_platform_xml {
 			radical => ($cluster * $self->cluster_size()) . '-' . (($cluster + 1) * $self->cluster_size() - 1),
 			power => CLUSTER_POWER,
 			bw => CLUSTER_BANDWIDTH,
-			lat => $self->{latencies}->[$#{$self->{latencies}}],
+			lat => $latencies->[-1],
 			router_id => "R-$cluster",
 		};
 
 		push @{$xml->{platform}{AS}{link}}, {
 			id => "L-$cluster",
 			bandwidth => LINK_BANDWIDTH,
-			latency => $self->{latencies}->[$#{$self->{latencies}}],
+			latency => $latencies->[-1],
 		};
 
 		push @{$xml->{platform}{AS}{ASroute}}, {
