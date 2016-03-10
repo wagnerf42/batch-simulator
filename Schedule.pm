@@ -141,18 +141,18 @@ sub stretch_with_cpus_log {
 
 sub contiguous_jobs_number {
 	my $self = shift;
-	return sum map {$self->{platform}->job_contiguity($_->assigned_processors_ids())} (@{$self->{trace}->jobs()});
+	return sum map {$self->{platform}->job_contiguity($_->assigned_processors())} (@{$self->{trace}->jobs()});
 }
 
 sub local_jobs_number {
 	my $self = shift;
-	return sum map {$self->{platform}->job_locality($_->assigned_processors_ids())} (@{$self->{trace}->jobs()});
+	return sum map {$self->{platform}->job_locality($_->assigned_processors())} (@{$self->{trace}->jobs()});
 }
 
 sub locality_factor {
 	my $self = shift;
 
-	my $total_locality_factor = sum map {$self->{platform}->job_locality_factor($_->assigned_processors_ids())} (@{$self->{trace}->jobs()});
+	my $total_locality_factor = sum map {$self->{platform}->job_locality_factor($_->assigned_processors())} (@{$self->{trace}->jobs()});
 	return $total_locality_factor/@{$self->{trace}->jobs()};
 }
 

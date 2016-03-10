@@ -150,7 +150,7 @@ sub remove_job {
 			my $new_profile = Profile->new(
 				$start,
 				$job_ending_time,
-				$job->assigned_processors_ids()->copy_range()
+				$job->assigned_processors()->copy_range()
 			);
 			$self->{profile_tree}->add_content($new_profile);
 		}
@@ -207,7 +207,7 @@ sub remove_job {
 			my $new_profile = Profile->new(
 				$previous_profile_ending_time,
 				$profile->starting_time(),
-				$job->assigned_processors_ids()->copy_range()
+				$job->assigned_processors()->copy_range()
 			);
 			$self->{profile_tree}->add_content($new_profile);
 		}
@@ -219,7 +219,7 @@ sub remove_job {
 		my $new_profile = Profile->new(
 			$previous_profile_ending_time,
 			$job_ending_time,
-			$job->assigned_processors_ids()->copy_range()
+			$job->assigned_processors()->copy_range()
 		);
 		$self->{profile_tree}->add_content($new_profile);
 	}

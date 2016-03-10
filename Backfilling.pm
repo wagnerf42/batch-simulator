@@ -231,7 +231,7 @@ sub reassign_jobs {
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
-			my $assigned_processors = $job->assigned_processors_ids();
+			my $assigned_processors = $job->assigned_processors();
 
 			##DEBUG_BEGIN
 			$logger->debug("enough processors for job " . $job->job_number());

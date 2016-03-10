@@ -38,7 +38,6 @@ sub new {
 sub stringification {
 	my $self = shift;
 
-	#FIXME Rewrite
 	return "[$self->{starting_time} ; ($self->{processors}) " . (defined $self->{ending_time} ? ": $self->{ending_time}]" : "]");
 }
 
@@ -76,7 +75,6 @@ sub add_job {
 	my $self = shift;
 	my $job = shift;
 
-	#FIXME Check again this routine split by job
 	return $self->split_by_job($job);
 }
 
@@ -84,7 +82,7 @@ sub remove_job {
 	my $self = shift;
 	my $job = shift;
 
-	$self->{processors}->add($job->assigned_processors_ids());
+	$self->{processors}->add($job->assigned_processors());
 
 	return;
 }
@@ -98,7 +96,8 @@ sub split_by_job {
 	my $middle_start = $self->{starting_time};
 	my $middle_end = (defined $self->{ending_time}) ? min($self->{ending_time}, $job->submitted_ending_time()) : $job->submitted_ending_time();
 	my $middle_profile = Profile->new($middle_start, $middle_end, $self->{processors}->copy_range());
-	$middle_profile->remove_processors($job);
+	
+	$middle_profile->{processors}->remove($job->assigned_processors());
 
 	if ($middle_profile->{processors}->size()) {
 		push @profiles, $middle_profile

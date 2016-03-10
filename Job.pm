@@ -129,8 +129,8 @@ sub copy {
 sub DESTROY {
 	my $self = shift;
 
-	$self->{assigned_processors_ids}->free_allocated_memory()
-		if defined $self->{assigned_processors_ids};
+	$self->{assigned_processors}->free_allocated_memory()
+		if defined $self->{assigned_processors};
 
 	return;
 }
@@ -209,9 +209,9 @@ sub status {
 	return $self->{status};
 }
 
-sub assigned_processors_ids {
+sub assigned_processors {
 	my $self = shift;
-	return $self->{assigned_processors_ids};
+	return $self->{assigned_processors};
 }
 
 # Ending time
@@ -285,9 +285,9 @@ sub unassign {
 
 	delete $self->{starting_time};
 
-	if (defined $self->{assigned_processors_ids}) {
-		$self->{assigned_processors_ids}->free_allocated_memory();
-		delete $self->{assigned_processors_ids};
+	if (defined $self->{assigned_processors}) {
+		$self->{assigned_processors}->free_allocated_memory();
+		delete $self->{assigned_processors};
 	}
 
 	return;
@@ -299,8 +299,8 @@ sub assign {
 	my $assigned_processors = shift;
 
 	$self->{starting_time} = $starting_time;
-	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
-	$self->{assigned_processors_ids} = $assigned_processors;
+	$self->{assigned_processors}->free_allocated_memory() if defined $self->{assigned_processors};
+	$self->{assigned_processors} = $assigned_processors;
 
 	return;
 }
@@ -315,9 +315,9 @@ sub svg {
 	my $current_time = shift;
 	my $platform = shift;
 
-	my $job_platform_level = $platform->job_level_distance($self->{assigned_processors_ids});
+	my $job_platform_level = $platform->job_level_distance($self->{assigned_processors});
 
-	$self->{assigned_processors_ids}->ranges_loop(
+	$self->{assigned_processors}->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
 			die "$start is after $end" if $end < $start;
