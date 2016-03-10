@@ -43,7 +43,7 @@ sub new {
 # This routine uses the intersection of processor sets to find which processors
 # can be used to execute the job starting at starting_time. It returns either
 # the list of all processors available during that time.
-sub get_free_processors_for {
+sub get_free_processors {
 	my $self = shift;
 	my $job = shift;
 	my $starting_time = shift;
@@ -115,7 +115,7 @@ sub get_free_processors_for {
 }
 
 # Returns the number of available processors at the time starting_time.
-sub processors_available_at {
+sub processors_available {
 	my $self = shift;
 	my $starting_time = shift;
 	my $profile = $self->{profile_tree}->find_content($starting_time);
@@ -194,8 +194,7 @@ sub remove_job {
 	}
 
 	# Split at the first profile
-	if ((not float_equal($impacted_profiles[0]->starting_time(), $starting_time))
-			and ($impacted_profiles[0]->starting_time() < $starting_time)) {
+	if ((not float_equal($impacted_profiles[0]->starting_time(), $starting_time)) and ($impacted_profiles[0]->starting_time() < $starting_time)) {
 		##DEBUG_BEGIN
 		$logger->debug('split at the first profile');
 		##DEBUG_END
@@ -251,8 +250,7 @@ sub remove_job {
 		##DEBUG_END
 		$profile->remove_job($job);
 
-		if ((not float_equal($profile->starting_time(), $previous_profile_ending_time))
-				and ($profile->starting_time() > $previous_profile_ending_time)) {
+		if ((not float_equal($profile->starting_time(), $previous_profile_ending_time)) and ($profile->starting_time() > $previous_profile_ending_time)) {
 			##DEBUG_BEGIN
 			$logger->debug("gap at [$previous_profile_ending_time, " . $profile->starting_time() . "]");
 			##DEBUG_END
@@ -268,11 +266,11 @@ sub remove_job {
 	}
 
 	# Gap at the end
-	if ((not float_equal($job_ending_time, $previous_profile_ending_time))
-			and ($job_ending_time > $previous_profile_ending_time)) {
+	if ((not float_equal($job_ending_time, $previous_profile_ending_time)) and ($job_ending_time > $previous_profile_ending_time)) {
 		##DEBUG_BEGIN
 		$logger->debug("gap at the end ($job_ending_time > $previous_profile_ending_time)");
 		##DEBUG_END
+
 		my $new_profile = Profile->new(
 			$previous_profile_ending_time,
 			$job_ending_time,
@@ -292,7 +290,7 @@ sub remove_job {
 
 # This routine finds all the profiles that are impacted by the addition of the
 # job and updates them, removing available CPUs.
-sub add_job_at {
+sub add_job {
 	my $self = shift;
 	my $starting_time = shift;
 	my $job = shift;
@@ -330,7 +328,7 @@ sub add_job_at {
 
 # Note that this routine does not check the intersection of the available CPUs
 # for the duration of the job.
-sub could_start_job_at {
+sub could_start_job {
 	my $self = shift;
 	my $job = shift;
 	my $starting_time = shift;
@@ -371,7 +369,7 @@ sub could_start_job_at {
 # enough CPUs for the job.  When a suitable place for the job is found, the
 # routine returns the starting time and ranges of CPUs that can be used to
 # execute the job.
-sub find_first_profile_for {
+sub find_first_profile {
 	my $self = shift;
 	my $job = shift;
 
@@ -405,7 +403,7 @@ sub find_first_profile_for {
 				my $start_profile = shift @included_profiles;
 
 				$starting_time = $start_profile->starting_time();
-				$processors = $self->get_free_processors_for($job, $start_profile->starting_time());
+				$processors = $self->get_free_processors($job, $start_profile->starting_time());
 				return 0 if defined $processors;
 			}
 

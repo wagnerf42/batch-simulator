@@ -177,8 +177,7 @@ sub real_ending_time {
 	my $self = shift;
 	my $logger = get_logger('Job::real_ending_time');
 
-	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
-
+	return unless defined $self->{starting_time};
 	return $self->{starting_time} + $self->{run_time};
 }
 
@@ -204,10 +203,7 @@ sub bounded_stretch {
 	my $self = shift;
 	my $time_limit = shift;
 
-	my $logger = get_logger('Job::bounded_stretch');
-
-	$logger->logdie('undefined job parameters') unless defined $self->wait_time() and defined $self->{run_time};
-
+	return  unless defined $self->wait_time() and defined $self->{run_time};
 	return max(($self->wait_time() + $self->{run_time})/max($self->{run_time}, ((defined $time_limit) ? $time_limit : 10)), 1);
 }
 
@@ -216,8 +212,7 @@ sub bounded_stretch_with_cpus_squared {
 	my $time_limit = shift;
 
 	$time_limit = 10 unless (defined $time_limit);
-	return max(($self->wait_time() + $self->{run_time})
-		/ (max($self->{run_time}, $time_limit) * sqrt($self->{allocated_cpus})), 1);
+	return max(($self->wait_time() + $self->{run_time}) / (max($self->{run_time}, $time_limit) * sqrt($self->{allocated_cpus})), 1);
 }
 
 sub bounded_stretch_with_cpus_log {
@@ -297,7 +292,7 @@ sub unassign {
 	return;
 }
 
-sub assign_to {
+sub assign {
 	my $self = shift;
 	my $starting_time = shift;
 	my $assigned_processors = shift;

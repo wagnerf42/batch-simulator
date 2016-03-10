@@ -15,6 +15,7 @@ use Event;
 use Util qw(float_equal float_precision);
 use Platform;
 use Job;
+use RejectionPolicy;
 
 use Debug;
 
@@ -29,6 +30,7 @@ use constant {
 sub new {
 	my $class = shift;
 	my $reduction_algorithm = shift;
+	my $rejection_policy = shift;
 
 	my $self = $class->SUPER::new(@_);
 
@@ -43,6 +45,8 @@ sub new {
 	$self->{processed_jobs} = 0;
 	$self->{total_bounded_stretch} = 0;
 	$self->{total_original_bounded_stretch} = 0;
+
+	$self->{rejection_policy} = $rejection_policy;
 
 	return $self;
 }
@@ -83,8 +87,8 @@ sub run {
 	my $self = shift;
 	my $logger = get_logger('Backfilling::run');
 
-	$self->{reserved_jobs} = []; # jobs not started yet
-	$self->{started_jobs} = {}; # jobs that have already started
+	$self->{reserved_jobs} = [];
+	$self->{started_jobs} = {};
 
 	unless ($self->{uses_external_simulator}) {
 		$self->{events} = Heap->new(Event->new(SUBMISSION_EVENT, -1));
@@ -118,7 +122,7 @@ sub run {
 		$logger->debug("current time: $self->{current_time} events @events");
 		##DEBUG_END
 
-		# Ending event
+		# ending event
 		for my $event (@{$typed_events[JOB_COMPLETED_EVENT]}) {
 
 			my $job = $event->payload();
@@ -143,23 +147,25 @@ sub run {
 			}
 		}
 
-		# Reassign all reserved jobs if any job finished
+		# reassign all reserved jobs if any job finished
 		$self->reassign_jobs_two_positions() if (@{$typed_events[JOB_COMPLETED_EVENT]});
 
-		# Submission events
+		# submission events
 		for my $event (@{$typed_events[SUBMISSION_EVENT]}) {
 			my $job = $event->payload();
-			# Start of Rejection Code
 
-                        # Asking job rejection policy if this job
-                        # should be rejected or not??
-                        if($rejection_policy->should_reject($job)){ # must return true or false(Code yet to be written)
-                                # Yes, Reject the job by simply jumping to next job
-				# Note: The rejected job still remains in the $typed_events[SUBMISSION_EVENT] list
+			# start of Rejection Code
+			if ($self->{rejection_policy}->should_reject_job($job)) {
+				# yes, reject the job by simply jumping to the
+				# next job
+				
+				##DEBUG_BEGIN
+				$logger->debug("job [$job] rejected");
+				##DEBUG_END
+
 				next;
 
-                        }
-                        # End of Rejection Code
+			}
 
 			if ($self->{uses_external_simulator}) {
 				$job->requested_time($job->requested_time() + $self->{job_delay});
@@ -167,25 +173,28 @@ sub run {
 				$self->{trace}->add_job($job);
 			}
 
-			my $rejected = $self->assign_job($job);
-                        if($rejected){
-                                next;
-                        }
-			$logger->logdie("job " . $job->job_number() . " was not assigned")
-				unless (defined $job->starting_time());
-			push @{$self->{reserved_jobs}}, $job;
+			# check if the job is assigned or rejected
+			$self->assign_job($job);
+
+			if (defined $job->starting_time()) {
+				push @{$self->{reserved_jobs}}, $job;
+			} else {
+				##DEBUG_BEGIN
+				$logger->debug("job " . $job->job_number() . " was not assigned");
+				##DEBUG_END
+			}
 		}
 
 		$self->start_jobs();
 	}
 
-	# All jobs should be scheduled and started
+	# all jobs should be scheduled and started
 	$logger->logdie('there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}}))
 		if (@{$self->{reserved_jobs}});
 
 	$self->{execution_profile}->free_profiles();
 
-	# Time measure
+	# time measure
 	$self->{run_time} = time() - $self->{run_time};
 
 	return;
@@ -242,7 +251,7 @@ sub reassign_jobs_two_positions {
 
 	for my $job (@{$self->{reserved_jobs}}) {
 
-		if ($self->{execution_profile}->processors_available_at($self->{current_time})
+		if ($self->{execution_profile}->processors_available($self->{current_time})
 				>= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors_ids();
@@ -254,12 +263,12 @@ sub reassign_jobs_two_positions {
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
 
 			my $new_processors;
-			if ($self->{execution_profile}->could_start_job_at($job, $self->{current_time})) {
+			if ($self->{execution_profile}->could_start_job($job, $self->{current_time})) {
 				##DEBUG_BEGIN
 				$logger->debug("could start job " . $job->job_number());
 				##DEBUG_END
 
-				$new_processors = $self->{execution_profile}->get_free_processors_for($job, $self->{current_time});
+				$new_processors = $self->{execution_profile}->get_free_processors($job, $self->{current_time});
 			}
 
 			if (defined $new_processors) {
@@ -267,10 +276,10 @@ sub reassign_jobs_two_positions {
 				$logger->debug("reassigning job " . $job->job_number() . " processors $new_processors");
 				##DEBUG_END
 
-				$job->assign_to($self->{current_time}, $new_processors);
-				$self->{execution_profile}->add_job_at($self->{current_time}, $job, $self->{current_time});
+				$job->assign($self->{current_time}, $new_processors);
+				$self->{execution_profile}->add_job($self->{current_time}, $job, $self->{current_time});
 			} else {
-				$self->{execution_profile}->add_job_at($job_starting_time, $job, $self->{current_time});
+				$self->{execution_profile}->add_job($job_starting_time, $job, $self->{current_time});
 			}
 		}
 	}
@@ -293,7 +302,7 @@ sub assign_job {
 	$logger->debug("assigning job " . $job->job_number());
 	##DEBUG_END
 
-	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile_for($job);
+	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile($job);
 
 	##DEBUG_BEGIN
 	$logger->debug("chose starting time $starting_time and processors $chosen_processors duration " . $job->requested_time());
@@ -312,13 +321,19 @@ sub assign_job {
 	else {
 		$job->run_time($new_job_run_time);
 	}
+
 	# If the the job should be rejected according to rejection policy then
-        # return before reserving job in execution_profile
-        if($rejection_plicy->sould_dep_reject($job)){
-                return 0;
-        }
-	$job->assign_to($starting_time, $chosen_processors);
-	$self->{execution_profile}->add_job_at($starting_time, $job);
+	# return before reserving job in execution_profile
+	if ($self->{rejection_policy}->should_reject_reservation($job, $starting_time, $chosen_processors)) {
+		##DEBUG_BEGIN
+		$logger->debug("reservation for job [$job] rejected");
+		##DEBUG_END
+
+		return;
+	}
+
+	$job->assign($starting_time, $chosen_processors);
+	$self->{execution_profile}->add_job($starting_time, $job);
 
 	return;
 }
