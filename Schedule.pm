@@ -13,11 +13,6 @@ use EventQueue;
 use Platform;
 use Job;
 
-#TODO Rewrite the local code in this package. This package only needs the
-#cluster size for some minor things. I should be able to cleanup this package a
-#lot by removing unecessary code, or code that is not generic to the idea of a
-#Schedule.
-
 # Creates a new Schedule object.
 sub new {
 	my $class = shift;
@@ -69,9 +64,24 @@ sub run {
 	return;
 }
 
+# Getters and setters
+
+sub trace {
+	my $self = shift;
+	return $self->{trace};
+}
+
 sub run_time {
 	my $self = shift;
+
 	return $self->{run_time};
+}
+
+# Metrics
+
+sub cmax {
+	my $self = shift;
+	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
 }
 
 sub sum_flow_time {
@@ -99,17 +109,14 @@ sub mean_stretch {
 	return (sum map {$_->stretch()} @{$self->{trace}->jobs()}) / @{$self->{trace}->jobs()};
 }
 
-#TODO Check this (delay)
-sub cmax {
-	my $self = shift;
-	return max map {$_->real_ending_time()} (@{$self->{trace}->jobs()});
-}
-
 sub bounded_stretch {
 	my $self = shift;
+	my $bound = shift;
+
+	$bound = 10 unless defined $bound;
 
 	my $jobs_number = scalar @{$self->{trace}->jobs()};
-	my $total_bounded_stretch = sum map {$_->bounded_stretch(10)} (@{$self->{trace}->jobs()});
+	my $total_bounded_stretch = sum map {$_->bounded_stretch($bound)} (@{$self->{trace}->jobs()});
 
 	return $total_bounded_stretch/$jobs_number;
 }
@@ -134,42 +141,35 @@ sub stretch_with_cpus_log {
 
 sub contiguous_jobs_number {
 	my $self = shift;
-	return scalar grep {$_->assigned_processors_ids()->contiguous($self->{platform}->processors_number())} (@{$self->{trace}->jobs()});
+	return sum map {$self->{platform}->job_contiguity($_->assigned_processors())} (@{$self->{trace}->jobs()});
 }
 
 sub local_jobs_number {
 	my $self = shift;
-	return scalar grep {$_->assigned_processors_ids()->local($self->{platform}->cluster_size())} (@{$self->{trace}->jobs()});
+	return sum map {$self->{platform}->job_locality($_->assigned_processors())} (@{$self->{trace}->jobs()});
 }
 
 sub locality_factor {
 	my $self = shift;
-	my $used_clusters = 0;
-	my $optimum_clusters = 0;
 
-	for my $job (@{$self->{trace}->jobs()}) {
-		$used_clusters += $job->used_clusters($self->{platform}->cluster_size());
-		$optimum_clusters += $job->clusters_required($self->{platform}->cluster_size());
-	}
-
-	# If there are no jobs we need to avoid the division
-	return 1 unless ($optimum_clusters != 0);
-
-	return ($used_clusters / $optimum_clusters);
+	my $total_locality_factor = sum map {$self->{platform}->job_locality_factor($_->assigned_processors())} (@{$self->{trace}->jobs()});
+	return $total_locality_factor/@{$self->{trace}->jobs()};
 }
 
-sub locality_factor_2 {
+sub platform_level_factor {
 	my $self = shift;
-	my $sum_of_ratios = 0;
 
-	for my $job (@{$self->{trace}->jobs()}) {
-		my $used_clusters = $job->used_clusters($self->{platform}->cluster_size());
-		my $optimum_clusters = $job->clusters_required($self->{platform}->cluster_size());
-		$sum_of_ratios += $used_clusters / $optimum_clusters;
-	}
+	my $job_level_distances = sum map {$self->{platform}->relative_job_level_distance($_->list_of_used_clusters($self->{platform}->cluster_size()), $_->requested_cpus())} (@{$self->{trace}->jobs()});
 
-	return $sum_of_ratios;
+	return $job_level_distances / scalar @{$self->{trace}->jobs()};
 }
+
+sub job_success_rate {
+	my $self = shift;
+	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
+}
+
+# SVG
 
 sub save_svg {
 	my ($self, $svg_filename) = @_;
@@ -201,25 +201,6 @@ sub save_svg {
 	print $filehandle "</svg>\n";
 	close $filehandle;
 	return;
-}
-
-sub trace {
-	my $self = shift;
-	return $self->{trace};
-}
-
-sub platform_level_factor {
-	my $self = shift;
-
-	my $job_level_distances = sum map {$self->{platform}->relative_job_level_distance($_->list_of_used_clusters($self->{platform}->cluster_size()), $_->requested_cpus())} (@{$self->{trace}->jobs()});
-
-	return $job_level_distances / scalar @{$self->{trace}->jobs()};
-}
-
-sub job_success_rate {
-	my $self = shift;
-
-	return sum map {($_->status() == JOB_STATUS_COMPLETED) ? 1 : 0} (@{$self->{trace}->jobs()});
 }
 
 1;

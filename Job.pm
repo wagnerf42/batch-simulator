@@ -41,6 +41,8 @@ use constant {
 
 our @EXPORT = qw(JOB_STATUS_COMPLETED JOB_STATUS_FAILED JOB_STATUS_CANCELED);
 
+# Stringification
+
 sub stringification {
 	my $self = shift;
 
@@ -67,6 +69,8 @@ sub stringification {
 		)
 	);
 }
+
+# Constructors and destructors
 
 sub new {
 	my $class = shift;
@@ -122,6 +126,17 @@ sub copy {
 	return $self;
 }
 
+sub DESTROY {
+	my $self = shift;
+
+	$self->{assigned_processors}->free_allocated_memory()
+		if defined $self->{assigned_processors};
+
+	return;
+}
+
+# Getters and setters
+
 sub schedule_time {
 	my $self = shift;
 	my $schedule_time = shift;
@@ -163,52 +178,66 @@ sub starting_time {
 	return $self->{starting_time};
 }
 
-sub starts_after {
+sub submit_time {
 	my $self = shift;
-	my $time = shift;
-	my $logger = get_logger('Job::starts_after');
+	my $submit_time = shift;
 
-	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
-
-	return ($self->{starting_time} > $time);
+	$self->{submit_time} = $submit_time if defined $submit_time;
+	return $self->{submit_time};
 }
+
+sub original_wait_time {
+	my $self = shift;
+
+	return $self->{original_wait_time};
+}
+
+sub job_number {
+	my $self = shift;
+	my $job_number = shift;
+
+	$self->{job_number} = $job_number if defined $job_number;
+
+	return $self->{job_number};
+}
+
+sub status {
+	my $self = shift;
+	my $status = shift;
+
+	$self->{status} = $status if (defined $status);
+	return $self->{status};
+}
+
+sub assigned_processors {
+	my $self = shift;
+	return $self->{assigned_processors};
+}
+
+# Ending time
 
 sub real_ending_time {
 	my $self = shift;
-	my $logger = get_logger('Job::real_ending_time');
-
-	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
-
 	return $self->{starting_time} + $self->{run_time};
 }
 
 sub submitted_ending_time {
 	my $self = shift;
-	my $logger = get_logger('Job::submitted_ending_time');
-
-	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
-
 	return $self->{starting_time} + $self->{requested_time};
 }
 
+# Stretch
+
 sub flow_time {
 	my $self = shift;
-	my $logger = get_logger('Job::flow_time');
-
-	$logger->logdie('undefined job starting time') unless defined $self->{starting_time};
-
-	return $self->{starting_time} + $self->{run_time} - $self->{submit_time};
+	return $self->{starting_time} - $self->{submit_time} + $self->{run_time};
 }
 
 sub bounded_stretch {
 	my $self = shift;
-	my $time_limit = shift;
+	my $bound = shift;
 
-	my $logger = get_logger('Job::bounded_stretch');
-
-	$logger->logdie('undefined job parameters') unless defined $self->wait_time() and defined $self->{run_time};
-
-	return max(($self->wait_time() + $self->{run_time})/max($self->{run_time}, ((defined $time_limit) ? $time_limit : 10)), 1);
+	return max($self->flow_time()/max($self->{run_time}, $bound), 1);
 }
 
 sub bounded_stretch_with_cpus_squared {
@@ -216,8 +245,7 @@ sub bounded_stretch_with_cpus_squared {
 	my $time_limit = shift;
 
 	$time_limit = 10 unless (defined $time_limit);
-	return max(($self->wait_time() + $self->{run_time})
-		/ (max($self->{run_time}, $time_limit) * sqrt($self->{allocated_cpus})), 1);
+	return max($self->flow_time()/(max($self->{run_time}, $time_limit) * sqrt($self->{allocated_cpus})), 1);
 }
 
 sub bounded_stretch_with_cpus_log {
@@ -245,74 +273,39 @@ sub stretch {
 	return $self->wait_time()/$self->{run_time};
 }
 
-sub submit_time {
-	my $self = shift;
-	my $submit_time = shift;
-
-	$self->{submit_time} = $submit_time if defined $submit_time;
-	return $self->{submit_time};
-}
-
-sub original_wait_time {
-	my $self = shift;
-
-	return $self->{original_wait_time};
-}
-
 sub wait_time {
 	my $self = shift;
-	my $logger = get_logger('Job::wait_time');
-
-	return unless defined $self->{submit_time} and defined $self->{starting_time};
 	return $self->{starting_time} - $self->{submit_time};
 }
 
-sub job_number {
-	my $self = shift;
-	my $job_number = shift;
-
-	$self->{job_number} = $job_number if defined $job_number;
-
-	return $self->{job_number};
-}
-
-sub status {
-	my $self = shift;
-	my $status = shift;
-
-	$self->{status} = $status if (defined $status);
-	return $self->{status};
-}
+# Assignment
 
 sub unassign {
 	my $self = shift;
 
 	delete $self->{starting_time};
 
-	if (defined $self->{assigned_processors_ids}) {
-		$self->{assigned_processors_ids}->free_allocated_memory();
-		delete $self->{assigned_processors_ids};
+	if (defined $self->{assigned_processors}) {
+		$self->{assigned_processors}->free_allocated_memory();
+		delete $self->{assigned_processors};
 	}
 
 	return;
 }
 
-sub assign_to {
+sub assign {
 	my $self = shift;
 	my $starting_time = shift;
 	my $assigned_processors = shift;
 
 	$self->{starting_time} = $starting_time;
-	$self->{assigned_processors_ids}->free_allocated_memory() if defined $self->{assigned_processors_ids};
-	$self->{assigned_processors_ids} = $assigned_processors;
+	$self->{assigned_processors}->free_allocated_memory() if defined $self->{assigned_processors};
+	$self->{assigned_processors} = $assigned_processors;
 
 	return;
 }
 
-sub assigned_processors_ids {
-	my $self = shift;
-	return $self->{assigned_processors_ids};
-}
+# SVG
 
 sub svg {
 	my $self = shift;
@@ -322,10 +315,9 @@ sub svg {
 	my $current_time = shift;
 	my $platform = shift;
 
-	my $used_clusters = $self->{assigned_processors_ids}->list_of_used_clusters($platform->cluster_size());
-	my $job_platform_level = $platform->job_level_distance($used_clusters);
+	my $job_platform_level = $platform->job_level_distance($self->{assigned_processors});
 
-	$self->{assigned_processors_ids}->ranges_loop(
+	$self->{assigned_processors}->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
 			die "$start is after $end" if $end < $start;
@@ -355,39 +347,9 @@ sub svg {
 			my $fs = min($h_ratio*($end-$start+1), $w/5);
 			die "negative font size :$fs ; $end ; $start $h_ratio $w $self->{run_time}" if $fs <= 0;
 			my $text_y = $y + $fs*0.35;
-			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}-$job_platform_level</text>\n";
+			print $fh "\t<text x=\"$x\" y=\"$text_y\" fill=\"black\" font-family=\"Verdana\" text-anchor=\"middle\" font-size=\"$fs\">$self->{job_number}</text>\n";
 		}
 	);
-	return;
-}
-
-sub used_clusters {
-	my $self = shift;
-	my $cluster_size = shift;
-
-	return $self->{assigned_processors_ids}->used_clusters($cluster_size);
-}
-
-sub list_of_used_clusters {
-	my $self = shift;
-	my $cluster_size = shift;
-
-	return $self->{assigned_processors_ids}->list_of_used_clusters($cluster_size);
-}
-
-sub clusters_required {
-	my $self = shift;
-	my $cluster_size = shift;
-
-	return POSIX::ceil($self->requested_cpus() / $cluster_size);
-}
-
-sub DESTROY {
-	my $self = shift;
-
-	$self->{assigned_processors_ids}->free_allocated_memory()
-		if defined $self->{assigned_processors_ids};
-
 	return;
 }
 

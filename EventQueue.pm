@@ -86,11 +86,15 @@ sub current_time {
 sub set_started_jobs {
 	my $self = shift;
 	my $jobs = shift;
+
 	my $logger = get_logger('EventQueue::set_started_jobs');
+
 	my $message = "0:$self->{current_simulator_time}|$self->{current_simulator_time}:";
 
 	if (@{$jobs}) {
-		my @jobs_messages = map {$_->job_number().'='.join(',', $_->assigned_processors_ids()->processors_ids())} @{$jobs};
+		my @jobs_messages = map {$_->job_number().'='
+		.join(',', $_->assigned_processors_ids()->processors_ids())} @{$jobs};
+
 		$message .= 'J:' . join(';', @jobs_messages);
 	} else {
 		$message .= 'N';
@@ -104,6 +108,7 @@ sub set_started_jobs {
 
 	$self->{socket}->send($message_size);
 	$self->{socket}->send($message);
+
 	return;
 }
 
@@ -131,7 +136,8 @@ sub retrieve_all {
 
 	my @incoming_events;
 	for my $field (@fields) {
-		$logger->logdie("invalid message $field") unless $field=~/^(\d+(\.\d+)?):([SC]):(\d+)/;
+		$logger->logdie("invalid message $field")
+		unless ($field =~ /^(\d+(\.\d+)?):([SC]):(\d+)/);
 
 		my $timestamp = $1;
 		my $type = $3;

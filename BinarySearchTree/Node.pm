@@ -165,30 +165,30 @@ sub find_node {
 	return $current_node;
 }
 
-#TODO Fix float
 sub nodes_loop {
 	my $self = shift;
 	my $start_key = shift;
 	my $end_key = shift;
 	my $routine = shift;
+
 	my $current_node = $self;
 	my @parents;
 
 	while (@parents or defined $current_node) {
 		if (defined $current_node) {
-			#go left first
+			# go left first
 			push @parents, $current_node;
 			$current_node = ($current_node->{content} > $start_key) ? $current_node->{children}->[LEFT] : undef;
 		} else {
-			#we returned from exploration of a left child
+			# we returned from exploration of a left child
 			$current_node = pop @parents;
 
-			#do content here
+			# do content here
 			if ($current_node->{content} >= $start_key and (not defined $end_key or $current_node->{content} <= $end_key)) {
 				return unless $routine->($current_node->{content});
 			}
 
-			#and continue with right subtree
+			# and continue with right subtree
 			$current_node = (not defined $end_key or $current_node->{content} < $end_key) ? $current_node->{children}->[RIGHT] : undef;
 		}
 	}

@@ -5,13 +5,14 @@ use warnings;
 
 use POSIX;
 use List::Util qw(min);
+use Scalar::Util qw(blessed);
 use Log::Log4perl qw(get_logger);
 use Carp;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
-
 use ProcessorRange;
-use Util qw(float_equal float_precision);
+
+use Util qw(float_equal);
 
 use overload '""' => \&stringification, '<=>' => \&three_way_comparison;
 
@@ -20,16 +21,15 @@ sub new {
 	my $starting_time = shift;
 	my $ending_time = shift;
 	my $ids = shift;
-	my $logger = get_logger('Profile::new');
 
 	my $self = {
 		starting_time => $starting_time,
 		ending_time => $ending_time
 	};
 
-	$logger->logconfess("invalid profile duration ($self->{ending_time} - $self->{starting_time}") if defined $self->{ending_time} and $self->{ending_time} <= $self->{starting_time};
+	die "invalid profile duration ($self->{ending_time} - $self->{starting_time}" if defined $self->{ending_time} and $self->{ending_time} <= $self->{starting_time};
 
-	$self->{processors} = (ref $ids eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
+	$self->{processors} = (blessed($ids) eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
 
 	bless $self, $class;
 	return $self;
@@ -58,7 +58,7 @@ sub processors_ids {
 sub duration {
 	my $self = shift;
 
-	return ($self->{ending_time} - $self->{starting_time}) if defined $self->{ending_time};
+	return $self->{ending_time} - $self->{starting_time} if defined $self->{ending_time};
 	return;
 }
 
@@ -82,7 +82,7 @@ sub remove_job {
 	my $self = shift;
 	my $job = shift;
 
-	$self->{processors}->add($job->assigned_processors_ids());
+	$self->{processors}->add($job->assigned_processors());
 
 	return;
 }
@@ -96,8 +96,10 @@ sub split_by_job {
 	my $middle_start = $self->{starting_time};
 	my $middle_end = (defined $self->{ending_time}) ? min($self->{ending_time}, $job->submitted_ending_time()) : $job->submitted_ending_time();
 	my $middle_profile = Profile->new($middle_start, $middle_end, $self->{processors}->copy_range());
-	$middle_profile->remove_used_processors($job);
-	unless ($middle_profile->is_fully_loaded()) {
+	
+	$middle_profile->{processors}->remove($job->assigned_processors());
+
+	if ($middle_profile->{processors}->size()) {
 		push @profiles, $middle_profile
 	} else {
 		$middle_profile->processors()->free_allocated_memory();
@@ -111,16 +113,11 @@ sub split_by_job {
 	return @profiles;
 }
 
-sub is_fully_loaded {
-	my $self = shift;
-	return $self->{processors}->is_empty();
-}
-
-sub remove_used_processors {
+sub remove_processors {
 	my $self = shift;
 	my $job = shift;
-	my $assigned_processors_ids = $job->assigned_processors_ids();
 
+	my $assigned_processors_ids = $job->assigned_processors_ids();
 	$self->{processors}->remove($assigned_processors_ids);
 
 	return;
@@ -165,6 +162,8 @@ sub svg {
 	return;
 }
 
+# Comparison functions
+
 my $comparison_function = 'default';
 my %comparison_functions = (
 	'default' => \&starting_times_comparison,
@@ -180,6 +179,7 @@ sub three_way_comparison {
 	my $self = shift;
 	my $other = shift;
 	my $inverted = shift;
+
 	return $comparison_functions{$comparison_function}->($self, $other, $inverted);
 }
 
@@ -189,7 +189,7 @@ sub starting_times_comparison {
 	my $inverted = shift;
 
 	# Save two calls to the comparison functions if $other is a Profile
-	$other = $other->starting_time() if (ref $other eq 'Profile');
+	$other = $other->starting_time() if blessed($other) eq 'Profile';
 
 	return $other <=> $self->{starting_time} if $inverted;
 	return $self->{starting_time} <=> $other;
@@ -200,18 +200,13 @@ sub all_times_comparison {
 	my $other = shift;
 	my $inverted = shift;
 
-	my $coef = ($inverted) ? -1 : 1;
-	my $ending_time = $self->{ending_time};
+	return $self->{starting_time} <=> $other->{starting_time} if blessed($other) eq 'Profile';
 
-	if (ref $other eq '') {
-		return -$coef if (defined $ending_time) and ($ending_time <= $other);
-		return $coef if $self->{starting_time} >= $other;
-		return 0;
-	}
+	my $coef = $inverted ? -1 : 1;
 
-	return $self->{starting_time} <=> $other->{starting_time} if (ref $other eq 'Profile');
-
-	die 'comparison not implemented';
+	return -$coef if defined $self->{ending_time} and $self->{ending_time} <= $other;
+	return $coef if $self->{starting_time} >= $other;
+	return 0;
 }
 
 1;
