@@ -29,7 +29,7 @@ sub new {
 
 	die "invalid profile duration ($self->{ending_time} - $self->{starting_time}" if defined $self->{ending_time} and $self->{ending_time} <= $self->{starting_time};
 
-	$self->{processors} = (defined blessed($ids) and blessed($ids) eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
+	$self->{processors} = (blessed($ids) eq 'ProcessorRange') ? $ids : ProcessorRange->new(@$ids);
 
 	bless $self, $class;
 	return $self;
@@ -189,7 +189,7 @@ sub starting_times_comparison {
 	my $inverted = shift;
 
 	# Save two calls to the comparison functions if $other is a Profile
-	$other = $other->starting_time() if defined blessed($other) and blessed($other) eq 'Profile';
+	$other = $other->starting_time() if blessed($other) eq 'Profile';
 
 	return $other <=> $self->{starting_time} if $inverted;
 	return $self->{starting_time} <=> $other;
@@ -200,7 +200,7 @@ sub all_times_comparison {
 	my $other = shift;
 	my $inverted = shift;
 
-	return $self->{starting_time} <=> $other->{starting_time} if defined blessed($other) and blessed($other) eq 'Profile';
+	return $self->{starting_time} <=> $other->{starting_time} if blessed($other) eq 'Profile';
 
 	my $coef = $inverted ? -1 : 1;
 

@@ -65,7 +65,7 @@ sub get_free_processors {
 			$left_processors->intersection($profile->processors());
 			return 0 if $left_processors->size() < $job->requested_cpus();
 
-			$duration = defined $profile->ending_time() ? $duration + $profile->duration() : $requested_time;
+			$duration = (defined $profile->ending_time()) ? $duration + $profile->duration() : $requested_time;
 			return 1;
 		});
 
@@ -146,7 +146,7 @@ sub remove_job {
 		my $start = max($current_time, $starting_time);
 
 		# Only remove if it is still there
-		if ((not float_equal($job_ending_time, $start)) and ($job_ending_time > $start)) {
+		if (not float_equal($job_ending_time, $start) and $job_ending_time > $start) {
 			my $new_profile = Profile->new(
 				$start,
 				$job_ending_time,
@@ -158,7 +158,7 @@ sub remove_job {
 	}
 
 	# split at the first profile
-	if ((not float_equal($impacted_profiles[0]->starting_time(), $starting_time)) and ($impacted_profiles[0]->starting_time() < $starting_time)) {
+	if (not float_equal($impacted_profiles[0]->starting_time(), $starting_time) and $impacted_profiles[0]->starting_time() < $starting_time) {
 		# remove
 		my $first_profile = shift @impacted_profiles;
 		$self->{profile_tree}->remove_content($first_profile);
@@ -203,7 +203,7 @@ sub remove_job {
 	for my $profile (@impacted_profiles) {
 		$profile->remove_job($job);
 
-		if ((not float_equal($profile->starting_time(), $previous_profile_ending_time)) and ($profile->starting_time() > $previous_profile_ending_time)) {
+		if (not float_equal($profile->starting_time(), $previous_profile_ending_time) and $profile->starting_time() > $previous_profile_ending_time) {
 			my $new_profile = Profile->new(
 				$previous_profile_ending_time,
 				$profile->starting_time(),
@@ -215,7 +215,7 @@ sub remove_job {
 	}
 
 	# gap at the end
-	if ((not float_equal($job_ending_time, $previous_profile_ending_time)) and ($job_ending_time > $previous_profile_ending_time)) {
+	if (not float_equal($job_ending_time, $previous_profile_ending_time) and $job_ending_time > $previous_profile_ending_time) {
 		my $new_profile = Profile->new(
 			$previous_profile_ending_time,
 			$job_ending_time,
@@ -372,7 +372,7 @@ sub set_current_time {
 			my $starting_time = $profile->starting_time();
 			my $ending_time = $profile->ending_time();
 
-			if (not defined $ending_time or ((not float_equal($ending_time, $current_time)) and ($ending_time > $current_time))) {
+			if (not defined $ending_time or (not float_equal($ending_time, $current_time) and $ending_time > $current_time)) {
 				$updated_profile = $profile;
 				return 0;
 			}

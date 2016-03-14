@@ -139,8 +139,7 @@ sub run {
 				$self->{execution_profile}->remove_job($job, $self->{current_time});
 				$job->run_time($self->{current_time} - $job->starting_time());
 			} else {
-				$self->{execution_profile}->remove_job($job, $self->{current_time}) unless
-					float_equal($job->requested_time(), $job->run_time());
+				$self->{execution_profile}->remove_job($job, $self->{current_time}) unless float_equal($job->requested_time(), $job->run_time());
 			}
 		}
 
@@ -158,8 +157,7 @@ sub run {
 			}
 
 			$self->assign_job($job);
-			$logger->logdie("job " . $job->job_number() . " was not assigned")
-				unless (defined $job->starting_time());
+			$logger->logdie("job " . $job->job_number() . " was not assigned") unless (defined $job->starting_time());
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
