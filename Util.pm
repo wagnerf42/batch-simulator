@@ -4,12 +4,18 @@ use warnings;
 
 use Exporter qw(import);
 
-our @EXPORT_OK = qw(FALSE TRUE float_equal float_precision);
+our @EXPORT_OK = qw(FALSE TRUE git_tree_dirty git_version float_equal float_precision git_tree_dirty git_version);
 
 sub git_tree_dirty {
 	my $git_branch = `git symbolic-ref --short HEAD`;
-	chomp($git_branch);
+	chomp $git_branch;
 	return ($git_branch eq 'master' and system('git diff-files --quiet')) ? 1 : 0;
+}
+
+sub git_version {
+	my $git_version = `git describe --tags --dirty`;
+	chomp $git_version;
+	return $git_version;
 }
 
 use constant {

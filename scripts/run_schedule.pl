@@ -5,6 +5,7 @@ use warnings;
 use Data::Dumper qw(Dumper);
 use Log::Log4perl qw(get_logger);
 
+use Util qw(git_version);
 use Trace;
 use Backfilling;
 use Basic;
@@ -19,6 +20,9 @@ my ($trace_file, $jobs_number) = @ARGV;
 
 Log::Log4perl::init('log4perl.conf');
 my $logger = get_logger();
+
+$logger->info("Running batch-scheduler version " . git_version());
+die;
 
 my @platform_levels = (1, 2, 4, 8, 16);
 my @platform_latencies = (2e-2, 1e-3, 1e-3, 1e-4);
