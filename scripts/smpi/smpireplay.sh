@@ -9,4 +9,4 @@ smpirun -ext smpi_replay \
 	--cfg=smpi/privatize_global_variables:yes \
 	--cfg=smpi/running_power:23.492E9 \
 	-np $CPUS -platform $PLATFORMFILE -hostfile $HOSTFILE \
-	./smpi_replay $BENCHMARK-$CPUS.trace
+	mpi/smpi_replay $BENCHMARK-$CPUS.trace
