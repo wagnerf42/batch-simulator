@@ -159,7 +159,7 @@ sub locality_factor {
 sub platform_level_factor {
 	my $self = shift;
 
-	my $job_level_distances = sum map {$self->{platform}->relative_job_level_distance($_->list_of_used_clusters($self->{platform}->cluster_size()), $_->requested_cpus())} (@{$self->{trace}->jobs()});
+	my $job_level_distances = sum map {$self->{platform}->job_relative_level_distance($_->assigned_processors(), $_->requested_cpus())} (@{$self->{trace}->jobs()});
 
 	return $job_level_distances / scalar @{$self->{trace}->jobs()};
 }
