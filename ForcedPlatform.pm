@@ -23,7 +23,7 @@ sub reduce {
 	my $job = shift;
 	my $left_processors = shift;
 
-	my $available_cpus = $left_processors->available_cpus_in_clusters($self->{platform}->cluster_size());
+	my $available_cpus = $self->{platform}->available_cpus_in_clusters($left_processors);
 	my $cpus_structure = $self->{platform}->build_structure($available_cpus);
 	my $chosen_ranges = $self->choose_cpus($cpus_structure, $job->requested_cpus());
 

@@ -129,6 +129,7 @@ sub remove_job {
 	my $job_ending_time = $job->submitted_ending_time();
 
 	my @impacted_profiles;
+	Profile::set_comparison_function('all_times');
 	$self->{profile_tree}->nodes_loop($starting_time, $job_ending_time,
 		sub {
 			my $profile = shift;
@@ -136,10 +137,7 @@ sub remove_job {
 			return 1;
 		}
 	);
-
-	# impacted profiles must not include a profile that starts at the same
-	# time as $job_ending-time
-	pop @impacted_profiles if @impacted_profiles and $impacted_profiles[-1]->starting_time() == $job_ending_time;
+	Profile::set_comparison_function('default');
 
 	unless (@impacted_profiles) {
 		# avoid starting in the past

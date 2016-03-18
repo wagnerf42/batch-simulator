@@ -74,7 +74,6 @@ sub new_from_swf {
 	my $class = shift;
 	my $filename = shift;
 	my $jobs_number = shift;
-	my $logger = get_logger('Trace::new');
 
 	my $self = {
 		filename => $filename,
@@ -82,7 +81,7 @@ sub new_from_swf {
 		status => []
 	};
 
-	open (my $file, '<', $self->{filename}) or $logger->logdie("unable to open $self->{filename}");
+	open (my $file, '<', $self->{filename}) or die("unable to open $self->{filename}");
 
 	while (defined(my $line = <$file>) and (not defined $jobs_number or @{$self->{jobs}} < $jobs_number)) {
 		my @fields = split(' ', $line);

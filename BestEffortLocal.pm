@@ -11,10 +11,10 @@ use List::Util qw(min);
 
 sub new {
 	my $class = shift;
-	my $cluster_size = shift;
+	my $platform = shift;
 
 	my $self = {
-		cluster_size => $cluster_size,
+		platform => $platform,
 	};
 
 	bless $self, $class;
@@ -31,8 +31,9 @@ sub reduce {
 	my @remaining_ranges;
 	my $used_clusters_number = 0;
 	my $current_cluster;
-	my $clusters = $left_processors->compute_ranges_in_clusters($self->{cluster_size});
-	my @sorted_clusters = sort { ProcessorRange::cluster_size($b) - ProcessorRange::cluster_size($a) } @{$clusters};
+
+	my @clusters = $self->{platform}->job_processors_in_clusters($left_processors);
+	my @sorted_clusters = sort { scalar @{$a} <=> scalar @{$b} } (@clusters);
 
 	for my $cluster (@sorted_clusters) {
 		for my $pair (@{$cluster}) {

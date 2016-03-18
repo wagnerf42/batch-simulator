@@ -1,5 +1,5 @@
 package ForcedLocal;
-use parent 'Basic';
+use parent 'BestEffortLocal';
 use strict;
 use warnings;
 
@@ -12,11 +12,8 @@ use List::Util qw(min);
 
 sub new {
 	my $class = shift;
-	my $cluster_size = shift;
 
-	my $self = {
-		cluster_size => $cluster_size,
-	};
+	my $self = $class->SUPER::new(@_);
 
 	bless $self, $class;
 	return $self;
@@ -32,9 +29,9 @@ sub reduce {
 	my @remaining_ranges;
 	my $used_clusters_number = 0;
 	my $current_cluster;
-	my $clusters = $left_processors->compute_ranges_in_clusters($self->{cluster_size});
-	my @sorted_clusters = sort { ProcessorRange::cluster_size($b) - ProcessorRange::cluster_size($a) } @{$clusters};
-	my $target_clusters_number = ceil($target_number/$self->{cluster_size});
+	my @clusters = $self->{platform}->job_processors_in_clusters($left_processors);
+	my @sorted_clusters = sort { scalar @{$a} <=> scalar @{$b} } (@clusters);
+	my $target_clusters_number = ceil($target_number/$self->{platform}->cluster_size());
 
 	for my $cluster (@sorted_clusters) {
 		for my $pair (@{$cluster}) {

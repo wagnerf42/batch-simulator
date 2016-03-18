@@ -27,7 +27,7 @@ sub add_content {
 	my $content = shift;
 
 	my $node = $self->{root}->find_node($content);
-	die "found duplicate for $content" if defined $node;
+	confess "found duplicate for $content" if defined $node;
 
 	return $self->{root}->add($content);
 }

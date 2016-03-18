@@ -247,7 +247,7 @@ sub build_structure {
 		for my $block (0..($self->{levels}->[$last_level - $level] - 1)) {
 			my $block_content = {
 				total_size => 0,
-				total_original_size => $self->{levels}->[$#{$self->{levels}}]/$self->{levels}->[$last_level - $level],
+				total_original_size => $self->{levels}->[-1]/$self->{levels}->[$last_level - $level],
 				cpus => []
 			};
 
@@ -585,6 +585,70 @@ sub job_used_clusters {
 	return keys %used_clusters;
 }
 
+sub job_processors_in_clusters {
+	my $self = shift;
+	my $assigned_processors = shift;
+
+	my @clusters;
+	my $current_cluster;
+
+	$assigned_processors->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+
+			my $start_cluster = floor($start/$self->cluster_size());
+			my $end_cluster = floor($end/$self->cluster_size());
+
+			for my $cluster ($start_cluster..$end_cluster) {
+				my $start_point_in_cluster = max($start, $cluster*$self->cluster_size());
+				my $end_point_in_cluster = min($end, ($cluster+1)*$self->cluster_size()-1);
+
+				push @clusters, [] unless defined $current_cluster and $cluster == $current_cluster;
+				$current_cluster = $cluster;
+
+				push @{$clusters[-1]}, [$start_point_in_cluster, $end_point_in_cluster];
+			}
+
+			return 1;
+		}
+	);
+
+	return @clusters;
+}
+
+sub available_cpus_in_clusters {
+	my $self = shift;
+	my $processors = shift;
+
+	my @available_cpus;
+
+	$processors->ranges_loop(
+		sub {
+			my ($start, $end) = @_;
+
+			my $start_cluster = floor($start/$self->cluster_size());
+			my $end_cluster = floor($end/$self->cluster_size());
+
+			for my $cluster ($start_cluster..$end_cluster) {
+				my $start_point_in_cluster = max($start, $cluster * $self->cluster_size());
+				my $end_point_in_cluster = min($end, ($cluster + 1) * $self->cluster_size() - 1);
+
+				$available_cpus[$cluster] = {
+					total_size => 0,
+					cpus => []
+				} unless (defined $available_cpus[$cluster]);
+
+				$available_cpus[$cluster]->{total_size} += $end_point_in_cluster - $start_point_in_cluster + 1;
+				push @{$available_cpus[$cluster]->{cpus}}, ($start_point_in_cluster..$end_point_in_cluster);
+			}
+
+			return 1;
+		}
+	);
+
+	return \@available_cpus;
+}
+
 # Returns the locality factor for a job. Receives as parameter a list of
 # processor ranges in the form of a ProcessorRange object. Evaluation is done
 # in scalar context.
@@ -592,8 +656,7 @@ sub job_locality_factor {
 	my $self = shift;
 	my $assigned_processors = shift;
 
-	return $self->job_used_clusters($assigned_processors)
-	/ ceil($assigned_processors->size() / $self->cluster_size());
+	return $self->job_used_clusters($assigned_processors) / ceil($assigned_processors->size() / $self->cluster_size());
 }
 
 1;
