@@ -18,6 +18,8 @@ use ForcedPlatform;
 
 my ($trace_file, $jobs_number, $variant_id, $platform_string, $platform_speedup_string) = @ARGV;
 
+my $stretch_bound = 10;
+
 my @platform_levels = split('-', $platform_string);
 my @platform_speedup = split(',', $platform_speedup_string);
 
@@ -57,11 +59,11 @@ my @results = (
 	$schedule->contiguous_jobs_number(),
 	$schedule->local_jobs_number(),
 	$schedule->locality_factor(),
-	$schedule->platform_level_factor(),
 	$schedule->bounded_stretch($stretch_bound),
 	#$schedule->stretch_sum_of_squares($stretch_bound),
 	#$schedule->stretch_with_cpus_squared($stretch_bound),
 	$schedule->run_time(),
+	$schedule->platform_level_factor(),
 	$schedule->job_success_rate(),
 );
 
