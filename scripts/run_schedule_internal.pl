@@ -16,9 +16,13 @@ use ForcedLocal;
 use BestEffortPlatform qw(SMALLEST_FIRST BIGGEST_FIRST);
 use ForcedPlatform;
 
-my ($trace_file, $jobs_number, $variant_id, $platform_string, $platform_speedup_string) = @ARGV;
+use Debug;
+
+my ($trace_file, $jobs_number, $variant_id, $platform_string, $platform_speedup_string, $execution_path) = @ARGV;
 
 my $stretch_bound = 10;
+
+Log::Log4perl::init('log4perl.conf');
 
 my @platform_levels = split('-', $platform_string);
 my @platform_speedup = split(',', $platform_speedup_string);
@@ -49,6 +53,11 @@ my @variants = (
 my $schedule = Backfilling->new($variants[$variant_id], $platform, $trace);
 $schedule->run();
 
+##DEBUG_BEGIN
+#$schedule->save_svg("$execution_path/run_schedule_internal-$variant_id-$jobs_number.svg");
+#$trace->write_to_file("$execution_path/run_schedule_internal-$variant_id-$jobs_number.swf");
+##DEBUG_END
+
 my @results = (
 	$platform->processors_number(),
 	$jobs_number,
@@ -68,3 +77,7 @@ my @results = (
 );
 
 print STDOUT join(' ', @results) . "\n";
+
+sub get_log_file {
+	return "$execution_path/run_schedule_internal.log";
+}
