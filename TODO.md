@@ -37,3 +37,4 @@
   - [ ] Remove the log4perl usage where it's not needed. Leave only in places
     where you are likely to come back for debugging many times.
   - [ ] Review all the SVG code.
+  - [ ] Check again if there are any memory leaks on the code.
