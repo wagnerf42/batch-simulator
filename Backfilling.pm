@@ -128,10 +128,6 @@ sub run {
 			$logger->debug("job " . $job->job_number() . " ending");
 			##DEBUG_END
 
-			$self->{total_bounded_stretch} += $job->bounded_stretch(10);
-			$self->{total_original_bounded_stretch} += $job->original_bounded_stretch(10);
-			$self->{processed_jobs}++;
-
 			delete $self->{started_jobs}->{$job->job_number()};
 
 			if ($self->{uses_external_simulator}) {
