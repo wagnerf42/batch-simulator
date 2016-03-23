@@ -5,7 +5,6 @@ use warnings;
 
 use List::Util qw(min max);
 use POSIX;
-use Log::Log4perl qw(get_logger);
 use Carp;
 use Data::Dumper;
 
@@ -74,7 +73,6 @@ sub stringification {
 
 sub new {
 	my $class = shift;
-	my $logger = get_logger('Job::new');
 
 	my $self = {
 		job_number => shift, #1
@@ -98,13 +96,10 @@ sub new {
 	};
 
 	# Sanity checks for some of the job fields
-	#$logger->logdie('job run time is 0') if ($self->{run_time} == );
 	$self->{status} = 5 if (($self->{run_time} == 0) and ($self->{status} == 1));
 
-	#$logger->logdie('number of allocated CPUs is different than requested') if ($self->{allocated_cpus} != $self->{requested_cpus});
 	$self->{allocated_cpus} = $self->{requested_cpus} if ($self->{allocated_cpus} != $self->{requested_cpus});
 
-	#$logger->logdie('requested time smaller than run time') if ($self->{requested_time} < $self->{run_time});
 	$self->{run_time} = $self->{requested_time} if ($self->{requested_time} < $self->{run_time});
 
 	# Reset the job status for now. Maybe later we will do something
@@ -262,9 +257,7 @@ sub original_bounded_stretch {
 	my $self = shift;
 	my $time_limit = shift;
 
-	my $logger = get_logger('Job::original_bounded_stretch');
-
-	$logger->logconfess('undefined job parameters') unless defined $self->{original_wait_time} and defined $self->{run_time};
+	die 'undefined job parameters' unless defined $self->{original_wait_time} and defined $self->{run_time};
 	return max(($self->{original_wait_time} + $self->{run_time})/max($self->{run_time}, ((defined $time_limit) ? $time_limit : 10)), 1);
 }
 

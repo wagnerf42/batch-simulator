@@ -5,7 +5,6 @@ use strict;
 use warnings;
 
 use List::Util qw(min max);
-use Log::Log4perl qw(get_logger);
 use Data::Dumper;
 
 use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
@@ -236,8 +235,6 @@ sub add_job  {
 
 	my @profiles_to_update;
 	my $ending_time = $starting_time + $job->requested_time();
-
-	my $logger = get_logger('ExecutionProfile::add_job_at');
 
 	$self->{profile_tree}->nodes_loop($starting_time, $ending_time,
 		sub {

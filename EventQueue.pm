@@ -7,7 +7,6 @@ use IO::Socket::UNIX;
 use File::Slurp;
 use Data::Dumper;
 use JSON;
-use Log::Log4perl qw(get_logger);
 
 use Job;
 
@@ -19,14 +18,13 @@ use Debug;
 # UNIX socket to receive events from the external simulator.
 sub new {
 	my $class = shift;
-	my $logger = get_logger('EventQueue::new');
 
 	my $self = {
 		socket_file => shift,
 		json_file => shift,
 	};
 
-	$logger->logdie("bad json_file $self->{json_file}") unless -f $self->{json_file};
+	die "bad json_file $self->{json_file}" unless -f $self->{json_file};
 	my $json_data = read_file($self->{json_file});
 	$self->{json} = decode_json($json_data);
 
@@ -55,7 +53,7 @@ sub new {
 		sleep(1);
 
 		##DEBUG_BEGIN
-		$logger->debug("looking for socket $self->{socket_file}");
+		print STDERR "looking for socket $self->{socket_file}\n";
 		##DEBUG_END
 
 		$self->{socket} = IO::Socket::UNIX->new(
@@ -87,8 +85,6 @@ sub set_started_jobs {
 	my $self = shift;
 	my $jobs = shift;
 
-	my $logger = get_logger('EventQueue::set_started_jobs');
-
 	my $message = "0:$self->{current_simulator_time}|$self->{current_simulator_time}:";
 
 	if (@{$jobs}) {
@@ -103,7 +99,7 @@ sub set_started_jobs {
 	my $message_size = pack('L', length($message));
 
 	##DEBUG_BEGIN
-	$logger->debug("sending message (" . length($message) . " bytes): $message");
+	print STDERR "sending message (" . length($message) . " bytes): $message\n";
 	##DEBUG_END
 
 	$self->{socket}->send($message_size);
@@ -115,7 +111,6 @@ sub set_started_jobs {
 # Retrieves all the available events in the event queue.
 sub retrieve_all {
 	my $self = shift;
-	my $logger = get_logger('EventQueue::retrieve_all');
 
 	my $packed_size = $self->recv(4);
 	return unless length($packed_size) == 4;
@@ -128,27 +123,26 @@ sub retrieve_all {
 	my $check = shift @fields;
 
 	##DEBUG_BEGIN
-	$logger->debug("received message $message_content");
+	print STDERR "received message $message_content\n";
 	##DEBUG_END
 
-	$logger->logdie("error checking head of message: $check") unless $check=~/^(\d):(\d+(\.\d+)?)$/;
+	die "error checking head of message: $check" unless $check=~/^(\d):(\d+(\.\d+)?)$/;
 	$self->{current_simulator_time} = $2;
 
 	my @incoming_events;
 	for my $field (@fields) {
-		$logger->logdie("invalid message $field")
-		unless ($field =~ /^(\d+(\.\d+)?):([SC]):(\d+)/);
+		die "invalid message $field" unless ($field =~ /^(\d+(\.\d+)?):([SC]):(\d+)/);
 
 		my $timestamp = $1;
 		my $type = $3;
 		$type = ($type eq 'C') ? 0 : 1;
 		my $job_id = $4;
 
-		$logger->logdie("no job for id $job_id in $self->{json}") unless defined $self->{jobs}->{$job_id};
+		die "no job for id $job_id in $self->{json}" unless defined $self->{jobs}->{$job_id};
 		push @incoming_events, Event->new($type, $timestamp, $self->{jobs}->{$job_id});
 	}
 
-	$logger->logdie("no events received") unless @incoming_events;
+	die "no events received" unless @incoming_events;
 	return @incoming_events;
 }
 
@@ -166,11 +160,10 @@ sub recv {
 	my $size = shift;
 	my $message_content = '';
 	my $tmp;
-	my $logger = get_logger('EventQueue::recv');
 
 	while (length($message_content) < $size) {
 		my $result = $self->{socket}->sysread($tmp, $size - length($message_content));
-		$logger->logdie('recv') unless defined $result;
+		die 'error receiving message' unless defined $result;
 		last unless $result > 0;
 		$message_content .= $tmp;
 	}

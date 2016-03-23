@@ -6,7 +6,6 @@ use List::Util qw(max reduce sum min);
 use List::MoreUtils qw(natatime);
 use Storable qw(dclone);
 use POSIX qw(ceil floor);
-use Log::Log4perl qw(get_logger);
 
 use Job;
 
@@ -154,9 +153,8 @@ sub new_from_trace {
 	my $class = shift;
 	my $trace = shift;
 	my $size = shift;
-	my $logger = get_logger('Trace::new_from_trace');
 
-	$logger->logdie('empty trace') unless defined $trace->{jobs}->[0];
+	die 'empty trace' unless defined $trace->{jobs}->[0];
 
 	my $self = {
 		jobs => [],

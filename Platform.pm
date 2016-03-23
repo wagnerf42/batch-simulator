@@ -2,7 +2,6 @@ package Platform;
 use strict;
 use warnings;
 
-use Log::Log4perl qw(get_logger);
 use Data::Dumper;
 use List::Util qw(min max sum);
 use POSIX;
@@ -10,14 +9,12 @@ use XML::Smart;
 use Carp;
 
 use Tree;
-
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
 use ProcessorRange;
 
 # Default power, latency and bandwidth values
-use constant CLUSTER_POWER => "23.492E9";
-use constant CLUSTER_BANDWIDTH => "1.25E9";
-use constant LINK_BANDWIDTH => "1.25E9";
+use constant CLUSTER_POWER => "23.492E9f";
+use constant CLUSTER_BANDWIDTH => "1.25E9Bps";
+use constant LINK_BANDWIDTH => "1.25E9Bps";
 
 # Constructors and helper functions
 
@@ -271,8 +268,8 @@ sub generate_speedup {
 	my $self = shift;
 	my $benchmark = shift;
 	my $platform_file = shift;
+	my $replay_script = shift;
 
-	my $smpi_script = './scripts/smpi/smpireplay.sh';
 	my $hosts_file = '/tmp/hosts';
 
 	unless (defined $platform_file) {
@@ -290,10 +287,10 @@ sub generate_speedup {
 	for my $hosts_config (@hosts_configs) {
 		save_hosts_file($hosts_config, $hosts_file);
 
-		my $result = `$smpi_script $cpus_number $platform_file $hosts_file $benchmark 2>&1`;
+		my $result = `$replay_script $cpus_number $platform_file $hosts_file $benchmark 2>&1`;
 
 		unless ($result =~ /Simulation time (\d*\.\d*)/) {
-			print STDERR "$smpi_script $cpus_number $platform_file $hosts_file $benchmark\n";
+			print STDERR "$replay_script $cpus_number $platform_file $hosts_file $benchmark\n";
 			print STDERR "$result\n";
 			die 'error running benchmark';
 		}
@@ -329,7 +326,8 @@ sub speedup {
 	my $self = shift;
 	my $level = shift;
 
-	return $self->{speedup}->[$level - 1];
+	return $self->{speedup}->[$level - 1] if defined $level;
+	return @{$self->{speedup}};
 }
 
 # Platform XML
@@ -341,7 +339,7 @@ sub build_platform_xml {
 	my @platform_parts = @{$self->{levels}};
 	my $xml = XML::Smart->new();
 
-	$xml->{platform} = {version => 3};
+	$xml->{platform} = {version => 4};
 
 	# Root system
 	$xml->{platform}{AS} = {
@@ -386,7 +384,7 @@ sub build_platform_xml {
 			prefix => 'master_host',
 			suffix => '',
 			radical => '0-0',
-			power => CLUSTER_POWER,
+			speed => CLUSTER_POWER,
 			bw => CLUSTER_BANDWIDTH,
 			lat => $latencies->[-1],
 			router_id => 'R-MH',
@@ -413,7 +411,7 @@ sub build_platform_xml {
 			prefix => "",
 			suffix => "",
 			radical => ($cluster * $self->cluster_size()) . '-' . (($cluster + 1) * $self->cluster_size() - 1),
-			power => CLUSTER_POWER,
+			speed => CLUSTER_POWER,
 			bw => CLUSTER_BANDWIDTH,
 			lat => $latencies->[-1],
 			router_id => "R-$cluster",
@@ -444,7 +442,7 @@ sub save_platform_xml {
 
 	open(my $file, '>', $filename);
 
-	print $file "<?xml version=\'1.0\'?>\n" . "<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid.dtd\">\n" . $self->{xml}->data(noheader => 1, nometagen => 1);
+	print $file "<?xml version=\'1.0\'?>\n" . "<!DOCTYPE platform SYSTEM \"http://simgrid.gforge.inria.fr/simgrid/simgrid.dtd\">\n" . $self->{xml}->data(noheader => 1, nometagen => 1);
 
 	return;
 }

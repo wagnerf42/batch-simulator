@@ -6,7 +6,6 @@ use strict;
 use warnings;
 
 use Carp;
-use Log::Log4perl qw(get_logger);
 use POSIX qw(floor ceil);
 use List::Util qw(min max sum);
 use Data::Dumper;
@@ -72,16 +71,15 @@ sub pairs {
 sub check_ok {
 	my $self = shift;
 	my $last_end = -1;
-	my $logger = get_logger('ProcessorRange::check_ok');
 
 	$self->ranges_loop(
 		sub {
 			my ($start, $end) = @_;
 
-			$logger->logdie("invalid range $self: repeated cpu ($last_end)") if $start == $last_end;
-			$logger->logdie("invalid range $self: end < start ($end < $start)") if $end < $start;
-			$logger->logdie("invalid range $self: start not defined") unless defined $end;
-			$logger->logdie("invalid range $self: end not defined") unless defined $end;
+			die "invalid range $self: repeated cpu ($last_end)" if $start == $last_end;
+			die "invalid range $self: end < start ($end < $start)" if $end < $start;
+			die "invalid range $self: start not defined" unless defined $end;
+			die "invalid range $self: end not defined" unless defined $end;
 
 			$last_end = $end;
 			return 1;

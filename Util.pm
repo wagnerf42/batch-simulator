@@ -13,7 +13,11 @@ sub git_tree_dirty {
 }
 
 sub git_version {
-	my $git_version = `git describe --tags --dirty`;
+	my $git_path = shift;
+
+	$git_path = '.' unless defined $git_path;
+
+	my $git_version = `git -C $git_path describe --tags --dirty`;
 	chomp $git_version;
 	return $git_version;
 }
