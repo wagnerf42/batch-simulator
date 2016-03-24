@@ -161,8 +161,7 @@ sub run {
 	}
 
 	# All jobs should be scheduled and started
-	$logger->logdie('there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}}))
-		if (@{$self->{reserved_jobs}});
+	$logger->logdie('there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}})) if (@{$self->{reserved_jobs}});
 
 	$self->{execution_profile}->free_profiles();
 

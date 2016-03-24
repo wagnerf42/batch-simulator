@@ -268,6 +268,8 @@ sub stretch {
 
 sub wait_time {
 	my $self = shift;
+
+	return unless defined $self->{starting_time};
 	return $self->{starting_time} - $self->{submit_time};
 }
 
