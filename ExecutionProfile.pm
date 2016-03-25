@@ -6,14 +6,13 @@ use warnings;
 
 use List::Util qw(min max);
 use Data::Dumper;
-
-use lib 'ProcessorRange/blib/lib', 'ProcessorRange/blib/arch';
-use ProcessorRange;
+use Carp;
 
 use Util qw(float_equal float_precision);
 use Profile;
 use BinarySearchTree;
 use Platform;
+use ProcessorRange;
 
 use Debug;
 
@@ -23,6 +22,8 @@ sub new {
 	my $class = shift;
 	my $processors_number = shift;
 	my $reduction_algorithm = shift;
+
+	confess unless defined $processors_number;
 
 	my $self = {
 		processors_number => $processors_number,

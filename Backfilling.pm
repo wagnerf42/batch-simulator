@@ -5,7 +5,6 @@ use warnings;
 
 use Exporter qw(import);
 use Time::HiRes qw(time);
-use Log::Log4perl qw(get_logger :no_extra_logdie_message);
 use Data::Dumper;
 use List::Util qw(min);
 
@@ -55,7 +54,7 @@ sub new_simulation {
 	my $self = $class->SUPER::new_simulation(@_);
 
 	$self->{execution_profile} = ExecutionProfile->new(
-		$self->{processors_number},
+		$self->{platform}->processors_number(),
 		$reduction_algorithm,
 	);
 
@@ -82,7 +81,6 @@ sub new_simulation {
 # it's original position.
 sub run {
 	my $self = shift;
-	my $logger = get_logger('Backfilling::run');
 
 	$self->{reserved_jobs} = []; # jobs not started yet
 	$self->{started_jobs} = {}; # jobs that have already started
@@ -116,7 +114,7 @@ sub run {
 		push @{$typed_events[$_->type()]}, $_ for @events; # 2 lists, one for each event type
 
 		##DEBUG_BEGIN
-		$logger->debug("current time: $self->{current_time} events @events");
+		print STDERR "current time: $self->{current_time} events @events\n";
 		##DEBUG_END
 
 		# Ending event
@@ -125,7 +123,7 @@ sub run {
 			my $job = $event->payload();
 
 			##DEBUG_BEGIN
-			$logger->debug("job " . $job->job_number() . " ending");
+			print STDERR "job " . $job->job_number() . " ending\n";
 			##DEBUG_END
 
 			delete $self->{started_jobs}->{$job->job_number()};
@@ -153,7 +151,7 @@ sub run {
 			}
 
 			$self->assign_job($job);
-			$logger->logdie("job " . $job->job_number() . " was not assigned") unless (defined $job->starting_time());
+			die "job " . $job->job_number() . " was not assigned" unless defined $job->starting_time();
 			push @{$self->{reserved_jobs}}, $job;
 		}
 
@@ -161,7 +159,7 @@ sub run {
 	}
 
 	# All jobs should be scheduled and started
-	$logger->logdie('there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}})) if (@{$self->{reserved_jobs}});
+	die 'there are still jobs in the reserved queue: ' . join(' ', @{$self->{reserved_jobs}}) if @{$self->{reserved_jobs}};
 
 	$self->{execution_profile}->free_profiles();
 
@@ -181,13 +179,12 @@ sub run {
 sub start_jobs {
 	my $self = shift;
 	my @remaining_reserved_jobs;
-	my $logger = get_logger('Backfilling::start_jobs');
 	my @newly_started_jobs;
 
 	for my $job (@{$self->{reserved_jobs}}) {
 		if (float_equal($job->starting_time(), $self->{current_time})) {
 			##DEBUG_BEGIN
-			$logger->debug("job " . $job->job_number() . " starting");
+			print STDERR "job " . $job->job_number() . " starting\n";
 			##DEBUG_END
 
 			$self->{events}->add(
@@ -219,15 +216,13 @@ sub start_jobs {
 sub reassign_jobs {
 	my $self = shift;
 
-	my $logger = get_logger('Backfilling::reassign_jobs_two_positions');
-
 	for my $job (@{$self->{reserved_jobs}}) {
 		if ($self->{execution_profile}->available_processors($self->{current_time}) >= $job->requested_cpus()) {
 			my $job_starting_time = $job->starting_time();
 			my $assigned_processors = $job->assigned_processors();
 
 			##DEBUG_BEGIN
-			$logger->debug("enough processors for job " . $job->job_number());
+			print STDERR "enough processors for job " . $job->job_number() . "\n";
 			##DEBUG_END
 
 			$self->{execution_profile}->remove_job($job, $self->{current_time});
@@ -235,7 +230,7 @@ sub reassign_jobs {
 			my $new_processors;
 			if ($self->{execution_profile}->could_start_job($job, $self->{current_time})) {
 				##DEBUG_BEGIN
-				$logger->debug("could start job " . $job->job_number());
+				print STDERR "could start job " . $job->job_number() . "\n";
 				##DEBUG_END
 
 				$new_processors = $self->{execution_profile}->get_free_processors($job, $self->{current_time});
@@ -243,7 +238,7 @@ sub reassign_jobs {
 
 			if (defined $new_processors) {
 				##DEBUG_BEGIN
-				$logger->debug("reassigning job " . $job->job_number() . " processors $new_processors");
+				print STDERR "reassigning job " . $job->job_number() . " processors $new_processors\n";
 				##DEBUG_END
 
 				$job->assign($self->{current_time}, $new_processors);
@@ -266,30 +261,28 @@ sub assign_job {
 	my $self = shift;
 	my $job = shift;
 
-	my $logger = get_logger('Backfilling::assign_job');
-
 	##DEBUG_BEGIN
-	$logger->debug("assigning job " . $job->job_number());
+	print STDERR "assigning job " . $job->job_number() . "\n";
 	##DEBUG_END
 
 	my ($starting_time, $chosen_processors) = $self->{execution_profile}->find_first_profile($job);
 
 	##DEBUG_BEGIN
-	$logger->debug("chose starting time $starting_time and processors $chosen_processors duration " . $job->requested_time());
+	print STDERR "chose starting time $starting_time and processors $chosen_processors duration " . $job->requested_time() . "\n";
 	##DEBUG_END
 
 	# Here we can decide the new run time based on the platform level
-	my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
-	my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level);
+	#my $job_platform_level = $self->{platform}->job_level_distance($chosen_processors);
+	#my $new_job_run_time = $job->run_time() * $self->{platform}->speedup($job_platform_level);
 
-	if ($new_job_run_time > $job->requested_time()) {
-		$job->run_time($job->requested_time());
-		$job->status(JOB_STATUS_FAILED);
-	}
+	#if ($new_job_run_time > $job->requested_time()) {
+	#	$job->run_time($job->requested_time());
+	#	$job->status(JOB_STATUS_FAILED);
+	#}
 
-	else {
-		$job->run_time($new_job_run_time);
-	}
+	#else {
+	#	$job->run_time($new_job_run_time);
+	#}
 
 	$job->assign($starting_time, $chosen_processors);
 	$self->{execution_profile}->add_job($starting_time, $job);

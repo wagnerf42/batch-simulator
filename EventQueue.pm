@@ -88,8 +88,7 @@ sub set_started_jobs {
 	my $message = "0:$self->{current_simulator_time}|$self->{current_simulator_time}:";
 
 	if (@{$jobs}) {
-		my @jobs_messages = map {$_->job_number().'='
-		.join(',', $_->assigned_processors_ids()->processors_ids())} @{$jobs};
+		my @jobs_messages = map {$_->job_number() . '=' . join(',', $_->assigned_processors()->processors_ids())} @{$jobs};
 
 		$message .= 'J:' . join(';', @jobs_messages);
 	} else {
