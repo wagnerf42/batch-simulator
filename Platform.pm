@@ -305,7 +305,7 @@ sub generate_speedup {
 	return;
 }
 
-sub set_speedup {
+sub set_speedup_from_lantencies {
 	my $self = shift;
 	my $latencies = shift;
 
@@ -322,12 +322,20 @@ sub save_hosts_file {
 	close($file);
 }
 
+sub set_speedup {
+	my $self = shift;
+	my $platform_speedup = shift;
+
+	$self->{speedup} = [@{$platform_speedup}];
+	return;
+}
+
 sub speedup {
 	my $self = shift;
 	my $level = shift;
 
-	return $self->{speedup}->[$level - 1] if defined $level;
-	return @{$self->{speedup}};
+	return $self->{speedup}->[$level] if defined $level;
+	return $self->{speedup};
 }
 
 # Platform XML
